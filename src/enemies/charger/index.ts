@@ -1,10 +1,7 @@
-import { CHARGER_ROBOT } from '@/config/tunables';
 import type { EnemyFactory } from '../BaseEnemy';
-import { SphereRobot } from '../SphereRobot';
+import { Charger } from './Charger';
 
-/**
- * Placeholder charger robot (T-14 replaces this folder): a recoloured sphere robot with the
- * charger type and HP. Keep the export name and the EnemyFactory signature.
- */
-export const createChargerRobot: EnemyFactory = (deps, spawn) =>
-  new SphereRobot(deps, spawn, { type: 'charger', hp: CHARGER_ROBOT.hp, color: 0xc9731f });
+/** Charger robot (GDD 6.3, T-14): heavy shielded rhino with a telegraphed, locked-line charge. */
+export const createChargerRobot: EnemyFactory = (deps, spawn) => new Charger(deps, spawn);
+
+export { Charger } from './Charger';
