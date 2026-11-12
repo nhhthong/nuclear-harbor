@@ -136,7 +136,13 @@ export function createStructuresModule(): GameModule {
       const rangeCoverage = (): ZoneCoverage[] => checkCoverage(samples, registryAnchors(), range);
       const losCoverage = (): ZoneCoverage[] => {
         if (!losCache) {
-          losCache = checkCoverage(samples, registryAnchors(), range, (from, to) => ctx.physics.hasLineOfSight(from, to));
+          // Drop samples that are not standable in the final world (inside or on top of containers and
+          // buildings added by other modules): a downward ray from above must reach the ground.
+          const standable = samples.filter((sm) => {
+            const hit = ctx.physics.raycast({ x: sm.x, y: 40, z: sm.z }, { x: 0, y: -1, z: 0 }, 60);
+            return hit === null || hit.point.y < 0.5;
+          });
+          losCache = checkCoverage(standable, registryAnchors(), range, (from, to) => ctx.physics.hasLineOfSight(from, to));
         }
         return losCache;
       };

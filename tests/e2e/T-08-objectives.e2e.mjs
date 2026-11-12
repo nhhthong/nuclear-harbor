@@ -19,7 +19,7 @@ export default async function ({ openGame, setKey, wait: _wall, assert }) {
   {
     const { page, failures } = await openGame('?sandbox&autostart&countdown=60');
     await page.evaluate(RECORD);
-    await page.evaluate(() => window.__NH__.game.ctx.player.teleport({ x: 8, y: 0, z: 4 }));
+    await page.evaluate(() => window.__NH__.game.ctx.player.teleport({ x: 8, y: 0, z: 3.5 }));
     await wait(page, 0.3);
     await setKey(page, 'KeyE', true);
     await wait(page, 5.5);
@@ -39,7 +39,7 @@ export default async function ({ openGame, setKey, wait: _wall, assert }) {
   {
     const { page, failures } = await openGame('?sandbox&autostart&countdown=60');
     await page.evaluate(RECORD);
-    await page.evaluate(() => window.__NH__.game.ctx.player.teleport({ x: 8, y: 0, z: 4 }));
+    await page.evaluate(() => window.__NH__.game.ctx.player.teleport({ x: 8, y: 0, z: 3.5 }));
     await wait(page, 0.3);
     await setKey(page, 'KeyE', true);
     await wait(page, 3);

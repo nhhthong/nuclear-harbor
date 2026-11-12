@@ -38,7 +38,7 @@ try {
       console.log(`  ok   ${file} (${Date.now() - started} ms)`);
     } catch (error) {
       failed++;
-      console.error(`  FAIL ${file}\n       ${error instanceof Error ? error.message : error}`);
+      console.error(`  FAIL ${file}\n       ${error instanceof Error ? (error.stack ?? error.message).split("\n").slice(0,5).join("\n       ") : error}`);
     }
   }
 } catch (error) {

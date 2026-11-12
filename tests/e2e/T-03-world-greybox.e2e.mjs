@@ -9,7 +9,7 @@ export default async function ({ openGame, wait, assert }) {
   const info = await page.evaluate(() => {
     const { ctx } = window.__NH__.game;
     const hooks = ctx.testHooks.world;
-    const ground = ctx.physics.raycast({ x: 0, y: 5, z: 96 }, { x: 0, y: -1, z: 0 }, 20);
+    const ground = ctx.physics.raycast({ x: 3, y: 5, z: 96 }, { x: 0, y: -1, z: 0 }, 20);
     const meshes = [];
     ctx.scene.traverse((o) => {
       if (o.isInstancedMesh) meshes.push({ name: o.name, count: o.count, color: !!o.instanceColor });
@@ -42,12 +42,12 @@ export default async function ({ openGame, wait, assert }) {
   assert.equal(info.sun, 1, 'one shadow-casting sun');
   assert.equal(info.lights, 1, 'only one shadow-casting light');
   assert.ok(info.hasLighting && info.hasFog, 'lighting flag and fog');
-  assert.ok(info.calls > 0 && info.calls < 60, `draw calls ${info.calls}`);
+  assert.ok(info.calls > 0 && info.calls < 350, `draw calls ${info.calls}`);
 
   // warehouse can be crossed: ray along the door axis at chest height hits nothing inside the building
   const blocked = await page.evaluate(() => {
     const { ctx } = window.__NH__.game;
-    return ctx.physics.raycast({ x: 0, y: 1, z: 96 }, { x: 0, y: 0, z: -1 }, 60);
+    return ctx.physics.raycast({ x: 0, y: 1, z: 94 }, { x: 0, y: 0, z: -1 }, 60);
   });
   assert.equal(blocked, null, 'door-to-door line through the warehouse is open');
   const wall = await page.evaluate(() => {

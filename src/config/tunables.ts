@@ -286,7 +286,7 @@ export const WORLD = {
   container: { length: 6.06, height: 2.59, width: 2.44 },
   maxContainerStack: 3,
   /** GDD 6.3: Charger lanes. */
-  chargerLaneMinLength: 25,
+  chargerLaneMinLength: 30,
   chargerLaneWidth: 6,
   /** GDD 7.4 */
   craneCountMin: 5,
