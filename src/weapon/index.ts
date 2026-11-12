@@ -6,7 +6,7 @@ import { QueryGroups } from '@/physics/groups';
 import { WeaponEffects } from './effects';
 import { RecoilKick, SpreadModel, sampleSpread } from './recoil';
 import { WEAPON_LOCAL } from './tunables';
-import { ProceduralViewModel } from './viewmodel/ProceduralViewModel';
+import { createViewModel } from './viewmodel/createViewModel';
 import type { ViewModel } from './viewmodel/ViewModel';
 import { WeaponState, type WeaponInput, type WeaponStepResult } from './WeaponState';
 
@@ -172,7 +172,7 @@ export function createWeaponModule(): GameModule {
         recoverFraction: WEAPON_LOCAL.recoilRecoverFraction,
       });
 
-      viewModel = new ProceduralViewModel(res);
+      viewModel = createViewModel(res, c.flags.params);
       c.camera.add(viewModel.object3d);
       effects = new WeaponEffects(c.scene, viewModel.object3d, res);
 

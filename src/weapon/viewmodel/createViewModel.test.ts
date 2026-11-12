@@ -12,13 +12,17 @@ const tracker = () => new ResourceTracker('test').scope('weapon');
 describe('createViewModel', () => {
   afterEach(() => vi.restoreAllMocks());
 
-  it('is procedural by default and never touches the loader', () => {
+  it('is procedural when forced and never touches the loader', () => {
     const loader = vi.fn();
-    const vm = createViewModel(tracker(), new URLSearchParams(''), { loader });
+    const vm = createViewModel(tracker(), new URLSearchParams('viewmodel=procedural'), { loader });
     expect(vm).toBeInstanceOf(ProceduralViewModel);
     expect(loader).not.toHaveBeenCalled();
+  });
+
+  it('wants the GLB by default and with ?viewmodel=glb', () => {
+    expect(wantsGlb(new URLSearchParams(''))).toBe(true);
     expect(wantsGlb(new URLSearchParams('viewmodel=glb'))).toBe(true);
-    expect(wantsGlb(new URLSearchParams('viewmodel=other'))).toBe(false);
+    expect(wantsGlb(new URLSearchParams('viewmodel=procedural'))).toBe(false);
   });
 
   it('keeps the procedural model and reports once when the load rejects', async () => {

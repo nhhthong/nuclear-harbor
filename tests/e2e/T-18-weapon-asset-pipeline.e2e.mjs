@@ -29,12 +29,12 @@ const handPos = (page) =>
   });
 
 export default async function ({ openGame, assert }) {
-  // 1. default: procedural, no GLB request at all
-  const def = await openGame('?sandbox&autostart');
-  assert.equal(await skinnedCount(def.page), 0, 'default boot uses the procedural model');
+  // 1. ?viewmodel=procedural: procedural model, no GLB request at all
+  const def = await openGame('?sandbox&autostart&viewmodel=procedural');
+  assert.equal(await skinnedCount(def.page), 0, 'forced procedural boot uses the procedural model');
   const defRequests = await def.page.evaluate(() => performance.getEntriesByType('resource').map((e) => e.name));
-  assert.ok(!defRequests.some((u) => u.endsWith('.glb')), 'no GLB request without ?viewmodel=glb');
-  assert.deepEqual(def.failures, [], 'default boot is clean');
+  assert.ok(!defRequests.some((u) => u.endsWith('.glb')), 'no GLB request with ?viewmodel=procedural');
+  assert.deepEqual(def.failures, [], 'procedural boot is clean');
   await def.page.close();
 
   // 2. GLB is shipped, same origin, valid container

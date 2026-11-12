@@ -114,14 +114,14 @@ function disposeLoaded(model: LoadedModel): void {
   });
 }
 
-/** True when the page URL selects the converted model (`?viewmodel=glb`). */
+/** True unless the page URL forces the placeholder (`?viewmodel=procedural`); the GLB is the default. */
 export function wantsGlb(params: URLSearchParams): boolean {
-  return params.get(GLB_VIEW.queryName) === GLB_VIEW.queryValue;
+  return params.get(GLB_VIEW.queryName) !== 'procedural';
 }
 
 /**
- * Factory used by the weapon module. Returns the plain procedural model unless `?viewmodel=glb`
- * is present, in which case the converted model is loaded lazily with automatic fallback.
+ * Factory used by the weapon module. The converted model is loaded lazily with automatic fallback to
+ * the procedural one; `?viewmodel=procedural` skips the load entirely.
  */
 export function createViewModel(res: ResourceTracker, params: URLSearchParams, options: ViewModelOptions = {}): ViewModel {
   if (!wantsGlb(params)) return new ProceduralViewModel(res);

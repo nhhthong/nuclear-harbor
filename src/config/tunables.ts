@@ -80,7 +80,7 @@ export const GRAPPLE = {
 
 export const WEAPON = {
   /** GDD 5.1 (display name, to be verified against the archive). */
-  name: 'MDR Helix',
+  name: 'G36C',
   /** GDD 5.3 */
   magazineSize: 30,
   /** GDD 5.3 */
