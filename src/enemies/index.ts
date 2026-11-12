@@ -1,11 +1,62 @@
+import { Vector3 } from 'three';
+import type { GameContext } from '@/core/GameContext';
 import type { GameModule } from '@/core/GameModule';
+import type { EnemyType } from '@/core/types';
+import { EnemyManager } from './EnemyManager';
+
+export type { EnemyDeps, EnemyFactory, EnemySpawn } from './BaseEnemy';
 
 /**
  * Robot framework: manager, AI scheduler, navigation, robot types (GDD 6, 13.7).
- *
- * Placeholder: implemented by ticket T-05 (framework + sphere), T-13 (spider), T-14 (charger) (docs/tickets). The ticket owns every file in this folder.
- * Keep the factory name and module id: src/modules.ts depends on them.
+ * T-05 owns the framework and the sphere robot; T-13 / T-14 replace spider/ and charger/.
  */
 export function createEnemiesModule(): GameModule {
-  return { id: 'enemies' };
+  let manager: EnemyManager | null = null;
+  let ctxRef: GameContext | null = null;
+  const offs: Array<() => void> = [];
+
+  return {
+    id: 'enemies',
+
+    init(ctx: GameContext) {
+      ctxRef = ctx;
+      const res = ctx.resources.scope('enemies');
+      const m = new EnemyManager(ctx, res);
+      manager = m;
+
+      offs.push(ctx.events.on('world:ready', () => m.start()));
+      offs.push(ctx.events.on('objectives:defendStarted', (e) => m.onDefendStarted(e.position, e.radius)));
+      offs.push(ctx.events.on('game:respawn', () => m.onRespawn()));
+
+      ctx.testHooks.enemies = {
+        list: () => m.snapshot(),
+        spawn: (type: EnemyType, position: { x: number; y?: number; z: number }) => {
+          const e = m.spawn({ type, position: new Vector3(position.x, 0, position.z), patrol: [] });
+          return e ? e.id : null;
+        },
+        killAll: () => m.killAll(),
+        projectiles: () => ({ live: m.projectiles.liveCount, cap: m.projectiles.capacity }),
+      };
+    },
+
+    fixedUpdate(dt) {
+      manager?.fixedUpdate(dt);
+    },
+
+    update(dt) {
+      manager?.update(dt);
+    },
+
+    dispose() {
+      for (const off of offs) off();
+      offs.length = 0;
+      manager?.dispose();
+      manager = null;
+      if (ctxRef) {
+        delete ctxRef.testHooks.enemies;
+        ctxRef.resources.scope('enemies').dispose();
+        ctxRef = null;
+      }
+    },
+  };
 }
