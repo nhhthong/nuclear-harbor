@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { shotsToKill } from '@/combat/damage';
-import { BOSS_ARENA, PLAYER_SPAWN, isOnLand, zoneAt } from '@/config/level';
+import { BOSS_ARENA, PLAYER_SPAWN, TOWERS, isOnLand, zoneAt } from '@/config/level';
 import {
   BOSS,
   CHARGER_ROBOT,
@@ -10,6 +10,8 @@ import {
   SPIDER_ROBOT,
   WEAPON,
 } from '@/config/tunables';
+import { buildWarehouse, buildControlCenter } from '@/world/buildings';
+import { generateContainerLayout } from '@/world/containerLayout';
 import { supplyBudget } from './logic';
 import { BOSS_PLACEMENTS, ZONE_PLACEMENTS } from './placements';
 
@@ -61,6 +63,55 @@ describe('candidate positions', () => {
       const d = Math.hypot(p.x - BOSS_ARENA.center.x, p.z - BOSS_ARENA.center.z);
       expect(d).toBeGreaterThan(BOSS_ARENA.radius);
       expect(d).toBeLessThan(BOSS_ARENA.radius + 5);
+    }
+  });
+});
+
+// ---- placement against the real harbor geometry (T-16, GDD 5.4) ---------------------------------
+const layout = generateContainerLayout();
+const solids = [
+  ...layout.boxes.map((b) => ({ c: b.center, h: b.halfExtents, roof: false })),
+  ...[...buildWarehouse().boxes, ...buildControlCenter()].map((b) => ({ c: b.center, h: b.halfExtents, roof: b.kind === 'roof' })),
+];
+
+/** Height of the first surface below `fromY` at (x, z); boxes are grown by `grow` metres (negative shrinks). */
+function surfaceAt(x: number, z: number, fromY: number, grow = 0): number {
+  let best = 0;
+  for (const b of solids) {
+    const top = b.c.y + b.h.y;
+    if (top > fromY) continue;
+    if (Math.abs(x - b.c.x) <= b.h.x + grow && Math.abs(z - b.c.z) <= b.h.z + grow) best = Math.max(best, top);
+  }
+  return best;
+}
+const castY = (p: { castFromY?: number }) => p.castFromY ?? 40;
+
+describe('placements against the real layout (AC5)', () => {
+  it('rests ground supplies on the ground with 0.6 m clearance from containers and walls', () => {
+    for (const p of [...ZONE_PLACEMENTS, ...BOSS_PLACEMENTS].filter((q) => !q.elevated)) {
+      expect(surfaceAt(p.x, p.z, castY(p), 0.6), `${p.kind} at ${p.x}, ${p.z}`).toBe(0);
+    }
+  });
+
+  it('puts every elevated supply on a container top or the gantry, inside the top face', () => {
+    for (const p of ZONE_PLACEMENTS.filter((q) => q.elevated)) {
+      const gantry = p.zone === 'B' && Math.hypot(p.x - 72, p.z + 12) < 8; // tower-3 platform (T-04)
+      if (gantry) continue;
+      expect(surfaceAt(p.x, p.z, castY(p), -0.6), `${p.kind} at ${p.x}, ${p.z}`).toBeGreaterThanOrEqual(2.5);
+    }
+  });
+
+  it('has at least five supplies that need the grapple, spread over several zones', () => {
+    const elevated = ZONE_PLACEMENTS.filter((p) => p.elevated);
+    expect(elevated.length).toBeGreaterThanOrEqual(5);
+    expect(new Set(elevated.map((p) => p.zone)).size).toBeGreaterThanOrEqual(3);
+  });
+
+  it('keeps every supply out of the tower and crane footprints', () => {
+    for (const p of [...ZONE_PLACEMENTS, ...BOSS_PLACEMENTS]) {
+      for (const t of TOWERS) {
+        if (Math.hypot(p.x - t.position.x, p.z - t.position.z) < 2) throw new Error(`pickup on tower ${t.id}`);
+      }
     }
   });
 });
