@@ -1,0 +1,76 @@
+{
+  "source": "v_g36c.mdl",
+  "header_name": "v_aug.mdl",
+  "bones": 46,
+  "bodyparts": [
+    "studio:hands_reference",
+    "studio:rif_g36c_01",
+    "studio:rif_g36c_02"
+  ],
+  "textures": 18,
+  "atlas": [
+    1024,
+    1840
+  ],
+  "vertices": 5954,
+  "triangles": 5726,
+  "draw_calls": 1,
+  "bind_pose_bounds_m": {
+    "min": [
+      -1.0155,
+      -0.2359,
+      -0.1807
+    ],
+    "max": [
+      0.5839,
+      -0.0043,
+      0.2105
+    ]
+  },
+  "clips": [
+    {
+      "name": "idle",
+      "frames": 112,
+      "fps": 30.0,
+      "duration_s": 3.733
+    },
+    {
+      "name": "reload",
+      "frames": 133,
+      "fps": 40.303,
+      "duration_s": 3.3
+    },
+    {
+      "name": "draw",
+      "frames": 43,
+      "fps": 32.0,
+      "duration_s": 1.344
+    },
+    {
+      "name": "shoot1",
+      "frames": 34,
+      "fps": 40.0,
+      "duration_s": 0.85
+    },
+    {
+      "name": "shoot2",
+      "frames": 34,
+      "fps": 40.0,
+      "duration_s": 0.85
+    },
+    {
+      "name": "shoot3",
+      "frames": 34,
+      "fps": 40.0,
+      "duration_s": 0.85
+    }
+  ],
+  "attachments": {
+    "muzzle": 44,
+    "eject": 43
+  },
+  "uv_out_of_range_pct": 0.0,
+  "winding_agreement_pct": 99.98,
+  "winding_flipped": false,
+  "glb_bytes": 2313804
+}
