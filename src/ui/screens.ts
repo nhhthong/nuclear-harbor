@@ -2,10 +2,11 @@ import type { GameContext } from '@/core/GameContext';
 import { ALL_ACTIONS, type Action } from '@/core/InputManager';
 import type { GameOverReason } from '@/core/types';
 import type { QualityPreset } from '@/config/tunables';
+import { CREDITS } from './credits';
 import { codeLabel, formatCountdown } from './format';
 import { el } from './hud';
 
-export type ScreenId = 'menu' | 'pause' | 'settings' | 'gameOver' | 'victory';
+export type ScreenId = 'menu' | 'pause' | 'settings' | 'credits' | 'gameOver' | 'victory';
 
 const ACTION_LABELS: Record<Action, string> = {
   moveForward: 'Move forward',
@@ -69,13 +70,14 @@ export function createScreens(ctx: GameContext, parent: HTMLElement): Screens {
     ctx.input.requestPointerLock();
     ctx.state.set('playing');
   };
-  /** Ask the flow module to act, then make sure the game runs again if it did not do so itself. */
+  /**
+   * Ask the flow module to act. The flow module owns the state change (respawn sets `playing`,
+   * restart reloads); the UI never forces `playing` itself, so a refused request changes nothing.
+   * If flow did resume the game, grab the pointer (this runs inside the click gesture).
+   */
   const request = (event: 'game:requestRespawn' | 'game:requestRestart'): void => {
     ctx.events.emit(event, {});
-    if (!ctx.state.is('playing')) {
-      ctx.input.requestPointerLock();
-      ctx.state.set('playing');
-    }
+    if (ctx.state.is('playing')) ctx.input.requestPointerLock();
   };
 
   // ---- main menu ----
@@ -84,6 +86,7 @@ export function createScreens(ctx: GameContext, parent: HTMLElement): Screens {
   el(menu, 'div', 'nh-sub', 'Nuclear Harbor');
   button(menu, 'Play', resumeGame, 'play');
   button(menu, 'Settings', () => openSettings(), 'settings');
+  button(menu, 'Credits', () => show('credits'), 'credits');
   const controls = el(menu, 'div', 'nh-controls');
   const renderControls = (): void => {
     controls.textContent = '';
@@ -268,8 +271,19 @@ export function createScreens(ctx: GameContext, parent: HTMLElement): Screens {
     }),
   );
 
+  // ---- credits ----
+  const credits = screen('credits', 'nh-credits');
+  el(credits, 'div', 'nh-title', 'Credits');
+  for (const c of CREDITS) {
+    const row = el(credits, 'div', 'nh-credit');
+    el(row, 'b', '', c.name);
+    el(row, 'span', '', ` - ${c.role}`);
+    if (c.note) el(row, 'div', 'nh-credit-note', c.note);
+  }
+  button(credits, 'Back', () => show('menu'), 'back');
+
   // ---- show/hide ----
-  const all: Record<ScreenId, HTMLElement> = { menu, pause, settings, gameOver: over, victory };
+  const all: Record<ScreenId, HTMLElement> = { menu, pause, settings, credits, gameOver: over, victory };
   let current: ScreenId | null = null;
   let settingsReturn: ScreenId | null = null;
 

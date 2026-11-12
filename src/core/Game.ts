@@ -1,4 +1,4 @@
-import { Scene } from 'three';
+import { Fog, Scene } from 'three';
 import { ResourceTracker } from '@/assets/ResourceTracker';
 import { TUNABLES } from '@/config/tunables';
 import { PhysicsWorld } from '@/physics/PhysicsWorld';
@@ -9,6 +9,7 @@ import { GameLoop } from './GameLoop';
 import type { GameModule } from './GameModule';
 import { GameStateMachine } from './GameState';
 import { InputManager } from './InputManager';
+import { minFrameIntervalMs } from './quality';
 import { PlayerState } from './PlayerState';
 import { EnemyRegistry, GrappleAnchorRegistry } from './registries';
 import { Renderer } from './Renderer';
@@ -121,24 +122,39 @@ export class Game {
     const { ctx } = this;
     const applyFpsCap = (): void => {
       const cap = ctx.settings.get('fpsCap');
-      this.loop.minFrameIntervalMs = cap > 0 ? 1000 / cap : 0;
+      this.loop.minFrameIntervalMs = minFrameIntervalMs(cap);
     };
     applyFpsCap();
+    // fog range follows the preset's view distance (T-17)
+    const applyFog = (): void => {
+      if (!(ctx.scene.fog instanceof Fog)) return;
+      const r = ctx.renderer.fogRange;
+      ctx.scene.fog.near = r.near;
+      ctx.scene.fog.far = r.far;
+    };
 
     this.offHandlers.push(
       ctx.events.on('game:stateChanged', ({ to }) => {
         const playing = to === 'playing';
+        ctx.renderer.shadowDynamicActive = playing;
         this.loop.simulationPaused = !playing;
         ctx.input.enabled = playing;
         if (playing) this.loop.resetTiming();
         else ctx.input.releaseAll();
       }),
       // Losing pointer lock while playing (Esc, alt-tab) pauses the game.
+      ctx.events.on('world:ready', () => {
+        applyFog();
+        ctx.renderer.markShadowsDirty();
+      }),
       ctx.events.on('input:pointerLockChanged', ({ locked }) => {
         if (!locked && ctx.state.is('playing')) ctx.state.set('paused');
       }),
       ctx.events.on('settings:changed', ({ key }) => {
-        if (key === 'quality') ctx.renderer.applyQuality(ctx.settings.get('quality'));
+        if (key === 'quality') {
+          ctx.renderer.applyQuality(ctx.settings.get('quality'));
+          applyFog();
+        }
         if (key === 'fpsCap') applyFpsCap();
         if (key === 'bindings') ctx.input.setBindings(ctx.settings.get('bindings'));
       }),

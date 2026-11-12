@@ -16,7 +16,11 @@
     "test:watch": "vitest",
     "smoke": "node scripts/smoke.mjs",
     "check": "npm run typecheck && npm test && npm run build && npm run smoke",
-    "e2e": "node scripts/e2e.mjs"
+    "e2e": "node scripts/e2e.mjs",
+    "bench": "node scripts/bench.mjs",
+    "leakcheck": "node scripts/leakcheck.mjs",
+    "offline": "node scripts/offline.mjs",
+    "icons": "node scripts/make-icons.mjs"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.21.0",

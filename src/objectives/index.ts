@@ -74,6 +74,7 @@ export function createObjectivesModule(): GameModule {
 
     dispose() {
       for (const off of offs.splice(0)) off();
+      if (ctx) ctx.player.damageTakenMultiplier = 1;
       ctx = null;
       towers = null;
       countdown = null;

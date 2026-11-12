@@ -18,6 +18,15 @@ describe('PlayerState', () => {
     expect(died).toHaveBeenCalledTimes(1);
   });
 
+  it('scales incoming damage with damageTakenMultiplier (tower activation, T-17)', () => {
+    const player = new PlayerState(new EventBus<GameEvents>());
+    player.damageTakenMultiplier = 0.5;
+    expect(player.applyDamage({ amount: 20, zone: 'body', source: 'enemy' }).dealt).toBe(10);
+    expect(player.hp).toBe(90);
+    player.damageTakenMultiplier = 1;
+    expect(player.applyDamage({ amount: 20, zone: 'body', source: 'enemy' }).dealt).toBe(20);
+  });
+
   it('heals up to max HP only (GDD 4.2: medkits only)', () => {
     const player = new PlayerState(new EventBus<GameEvents>());
     player.applyDamage({ amount: 25, zone: 'body', source: 'enemy' });

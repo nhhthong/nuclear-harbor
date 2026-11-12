@@ -128,6 +128,7 @@ export class TowerManager {
       this.ctx.events.emit('interact:prompt', { text: showPrompt ? PROMPT_TEXT : null });
     }
 
+    let activating = false;
     for (const t of this.towers) {
       if (t.activation.isActivated) continue;
       const inRange = t === inRangeTower;
@@ -138,6 +139,7 @@ export class TowerManager {
         t.lastProgressEmit = this.time;
       }
       if (r.cancelled) this.afterCancel(t, r.cancelled);
+      if (t.activation.isActivating) activating = true;
       if (r.activated) {
         this.completeTower(t);
         continue;
@@ -147,6 +149,7 @@ export class TowerManager {
         this.ctx.events.emit('tower:activationProgress', { towerId: t.id, progress: r.progress });
       }
     }
+    player.damageTakenMultiplier = activating ? OBJECTIVES.activationDamageMultiplier : 1;
   }
 
   update(dt: number): void {

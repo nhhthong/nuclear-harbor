@@ -55,6 +55,8 @@ async function runScenario(harness, scenario) {
         litSamples: lit,
         distinctColors: seen.size,
         drawCalls: ctx.renderer.webgl.info.render.calls,
+        shadowAutoUpdate: ctx.renderer.webgl.shadowMap.autoUpdate,
+        maxDrawCalls: ctx.tunables.PERFORMANCE.maxDrawCalls,
         contextLost: gl.isContextLost(),
       };
     });
@@ -68,6 +70,9 @@ async function runScenario(harness, scenario) {
     if (result.state !== expectState) failures.push(`state is "${result.state}", expected "${expectState}"`);
     if (expectState === 'playing' && result.tick <= first.tick) failures.push('fixed simulation is not advancing');
     if (expectState !== 'playing' && result.tick !== 0) failures.push('simulation ran outside the playing state');
+    // T-17: every state stays within the global draw-call budget, shadows are not auto-updated
+    if (result.drawCalls > result.maxDrawCalls) failures.push(`draw calls ${result.drawCalls} > budget ${result.maxDrawCalls}`);
+    if (result.shadowAutoUpdate) failures.push('shadowMap.autoUpdate must be false (static shadows, T-17)');
     if (result.litSamples === 0) failures.push('canvas is black (nothing rendered)');
     if (scenario.expectColliders) {
       if (result.colliders < 5) failures.push(`expected sandbox colliders, got ${result.colliders}`);

@@ -5,9 +5,11 @@ import {
   InstancedMesh,
   Matrix4,
   Mesh,
+  MeshBasicMaterial,
   MeshStandardMaterial,
   Object3D,
   PlaneGeometry,
+  PointLight,
   RepeatWrapping,
   Vector3,
 } from 'three';
@@ -200,13 +202,38 @@ export function createWorldModule(): GameModule {
       const f = WAREHOUSE_FOOTPRINT;
       const interior = new Mesh(
         new PlaneGeometry(f.maxX - f.minX - 2, f.maxZ - f.minZ - 2).rotateX(-Math.PI / 2),
-        new MeshStandardMaterial({ color: 0x3d4040, roughness: 1 }),
+        new MeshStandardMaterial({ color: WORLD_LOCAL.warehouseLights.floorColor, roughness: 1 }),
       );
       interior.name = 'warehouse-floor';
       interior.position.set((f.minX + f.maxX) / 2, 0.02, (f.minZ + f.maxZ) / 2);
       interior.receiveShadow = true;
       scope.track(interior);
       scene.add(interior);
+
+      // interior lighting (T-17): unshadowed point lights + emissive ceiling strips, no new shadow casters
+      const wl = WORLD_LOCAL.warehouseLights;
+      for (const x of wl.xs) {
+        const lamp = new PointLight(wl.color, wl.intensity, wl.distance, wl.decay);
+        lamp.name = 'warehouse-lamp';
+        lamp.position.set(x, wl.y, wl.z);
+        lamp.castShadow = false;
+        scope.track(lamp);
+        scene.add(lamp);
+      }
+      const stripBoxes: BuildingBox[] = [];
+      for (const z of wl.stripZs) {
+        for (const x of wl.stripXs) {
+          stripBoxes.push({
+            center: { x, y: f.height - 0.08, z },
+            halfExtents: { x: wl.stripLength / 2, y: 0.05, z: wl.stripWidth / 2 },
+            kind: 'roof',
+          });
+        }
+      }
+      const strips = new Mesh(mergeBoxes(stripBoxes), new MeshBasicMaterial({ color: wl.stripColor, fog: false }));
+      strips.name = 'warehouse-light-strips';
+      scope.track(strips);
+      scene.add(strips);
 
       // ---- ocean and ship backdrop ----------------------------------------------------------------
       ocean = createOcean(lighting.sunDir, lighting.fogColor);

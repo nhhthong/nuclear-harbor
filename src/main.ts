@@ -1,10 +1,17 @@
 import { Game } from '@/core/Game';
 import { createModules } from '@/modules';
+import { registerOffline } from '@/offline/register';
 
 declare global {
   interface Window {
     /** Debug / test handle (smoke and e2e scripts read it). */
-    __NH__?: { game: Game | null; ready: boolean; error: string | null };
+    __NH__?: {
+      game: Game | null;
+      ready: boolean;
+      error: string | null;
+      /** Dispose the running game and build a fresh one in the same page (leak check, T-17). */
+      restart?: () => Promise<Game>;
+    };
   }
 }
 
@@ -13,10 +20,21 @@ async function boot(): Promise<void> {
   const uiRoot = document.getElementById('ui-root');
   if (!(canvas instanceof HTMLCanvasElement) || !uiRoot) throw new Error('index.html is missing #game-canvas or #ui-root');
 
+  const start = async (): Promise<Game> => {
+    const game = await Game.create({ canvas, uiRoot, modules: createModules() });
+    if (window.__NH__) window.__NH__.game = game;
+    return game;
+  };
+
   window.__NH__ = { game: null, ready: false, error: null };
-  const game = await Game.create({ canvas, uiRoot, modules: createModules() });
-  window.__NH__.game = game;
+  window.__NH__.restart = async (): Promise<Game> => {
+    window.__NH__?.game?.dispose();
+    if (window.__NH__) window.__NH__.game = null;
+    return start();
+  };
+  await start();
   window.__NH__.ready = true;
+  registerOffline();
 }
 
 boot().catch((error: unknown) => {
