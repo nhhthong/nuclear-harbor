@@ -152,7 +152,8 @@ export const SPHERE_ROBOT = {
   /** proposed */
   radius: 0.7,
   hoverHeight: 1.2,
-  fireInterval: 1.2,
+  /** proposed; T-17 raised 1.2 -> 2.0 s (defend phase was lethal, docs/PLAYTEST.md). */
+  fireInterval: 2.0,
   projectileSpeed: 30,
   /** proposed: stop approaching at this fraction of attack range. */
   preferredRangeFactor: 0.7,
@@ -172,7 +173,8 @@ export const SPIDER_ROBOT = {
   /** proposed */
   bodyRadius: 0.8,
   bodyHeight: 0.9,
-  fireInterval: 0.9,
+  /** proposed; T-17 raised 0.9 -> 1.5 s (defend phase was lethal, docs/PLAYTEST.md). */
+  fireInterval: 1.5,
   projectileSpeed: 26,
   flankAngleDeg: 55,
   flankDistance: 9,
@@ -233,7 +235,12 @@ export const OBJECTIVES = {
   activationHoldSeconds: 5,
   countdownSeconds: 20 * 60,
   /** proposed (REVIEW #6): defend phase pulls existing robots of the zone, no extra spawns. */
-  defendPullRadius: 60,
+  defendPullRadius: 40,
+  /**
+   * T-17: incoming damage multiplier while a tower is being activated (the hold cannot be combined with
+   * dodging, scripted probe: 100 -> 0 HP in 3.4 s at tower 2 before this). See docs/PLAYTEST.md.
+   */
+  activationDamageMultiplier: 0.5,
   /** proposed: progress decay per second when the hold is interrupted (0 = reset instantly). */
   activationResetInstant: true,
   /** proposed: countdown HUD turns critical below this. */
@@ -274,9 +281,11 @@ export const PERFORMANCE = {
   maxTriangles: 1_500_000,
   jsHeapWarnMb: 512,
   quality: {
-    low: { pixelRatioCap: 1, shadowMapSize: 1024, shadows: false, viewDistance: 300 },
-    medium: { pixelRatioCap: 1.5, shadowMapSize: 2048, shadows: true, viewDistance: 450 },
-    high: { pixelRatioCap: 2, shadowMapSize: 4096, shadows: true, viewDistance: 600 },
+    // T-17: fogFraction = [near, far] as a share of viewDistance; dynamicShadowHz = refresh rate of the
+    // otherwise static sun shadow for moving casters (0 = static only).
+    low: { pixelRatioCap: 1, shadowMapSize: 1024, shadows: false, viewDistance: 300, fogFraction: [0.18, 0.95], dynamicShadowHz: 0 },
+    medium: { pixelRatioCap: 1.5, shadowMapSize: 2048, shadows: true, viewDistance: 450, fogFraction: [0.18, 0.95], dynamicShadowHz: 6 },
+    high: { pixelRatioCap: 2, shadowMapSize: 4096, shadows: true, viewDistance: 600, fogFraction: [0.18, 0.95], dynamicShadowHz: 12 },
   },
 } as const;
 

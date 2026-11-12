@@ -66,5 +66,8 @@ export const UI_CSS = `
 .nh-key.listening{border-color:#ffd23a;color:#ffd23a}
 .nh-binds{width:100%;max-height:28vh;overflow:auto;border-top:1px solid rgba(80,200,255,.3);margin-top:1vh;padding-top:.5vh}
 .nh-binds .nh-row{grid-template-columns:1fr auto}
+.nh-credit{max-width:34em;text-align:center;margin:.5em 0;font-size:1em}
+.nh-credit b{color:#ffd23a;font-weight:600}
+.nh-credit-note{font-size:.8em;opacity:.7}
 .nh-reason{font-size:1.3em;color:#ff7b7b;margin-bottom:2vh;text-align:center}
 `;

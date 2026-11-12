@@ -48,6 +48,25 @@ export const WORLD_LOCAL = {
     shelfRowsZ: [54, 66, 72.4, 79.6, 84, 86.5] as readonly number[],
     corridor: { z: 76, width: 6, minX: -48, maxX: 48 },
   },
+  /**
+   * T-17 interior lighting: the roof blocks the sun and the hemisphere fill alone left the hall almost
+   * black. A few unshadowed point lights plus emissive ceiling strips (one merged mesh) light it.
+   */
+  warehouseLights: {
+    color: 0xffe2b8,
+    y: 7.2,
+    z: 68,
+    xs: [-34, 0, 34] as readonly number[],
+    intensity: 260,
+    distance: 55,
+    decay: 2,
+    stripColor: 0xfff1d0,
+    stripWidth: 0.6,
+    stripLength: 14,
+    stripZs: [58, 68, 78, 86] as readonly number[],
+    stripXs: [-34, 0, 34] as readonly number[],
+    floorColor: 0x6a6e6e,
+  },
   controlCenter: { upperInset: 5, upperHeight: 3 },
   ocean: { size: 1600, deep: 0x0d3b4f, shallow: 0x2f7f8f, waveSpeed: 0.6 },
   sky: { horizon: 0xcfd9dc, zenith: 0x5b8bb5, radius: 540 },

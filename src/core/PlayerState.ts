@@ -34,6 +34,8 @@ export class PlayerState implements Damageable {
   hp: number = PLAYER.maxHp;
   /** Seconds of remaining invulnerability (respawn protection); the controller counts it down. */
   invulnerableFor = 0;
+  /** Scales incoming damage (1 = normal). The objectives module lowers it while a tower is being activated. */
+  damageTakenMultiplier = 1;
 
   /**
    * When non-null the controller moves the capsule with exactly this velocity (still colliding
@@ -76,7 +78,7 @@ export class PlayerState implements Damageable {
     if (!this.alive || this.invulnerableFor > 0 || info.amount <= 0) {
       return { dealt: 0, zone: 'body', killed: false, absorbed: true };
     }
-    const dealt = Math.min(this.hp, info.amount);
+    const dealt = Math.min(this.hp, info.amount * this.damageTakenMultiplier);
     this.hp -= dealt;
     this.events.emit('player:damaged', {
       amount: dealt,

@@ -27,7 +27,7 @@ export const ENEMY_LOCAL = {
   sensorForwardFactor: 0.85,
   sensorUp: 0.15,
   /** Delay before the first shot after entering attack (s). */
-  firstShotDelay: 0.4,
+  firstShotDelay: 1.0,
   /** Aim point above the player's feet for bolts (m). */
   aimHeight: 1.2,
   /** Sandbox nav slab half size (the foundation sandbox ground is 80 x 80 m). */
@@ -37,12 +37,10 @@ export const ENEMY_LOCAL = {
   sandboxRingRadius: 3,
   sandboxPatrolHalf: 4,
   /** Harbor population. */
+  /** Authored population keeps robots at least this far from the player spawn (checked in population.ts). */
   minDistanceFromSpawn: 40,
-  populationSeed: 1337,
-  patrolPoints: { min: 3, max: 4 },
-  patrolRadius: { min: 6, max: 14 },
-  /** Max attempts when sampling random walkable cells. */
-  sampleAttempts: 400,
+  // T-17: populationSeed, patrolPoints, patrolRadius and sampleAttempts were removed (unused since the
+  // harbor population became authored, T-16).
 } as const;
 
 /** Pooled enemy bolts (GDD 13.4). */

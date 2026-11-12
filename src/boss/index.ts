@@ -29,6 +29,8 @@ const ATTACK_IDS: readonly BossAttackKind[] = ['heavy-cannon', 'ground-slam', 'm
 
 // module-level scratch, no per-frame allocation
 const evPos = new Vector3();
+/** Copy of the player position for `game:checkpoint` (event payloads must not carry live vectors). */
+const checkpointPos = new Vector3();
 const muzzle = new Vector3();
 const aim = new Vector3();
 const missileFrom = new Vector3();
@@ -183,7 +185,7 @@ export function createBossModule(): GameModule {
       weakPoints: BOSS.weakPointCount,
       position: evPos,
     });
-    c.events.emit('game:checkpoint', { id: 'boss-start', position: c.player.position, yaw: c.player.yaw });
+    c.events.emit('game:checkpoint', { id: 'boss-start', position: checkpointPos.copy(c.player.position), yaw: c.player.yaw });
     handleEvents(model.spawn());
   }
 
