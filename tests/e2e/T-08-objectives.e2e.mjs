@@ -58,7 +58,8 @@ export default async function ({ openGame, setKey, wait: _wall, assert }) {
   {
     const { page, failures } = await openGame('?sandbox&autostart&countdown=2');
     await page.evaluate(RECORD);
-    await wait(page, 3.5);
+    // game over stops the clock, so wait for the event itself rather than simulated time
+    await page.waitForFunction(() => (window.__rec['countdown:expired'] ?? []).length > 0, null, { timeout: 60_000 });
     const rec = await page.evaluate(() => window.__rec);
     assert.equal(rec['countdown:expired'].length, 1, 'expired exactly once');
     assert.deepEqual(failures, [], 'no console errors');

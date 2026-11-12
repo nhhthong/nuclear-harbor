@@ -204,6 +204,14 @@ export function createHud(ctx: GameContext, parent: HTMLElement): Hud {
     if (kind === 'activating') pip.style.setProperty('--p', p.toFixed(2));
   };
 
+  /** Tower ids are 1-based in the level layout: pips follow the sorted position of the id. */
+  const pipIndex = (id: number): number => {
+    const ids = [...new Set([...towerList.map((t) => t.id), id])].sort((a, b) => a - b);
+    return ids.indexOf(id);
+  };
+  const setPipById = (id: number, kind: 'inactive' | 'activating' | 'active', p = 0): void =>
+    setTowerPip(pipIndex(id), kind, p);
+
   const refresh = (): void => {
     const p = ctx.player;
     if (p.hp !== lastHp) {
@@ -308,28 +316,28 @@ export function createHud(ctx: GameContext, parent: HTMLElement): Hud {
     if (e.total !== towerTotal) {
       towerTotal = e.total;
       buildPips(e.total);
-      for (const id of active) setTowerPip(id, 'active');
+      for (const id of active) setPipById(id, 'active');
       towersCell.set(`${active.size}/${e.total}`);
     }
     lastCompass = '';
   });
   on('tower:activationProgress', (e) => {
     progress = e.progress;
-    if (!active.has(e.towerId)) setTowerPip(e.towerId, 'activating', e.progress);
+    if (!active.has(e.towerId)) setPipById(e.towerId, 'activating', e.progress);
     showPrompt();
   });
   on('tower:activationCancelled', (e) => {
     progress = 0;
-    if (!active.has(e.towerId)) setTowerPip(e.towerId, 'inactive');
+    if (!active.has(e.towerId)) setPipById(e.towerId, 'inactive');
     showPrompt();
   });
   on('tower:activated', (e) => {
     progress = 0;
     active.add(e.towerId);
-    setTowerPip(e.towerId, 'active');
+    setPipById(e.towerId, 'active');
     towersCell.set(`${e.activatedCount}/${e.total}`);
     showPrompt();
-    showToast(`Tower ${e.towerId + 1} activated (${e.activatedCount}/${e.total})`);
+    showToast(`Tower ${pipIndex(e.towerId) + 1} activated (${e.activatedCount}/${e.total})`);
     lastCompass = '';
   });
   on('objectives:allActivated', () => showToast('All towers online - the TITAN approaches', 4));

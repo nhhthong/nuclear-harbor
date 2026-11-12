@@ -3,7 +3,7 @@
  * the wall at z = -34 stops the player. Speeds are measured in simulation time, not wall time.
  */
 export default async function ({ openGame, setKey, wait, assert }) {
-  const { page, failures } = await openGame('?sandbox&autostart');
+  const { page, failures } = await openGame('?sandbox&autostart&enemies=none');
   const sample = () =>
     page.evaluate(() => {
       const { ctx } = window.__NH__.game;
