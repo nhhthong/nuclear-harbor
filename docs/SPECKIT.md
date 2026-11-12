@@ -25,3 +25,10 @@ Keep spec artifacts short (one screen each where possible). Commit `specs/T-XX-n
 - Constitution: `.specify/memory/constitution.md` (owned by Tech Lead). Do not edit.
 - Spec Kit scripts do not create git branches here; stay on the branch you were given.
 - Do not edit `.specify/templates`, `.specify/scripts`, `.claude/skills`.
+
+## Enforcement (wave 2 onward)
+Wave 1 (T-01..T-11) wrote spec/plan/tasks by hand; accepted as-is, not redone.
+From wave 2, a ticket is NOT done unless `specs/T-XX-name/` contains all of:
+`spec.md`, `checklists/requirements.md` (made by `speckit-specify`), `plan.md` with a filled Constitution Check, `tasks.md` with every task ticked.
+Run each phase through the Skill tool (`speckit-specify`, `speckit-plan`, `speckit-tasks`, `speckit-analyze`, `speckit-implement`). If the Skill tool is unavailable, `Read` `.claude/skills/<name>/SKILL.md` and execute its steps literally, including the `.specify/scripts/bash/*` calls. Hand-writing the artifacts from memory is not allowed.
+The final report must state, per phase, how it was run (Skill tool / SKILL.md steps) and list any step skipped and why.
