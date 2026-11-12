@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Last Stand: Nuclear Harbor</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: #0b0e12;
+        color: #e6e9ee;
+        font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      }
+      #app {
+        position: fixed;
+        inset: 0;
+      }
+      #game-canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+        outline: none;
+      }
+      /* All DOM UI (HUD, menus, debug overlays) lives in this layer. */
+      #ui-root {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        user-select: none;
+      }
+      #ui-root > * {
+        pointer-events: none;
+      }
+      #ui-root .interactive {
+        pointer-events: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="game-canvas" tabindex="0"></canvas>
+      <div id="ui-root"></div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

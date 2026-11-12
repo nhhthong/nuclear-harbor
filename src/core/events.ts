@@ -1,0 +1,121 @@
+import type { Vector3 } from 'three';
+import type {
+  BossAttackId,
+  BossPhase,
+  DamageSource,
+  DamageableKind,
+  EnemyType,
+  GameOverReason,
+  GameStateId,
+  HitZone,
+  PickupKind,
+  VfxKind,
+} from './types';
+
+/**
+ * The complete, typed event catalogue. This is the main integration surface between modules:
+ * producers `ctx.events.emit(name, payload)`, consumers `ctx.events.on(name, handler)`.
+ *
+ * Conventions:
+ *  - `domain:pastTense` = something happened (fact). `domain:verb` (grant/spawn/show) = request.
+ *  - Payload Vector3s are only valid during the callback; clone them if you keep them.
+ *  - Adding an event: append to this file in your ticket's block. Never rename or remove an
+ *    existing event without updating docs/PLAN.md.
+ */
+export interface GameEvents {
+  // ---- core (foundation) ---------------------------------------------------------------
+  'game:stateChanged': { from: GameStateId; to: GameStateId };
+  /** Emitted once after every module finished init: static world colliders exist (nav may bake). */
+  'world:ready': Record<string, never>;
+  'game:over': { reason: GameOverReason };
+  'game:victory': { timeRemaining: number };
+  /** A checkpoint was stored (REVIEW #7: each activated tower + boss start). */
+  'game:checkpoint': { id: string; position: Vector3; yaw: number };
+  /** Player was put back at a checkpoint; modules restore what they own (ammo floor, enemy aggro...). */
+  'game:respawn': { checkpointId: string; position: Vector3 };
+  'input:pointerLockChanged': { locked: boolean };
+  'settings:changed': { key: string };
+
+  // ---- player (T-01) -------------------------------------------------------------------
+  'player:damaged': { amount: number; hp: number; maxHp: number; source: DamageSource; direction?: Vector3 };
+  'player:healed': { amount: number; hp: number; maxHp: number };
+  'player:died': { source: DamageSource };
+  'player:landed': { impactSpeed: number };
+  'player:footstep': { sprinting: boolean };
+
+  // ---- weapon (T-02) -------------------------------------------------------------------
+  'weapon:fired': { origin: Vector3; direction: Vector3; mag: number; reserve: number };
+  'weapon:dryFire': Record<string, never>;
+  'weapon:reloadStarted': { duration: number };
+  'weapon:reloadFinished': { mag: number; reserve: number };
+  'weapon:ammoChanged': { mag: number; reserve: number; magSize: number; name: string };
+  /** Request: add rounds to the reserve (pickups). */
+  'weapon:grantAmmo': { amount: number };
+  /** A shot hit a damageable target. */
+  'combat:hit': {
+    targetId: string;
+    targetKind: DamageableKind;
+    zone: HitZone;
+    dealt: number;
+    killed: boolean;
+    absorbed: boolean;
+    point: Vector3;
+    normal: Vector3;
+  };
+  /** A shot hit static geometry. */
+  'combat:impact': { point: Vector3; normal: Vector3 };
+
+  // ---- grapple (T-12) ------------------------------------------------------------------
+  'grapple:fired': { origin: Vector3; direction: Vector3 };
+  'grapple:attached': { point: Vector3; distance: number; anchorId?: string };
+  'grapple:released': { reason: 'arrived' | 'manual' | 'stuck' | 'timeout' | 'death' };
+  'grapple:failed': { reason: 'no-target' | 'not-grappleable' | 'out-of-range' | 'cooldown' };
+  'grapple:cooldown': { remaining: number; total: number };
+
+  // ---- enemies (T-05, T-13, T-14) ------------------------------------------------------
+  'enemy:spawned': { id: string; type: EnemyType; position: Vector3 };
+  'enemy:alerted': { id: string; type: EnemyType; position: Vector3 };
+  'enemy:attacked': { id: string; type: EnemyType; position: Vector3 };
+  'enemy:damaged': { id: string; type: EnemyType; hp: number; maxHp: number; zone: HitZone };
+  'enemy:destroyed': { id: string; type: EnemyType; position: Vector3; remaining: number };
+  'charger:windup': { id: string; position: Vector3; direction: Vector3; duration: number };
+  'charger:chargeStarted': { id: string; position: Vector3; direction: Vector3 };
+  'charger:stunned': { id: string; position: Vector3; duration: number };
+  'charger:hitPlayer': { id: string; position: Vector3 };
+
+  // ---- objectives (T-08) ---------------------------------------------------------------
+  'tower:activationStarted': { towerId: number };
+  'tower:activationProgress': { towerId: number; progress: number };
+  'tower:activationCancelled': { towerId: number; reason: 'left-range' | 'released' | 'died' };
+  'tower:activated': { towerId: number; activatedCount: number; total: number; position: Vector3 };
+  /** Defend phase: existing robots of the zone are pulled to the tower (REVIEW #6). */
+  'objectives:defendStarted': { towerId: number; position: Vector3; radius: number };
+  'objectives:allActivated': { timeRemaining: number };
+  /** 1 Hz while running. */
+  'countdown:tick': { remaining: number; critical: boolean };
+  'countdown:stopped': { remaining: number };
+  'countdown:expired': Record<string, never>;
+  /** HUD prompt such as "Hold E to activate"; null text hides it. */
+  'interact:prompt': { text: string | null };
+
+  // ---- pickups (T-09) ------------------------------------------------------------------
+  'pickup:spawned': { id: string; kind: PickupKind; position: Vector3; dropped: boolean };
+  'pickup:collected': { id: string; kind: PickupKind; amount: number; position: Vector3 };
+
+  // ---- boss (T-15) ---------------------------------------------------------------------
+  'boss:spawned': { name: string; coreHp: number; weakPoints: number; position: Vector3 };
+  'boss:phaseChanged': { phase: BossPhase };
+  'boss:weakPointDamaged': { index: number; hp: number; maxHp: number };
+  'boss:weakPointDestroyed': { index: number; remaining: number; position: Vector3 };
+  'boss:coreExposed': Record<string, never>;
+  'boss:coreDamaged': { hp: number; maxHp: number };
+  'boss:attackTelegraph': { attack: BossAttackId; position: Vector3; radius: number; duration: number };
+  'boss:attack': { attack: BossAttackId; position: Vector3; radius: number };
+  'boss:defeated': { position: Vector3 };
+
+  // ---- presentation requests (T-10 vfx, T-06 ui) ---------------------------------------
+  'vfx:spawn': { kind: VfxKind; position: Vector3; normal?: Vector3; scale?: number; duration?: number };
+  'ui:toast': { text: string; seconds?: number };
+}
+
+export type GameEventName = keyof GameEvents;

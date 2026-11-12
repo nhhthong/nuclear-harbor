@@ -1,0 +1,14 @@
+node_modules/
+dist/
+coverage/
+*.log
+.DS_Store
+.vite/
+.vitest/
+test-results/
+playwright-report/
+*.tsbuildinfo
+.env
+.env.*
+# raw third-party weapon archives must never be committed (licence unverified, see docs/tickets/T-18)
+tools/asset-pipeline/input/
