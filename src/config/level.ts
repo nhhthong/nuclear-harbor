@@ -101,6 +101,29 @@ export const BOSS_ARENA = {
   radius: 28,
 } as const;
 
+export interface KeepClearDisc {
+  readonly reason: string;
+  readonly x: number;
+  readonly z: number;
+  readonly radius: number;
+}
+
+/**
+ * Ground areas that level geometry of OTHER tickets must leave empty (below y = 9 m): containers
+ * and buildings (T-03) stay out of these discs; each disc's owner builds inside it. Cranes and
+ * the tower-3 platform must keep their ground footprint inside their own disc.
+ */
+export const KEEP_CLEAR: readonly KeepClearDisc[] = [
+  { reason: 'player-spawn', x: PLAYER_SPAWN.position.x, z: PLAYER_SPAWN.position.z, radius: 6 },
+  { reason: 'boss-arena', x: BOSS_ARENA.center.x, z: BOSS_ARENA.center.z, radius: BOSS_ARENA.radius + 4 },
+  ...TOWERS.map((t) => ({ reason: `tower-${t.id}`, x: t.position.x, z: t.position.z, radius: 7 })),
+  ...CRANE_SITES.map((c) => ({ reason: c.id, x: c.position.x, z: c.position.z, radius: 14 })),
+];
+
+export function isKeepClear(x: number, z: number, margin = 0): boolean {
+  return KEEP_CLEAR.some((d) => Math.hypot(x - d.x, z - d.z) < d.radius + margin);
+}
+
 /** Decorative cargo ship (GDD 7.1), static, out at sea. */
 export const SHIP_BACKDROP = { position: { x: -40, y: SEA_LEVEL_Y, z: -190 } as Vec3Like, yaw: 0.12 } as const;
 

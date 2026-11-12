@@ -56,4 +56,10 @@ export interface GameContext {
   readonly tunables: typeof TUNABLES;
   readonly flags: GameFlags;
   readonly clock: GameClock;
+  /**
+   * Read-only inspection hooks for browser tests and the debug overlay, keyed by module id
+   * (e.g. `ctx.testHooks.weapon = { getAmmo: () => ... }`). Each module writes only its own key.
+   * Gameplay code MUST NOT read another module's hooks: use events and registries instead.
+   */
+  readonly testHooks: Record<string, unknown>;
 }

@@ -33,6 +33,9 @@ export interface GameEvents {
   'game:checkpoint': { id: string; position: Vector3; yaw: number };
   /** Player was put back at a checkpoint; modules restore what they own (ammo floor, enemy aggro...). */
   'game:respawn': { checkpointId: string; position: Vector3 };
+  /** Requests from the UI (game-over / pause screens); handled by the flow module. */
+  'game:requestRespawn': Record<string, never>;
+  'game:requestRestart': Record<string, never>;
   'input:pointerLockChanged': { locked: boolean };
   'settings:changed': { key: string };
 
@@ -84,6 +87,8 @@ export interface GameEvents {
   'charger:hitPlayer': { id: string; position: Vector3 };
 
   // ---- objectives (T-08) ---------------------------------------------------------------
+  /** Emitted once per tower from the objectives module's `world:ready` handler (HUD compass, audio). */
+  'tower:registered': { towerId: number; position: Vector3; total: number };
   'tower:activationStarted': { towerId: number };
   'tower:activationProgress': { towerId: number; progress: number };
   'tower:activationCancelled': { towerId: number; reason: 'left-range' | 'released' | 'died' };

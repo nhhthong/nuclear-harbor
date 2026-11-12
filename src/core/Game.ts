@@ -92,6 +92,7 @@ export class Game {
       tunables: TUNABLES,
       flags,
       clock,
+      testHooks: {},
     };
 
     const game = new Game(ctx, options.modules, clock);
