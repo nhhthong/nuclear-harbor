@@ -1,0 +1,67 @@
+import { describe, expect, it } from 'vitest';
+import { ECONOMY } from '@/config/tunables';
+import { collect, dropBlinkVisible, findRestingSpot, shouldDrop } from './logic';
+
+describe('collect', () => {
+  it('always accepts ammo while alive', () => {
+    expect(collect('ammo', { hp: 100, maxHp: 100, alive: true })).toEqual({ accepted: true, amount: 30 });
+  });
+  it('refuses a medkit at full HP', () => {
+    expect(collect('medkit', { hp: 100, maxHp: 100, alive: true }).accepted).toBe(false);
+  });
+  it('heals 40, capped at max', () => {
+    expect(collect('medkit', { hp: 50, maxHp: 100, alive: true })).toEqual({ accepted: true, amount: 40 });
+    expect(collect('medkit', { hp: 80, maxHp: 100, alive: true })).toEqual({ accepted: true, amount: 20 });
+  });
+  it('refuses everything when dead', () => {
+    expect(collect('ammo', { hp: 0, maxHp: 100, alive: false }).accepted).toBe(false);
+  });
+});
+
+describe('shouldDrop', () => {
+  it('rolls against the drop chance', () => {
+    expect(shouldDrop(() => ECONOMY.enemyAmmoDropChance - 0.001, 0)).toBe(true);
+    expect(shouldDrop(() => ECONOMY.enemyAmmoDropChance, 0)).toBe(false);
+  });
+  it('never drops beyond the per-zone cap', () => {
+    expect(shouldDrop(() => 0, ECONOMY.maxEnemyDropsPerZone)).toBe(false);
+    expect(shouldDrop(() => 0, ECONOMY.maxEnemyDropsPerZone - 1)).toBe(true);
+  });
+  it('is about 15% over many rolls', () => {
+    let seed = 12345;
+    const rng = () => {
+      seed = (seed * 1664525 + 1013904223) % 4294967296;
+      return seed / 4294967296;
+    };
+    let n = 0;
+    for (let i = 0; i < 20000; i++) if (shouldDrop(rng, 0)) n++;
+    expect(n / 20000).toBeGreaterThan(0.13);
+    expect(n / 20000).toBeLessThan(0.17);
+  });
+});
+
+describe('dropBlinkVisible', () => {
+  it('is steady until the last 5 s, then alternates', () => {
+    expect(dropBlinkVisible(30)).toBe(true);
+    expect(dropBlinkVisible(5.01)).toBe(true);
+    const states = new Set([4.9, 4.7, 4.45, 4.2].map(dropBlinkVisible));
+    expect(states.size).toBe(2);
+  });
+});
+
+describe('findRestingSpot', () => {
+  it('returns null over the sea', () => {
+    expect(findRestingSpot(0, 0, false, () => null)).toBeNull();
+  });
+  it('takes the first surface for elevated candidates', () => {
+    expect(findRestingSpot(1, 2, true, () => 6)).toEqual({ x: 1, y: 6, z: 2 });
+  });
+  it('moves a ground candidate off a container roof', () => {
+    const spot = findRestingSpot(0, 0, false, (x, z) => (Math.hypot(x, z) < 1.5 ? 6 : 0));
+    expect(spot?.y).toBe(0);
+    expect(Math.hypot(spot?.x ?? 0, spot?.z ?? 0)).toBeGreaterThanOrEqual(1.5);
+  });
+  it('falls back to the first hit when everything nearby is high', () => {
+    expect(findRestingSpot(0, 0, false, () => 6)).toEqual({ x: 0, y: 6, z: 0 });
+  });
+});
