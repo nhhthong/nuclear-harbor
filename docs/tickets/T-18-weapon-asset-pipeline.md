@@ -3,13 +3,13 @@
 | | |
 |---|---|
 | Wave | optional |
-| Depends on | T-02 merged AND the user uploads the GameBanana archive (BLOCKED until then) |
+| Depends on | T-02 merged (done). Asset supplied: `assets-src/weapons/g36c/v_g36c.mdl` (UNBLOCKED) |
 | GDD sections | 5.1, 5.2, 16 Weapon Asset, 17.1; REVIEW #3 |
 | Spec dir | `specs/T-18-weapon-asset-pipeline/` |
 
 ## Goal
 
-Optional track: if (and only if) the user provides the mod archive and the licence allows it, convert the GoldSrc `v_*.mdl` view model to GLB with headless Blender and load it as an alternative view model. The procedural model stays the default and the fallback.
+Optional track: the user supplied a single GoldSrc view model (G36C, author credited as funnky, permission to use stated by the user; see docs/ASSETS.md). Convert the GoldSrc `v_*.mdl` view model to GLB with headless Blender and load it as an alternative view model. The procedural model stays the default and the fallback.
 
 ## Files owned (exclusive)
 
@@ -90,3 +90,12 @@ bash tools/asset-pipeline/convert.sh tools/asset-pipeline/input/<archive>
 ```
 
 Definition of Done: [`docs/PLAN.md`](../PLAN.md) section 7.
+
+
+## Update: asset supplied (supersedes the BLOCKED notes above)
+- Source file: `assets-src/weapons/g36c/v_g36c.mdl` (GoldSrc MDL v10, renamed from `v_aug.mdl`; header name still says `v_aug.mdl`). Single file: embedded textures and animations, no `T.mdl`/`01.mdl` companions.
+- Contents (inspected): 46 bones (arms/fingers + `body`, `mag`, `mag1`, `bolt001`, `bolt`, `select`, `sss`, `fff`), 6 sequences (`idle` 112f@30, `reload` 133f@40.3, `draw` 43f@32, `shoot1..3` 34f@40), 18 BMP textures (`hands_1..4`, `g36c_01..14`, several 512², some 256x1024 / 1024x256), 3 bodyparts, 2 attachments. The ORIGINAL GDD asset (DesertTech MDR) is no longer used; the previously supplied SG552/MSBS file was discarded by the user.
+- Licence: the user states the author (funnky) permits use. The file contains no readme/credits. Record this in `docs/ASSETS.md` (already seeded) and keep the credit in the game credits. The mod's source archive/URL is not needed.
+- Because the licence statement is the user's, files derived from this model MAY be committed under `public/assets/weapons/g36c/` (GLB + PNG textures). Keep `assets-src/` as the source of truth.
+- Goal: GLB view model with skeleton and the 6 animations if recoverable, mapped to the weapon states (idle, reload, draw, fire), loaded by `GlbViewModel` as an alternative to the procedural model, with automatic fallback to the procedural one on any load error. Muzzle position from attachment 0, ejection port from attachment 1 if plausible.
+- AC1-AC3 are reworded accordingly: record provenance as above; derived files may be committed; scripted headless conversion from `v_g36c.mdl` (do not report blocked).
