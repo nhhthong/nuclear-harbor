@@ -99,3 +99,58 @@ fight (240 hits). The 20:00 countdown is generous if nobody dies; deaths do not 
 The loop is complete and replayable by script: start, four towers, boss, victory; death to checkpoint; countdown to
 failure; restart. Whether it is fun is unverified. The two things most likely to hurt the first impression are
 issue 2 (standing still while a whole zone converges) and issue 3 (dark warehouse at the very start).
+
+## 7. T-17 follow-up: fixes, numbers and screenshots (before / after)
+
+Same honesty rules as above: scripted runs and screenshots only, nobody played this build.
+
+### Defend-phase lethality (issue 2), `scripts/defend-probe.mjs`
+
+Probe: teleport next to a tower (1.2 m), hold E for the full 5 s without shooting or dodging (worst case), count HP
+lost. Software GL, so simulated time is used; results vary by a few HP between runs.
+
+| Tower | Before | Step 1 (fire rates, pull radius) | Final |
+|---|---|---|---|
+| 1 (warehouse, 1 sphere near) | 40 HP lost, survived | 24 | **12** |
+| 2 (yard, 3 spheres + 1 spider within 30 m) | **dead after 3.4 to 4.0 s** | 88 lost (12 HP left) | **44 lost** |
+| 3 (gantry, 3 robots) | 0 | not run | **0** |
+| 4 (dock, 2 spheres + 2 spiders) | dead after 4.0 s | 96 lost (4 HP left) | **44 lost** |
+
+Changes (all tunables): sphere `fireInterval` 1.2 -> 2.0 s and spider 0.9 -> 1.5 s (both "proposed" values, not GDD
+tagged), `ENEMY_LOCAL.firstShotDelay` 0.4 -> 1.0 s, `OBJECTIVES.defendPullRadius` 60 -> 40 m (proposal 2 of section 5),
+and a new `OBJECTIVES.activationDamageMultiplier` 0.5: incoming damage is halved while a tower is being activated
+(`PlayerState.damageTakenMultiplier`, set by the objectives module, reset when the hold ends). Result for a player who
+only stands and holds: about a medkit (40 HP) at the two hard towers, so a player who also shoots should lose less.
+Whether the hold now feels tense instead of unfair is unverified. GDD damage values were not touched. Not changed:
+`PLAYER.respawnInvulnerability` (proposal 1), medkit placement (proposal 3).
+
+### Other issues from section 4
+
+| # | Status |
+|---|---|
+| 1 HUD pips | already fixed before T-17 |
+| 3 warehouse dark | fixed: 3 unshadowed point lights, merged emissive ceiling strips (1 draw call), lighter floor (`WORLD_LOCAL.warehouseLights`) |
+| 4 `request()` forcing `playing` | fixed in `src/ui/screens.ts`: only emits; flow owns the state change; e2e: refused respawn after countdown expiry stays `gameOver` |
+| 5 live vector in `boss-start` checkpoint | fixed: payload is a copy (`checkpointPos`), e2e asserts it is not `ctx.player.position` |
+| 6 unused T-05 tunables | removed `populationSeed`, `patrolPoints`, `patrolRadius`, `sampleAttempts` (no references) |
+| 7, 8, 9 | not touched (test-ownership notes; the T-08 and T-06 e2e files pass in the final run) |
+
+### Screenshots (`scripts/screenshots.mjs`, 1280 x 720, device scale factor 1, software GL) in `docs/playtest/`
+
+- `before-menu.png` / `after-menu.png`: the menu sits over the camera looking north from the spawn into the warehouse.
+  Behind the buttons it is a dark grey-blue room and a doorway; in both shots the 3D background is almost invisible
+  under the overlay. After: a new Credits button; the interior shows a little more detail (light strips at the top). The
+  menu would read better with a dedicated, brighter backdrop camera; not done.
+- `before-harbor-spawn.png` (see section 3) vs `after-harbor-spawn.png`: after, standing at the south door looking in,
+  the doorway shows a bright ceiling strip and a lit grey back wall and floor instead of black. The outside concrete and
+  walls render as before.
+- `before-warehouse-interior.png` / `after-warehouse-interior.png`: before, the ceiling and floor are pure black and only
+  a window and tower 1 stand out. After, the floor is mid grey, the walls readable, ceiling strips visible, the tower, a
+  sphere robot, medkit and ammo crate are all easy to see. The ceiling remains dark brown-black (point lights are placed
+  below it). `warehouse-tower1` pair shows the same around tower 1.
+- `before-boss-arena.png` / `after-boss-arena.png`: TITAN-04 over the arena with the ship behind and cranes at the sides,
+  HUD boss panel in front of the dome's top. Identical look before and after, which is the check that the static shadow
+  scheme did not break the outdoor shadows. In the after shot a Charger stands
+  1.2 m from the camera (the scripted teleport puts the player on its lane) and fills the lower half of the image as a dark
+  box: it looks like a rendering fault but is a robot; I confirmed this with a position dump.
+- Not checked visually: shadow lag of moving robots at 6 Hz; the credits and settings screens (covered by e2e, not looked at).

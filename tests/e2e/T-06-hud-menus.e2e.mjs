@@ -105,12 +105,16 @@ export default async function ({ openGame, wait, assert }) {
   assert.ok(await ui(() => !!document.querySelector('[data-action="respawn"]').offsetParent), 'respawn shown on death');
   await click('[data-screen="gameOver"] [data-action="respawn"]');
   assert.deepEqual(await ui(() => window.__reqs), ['respawn']);
-  assert.equal(await state(), 'playing');
+  // T-17: the UI no longer forces `playing`; the synthetic game over is not a real flow state, so flow
+  // refuses the respawn and the state is left alone.
+  assert.equal(await state(), 'gameOver');
+  await ui(() => window.__NH__.game.ctx.state.set('playing'));
   await emit('game:over', { reason: 'countdown-expired' });
   await ui(() => window.__NH__.game.ctx.state.set('gameOver'));
   assert.ok(await ui(() => !document.querySelector('[data-action="respawn"]').offsetParent), 'no respawn on timeout');
   await click('[data-screen="gameOver"] [data-action="restart"]');
   assert.deepEqual(await ui(() => window.__reqs), ['respawn', 'restart']);
+  await ui(() => window.__NH__.game.ctx.state.set('playing')); // T-17: the UI no longer resumes by itself
 
   // victory
   await emit('game:victory', { timeRemaining: 300 });
