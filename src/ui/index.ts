@@ -1,69 +1,108 @@
 import type { GameContext } from '@/core/GameContext';
 import type { GameModule } from '@/core/GameModule';
 import type { GameStateId } from '@/core/types';
+import { createHud, el, type Hud } from './hud';
+import { createScreens, type ScreenId, type Screens } from './screens';
+import { UI_CSS } from './styles';
+
+const SCREEN_FOR_STATE: Partial<Record<GameStateId, ScreenId>> = {
+  menu: 'menu',
+  paused: 'pause',
+  gameOver: 'gameOver',
+  victory: 'victory',
+};
 
 /**
- * UI module (GDD 10): HUD, menus, settings.
- *
- * FOUNDATION PLACEHOLDER: a bare "click to play / paused" overlay so that the state machine and
- * pointer lock are usable. Ticket T-06 replaces this file and owns every file in this folder.
- * Keep the factory name and module id.
+ * UI module (GDD 10): HUD, main menu, pause, settings, game over and victory screens.
+ * Pure DOM + scoped CSS; communicates through events and `ctx.state` only.
  */
 export function createUiModule(): GameModule {
-  let overlay: HTMLDivElement | null = null;
-  let off: Array<() => void> = [];
+  let style: HTMLStyleElement | null = null;
+  let root: HTMLElement | null = null;
+  let hud: Hud | null = null;
+  let screens: Screens | null = null;
+  let offs: Array<() => void> = [];
+  let hudShown = false;
+  let ctxRef: GameContext | null = null;
 
-  const LABELS: Partial<Record<GameStateId, string>> = {
-    menu: 'LAST STAND: NUCLEAR HARBOR — click to play',
-    paused: 'Paused — click to resume',
-    gameOver: 'Game over',
-    victory: 'Victory',
+  const applyState = (state: GameStateId): void => {
+    if (!hud || !screens || !ctxRef) return;
+    screens.show(SCREEN_FOR_STATE[state] ?? null);
+    hudShown = state === 'playing' || state === 'paused' || state === 'gameOver';
+    hud.root.classList.toggle('nh-hidden', !hudShown);
+    // menus need the mouse cursor
+    if (state === 'menu' || state === 'gameOver' || state === 'victory') ctxRef.input.exitPointerLock();
   };
 
   return {
     id: 'ui',
 
     init(ctx: GameContext) {
-      overlay = document.createElement('div');
-      overlay.id = 'placeholder-overlay';
-      overlay.className = 'interactive';
-      overlay.style.cssText =
-        'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;' +
-        'background:rgba(8,10,14,0.55);font-size:20px;letter-spacing:0.04em;cursor:pointer;';
-      ctx.uiRoot.appendChild(overlay);
+      ctxRef = ctx;
+      style = document.createElement('style');
+      style.dataset.nhUi = '';
+      style.textContent = UI_CSS;
+      document.head.appendChild(style);
 
-      const refresh = (state: GameStateId): void => {
-        if (!overlay) return;
-        const label = LABELS[state];
-        overlay.style.display = label ? 'flex' : 'none';
-        overlay.textContent = label ?? '';
-      };
-      const onClick = (): void => {
-        if (ctx.state.is('menu') || ctx.state.is('paused')) {
+      root = el(ctx.uiRoot, 'div', 'nh-root');
+      hud = createHud(ctx, root);
+      screens = createScreens(ctx, root);
+
+      const onKeyDown = (e: KeyboardEvent): void => {
+        if (e.repeat) return;
+        if (screens?.current() === 'settings' && e.code === 'Escape') {
+          screens.closeSettings();
+          return;
+        }
+        if (!ctx.settings.get('bindings').pause.includes(e.code)) return;
+        if (ctx.state.is('playing')) {
+          ctx.state.set('paused');
+          ctx.input.exitPointerLock();
+        } else if (ctx.state.is('paused') && e.code !== 'Escape' && screens?.current() === 'pause') {
           ctx.input.requestPointerLock();
           ctx.state.set('playing');
         }
       };
-      overlay.addEventListener('click', onClick);
+      document.addEventListener('keydown', onKeyDown);
+
       // With ?autostart the game is already 'playing' without pointer lock: lock on first click.
       const onCanvasClick = (): void => {
         if (ctx.state.is('playing')) ctx.input.requestPointerLock();
       };
       ctx.canvas.addEventListener('click', onCanvasClick);
 
-      off = [
-        ctx.events.on('game:stateChanged', ({ to }) => refresh(to)),
-        () => overlay?.removeEventListener('click', onClick),
+      offs = [
+        ctx.events.on('game:stateChanged', ({ to }) => applyState(to)),
+        () => document.removeEventListener('keydown', onKeyDown),
         () => ctx.canvas.removeEventListener('click', onCanvasClick),
       ];
-      refresh(ctx.state.current);
+
+      ctx.testHooks.ui = {
+        getHudText: (): Record<string, string> => hud?.getText() ?? {},
+        isVisible: (screen: string): boolean =>
+          screen === 'hud' ? hudShown : (screens?.isVisible(screen as ScreenId) ?? false),
+      };
+
+      applyState(ctx.state.current);
+    },
+
+    update() {
+      hud?.refresh();
     },
 
     dispose() {
-      for (const fn of off) fn();
-      off = [];
-      overlay?.remove();
-      overlay = null;
+      for (const fn of offs) fn();
+      offs = [];
+      hud?.dispose();
+      screens?.dispose();
+      root?.remove();
+      style?.remove();
+      if (ctxRef) delete ctxRef.testHooks.ui;
+      hud = null;
+      screens = null;
+      root = null;
+      style = null;
+      ctxRef = null;
     },
   };
 }
