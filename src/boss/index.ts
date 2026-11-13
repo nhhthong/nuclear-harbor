@@ -1,10 +1,10 @@
-import { Vector3 } from 'three';
+import { Euler, Matrix4, Quaternion, Vector3 } from 'three';
 import { BOSS } from '@/config/tunables';
 import { BOSS_ARENA } from '@/config/level';
 import type { GameContext } from '@/core/GameContext';
 import type { GameModule } from '@/core/GameModule';
 import type { BossAttackId, DamageResult } from '@/core/types';
-import { BossBody, BODY_R, BODY_Y } from './BossBody';
+import { BossBody, BODY_R, BODY_Y, EYE_LOCAL } from './BossBody';
 import type { BodyAnim } from './BossBody';
 import {
   AttackScheduler,
@@ -19,7 +19,13 @@ import {
 import type { AttackStep, BossAttackKind, XZ } from './BossAttacks';
 import { BossColliders } from './BossColliders';
 import type { ZoneHandlers } from './BossColliders';
-import { BossModel } from './BossModel';
+import { canSkip, cinematicFrame, newCinematicFrame } from './cinematic';
+import { CinematicFx } from './CinematicFx';
+import { pickLandingSpot } from './landing';
+import type { LandingObstacle } from './landing';
+import { QueryGroups } from '@/physics/groups';
+import { BossModel, DEFAULT_BOSS_MODEL_CONFIG } from './BossModel';
+import { resetArmorTextures } from './BossTextures';
 import type { BossModelEvent, HitOutcome } from './BossModel';
 import { BossProjectiles } from './BossProjectiles';
 import type { ExplodeKind } from './BossProjectiles';
@@ -39,6 +45,17 @@ const impulse = new Vector3();
 const blastDir = new Vector3();
 const playerCentre = new Vector3();
 const tmpLocal = new Vector3();
+const camPos = new Vector3();
+const camTarget = new Vector3();
+const camQ = new Quaternion();
+const playerQ = new Quaternion();
+const playerEuler = new Euler();
+const lookM = new Matrix4();
+const UP = new Vector3(0, 1, 0);
+const CAM_ROLL = new Quaternion();
+const ROLL_AXIS = new Vector3(0, 0, 1);
+const probe = { x: 0, y: 0, z: 0 };
+const DOWN = { x: 0, y: -1, z: 0 };
 
 /**
  * TITAN-04 boss fight (GDD 9). Rules live in BossModel / BossAttacks (pure, unit tested); this
@@ -47,13 +64,18 @@ const tmpLocal = new Vector3();
 export function createBossModule(): GameModule {
   let ctx: GameContext | null = null;
   const offs: Array<() => void> = [];
-  const model = new BossModel();
+  const model = new BossModel({ ...DEFAULT_BOSS_MODEL_CONFIG, awakeningDuration: BOSS_LOCAL.cinematic.duration });
   const destroyed: boolean[] = [false, false, false, false];
 
   let scale = 1;
   let origin: XZ = { x: BOSS_ARENA.center.x, z: BOSS_ARENA.center.z };
   let arenaRadius: number = BOSS_ARENA.radius;
   let scheduler = new AttackScheduler(1);
+
+  let fx: CinematicFx | null = null;
+  const cin = { active: false, t: 0, impacted: false, ended: false, frame: newCinematicFrame() };
+  const landing = { x: 0, z: 0, clear: true };
+  const hiddenCamChildren: Array<{ o: { visible: boolean }; was: boolean }> = [];
 
   let body: BossBody | null = null;
   let colliders: BossColliders | null = null;
@@ -118,7 +140,7 @@ export function createBossModule(): GameModule {
           destroyed[e.index] = true;
           body?.setWeakPoint(e.index, 0, BOSS.weakPointHp);
           colliders?.removeWeakPoint(e.index);
-          if (body) body.weakPointLocal(e.index, tmpLocal);
+          if (body) tmpLocal.copy(body.kneeRoot[e.index] ?? tmpLocal);
           worldPoint(tmpLocal, evPos);
           c.events.emit('boss:weakPointDestroyed', { index: e.index, remaining: e.remaining, position: evPos });
           vfx('explosion', evPos, 2 * scale);
@@ -153,6 +175,38 @@ export function createBossModule(): GameModule {
 
   // ---- lifecycle -----------------------------------------------------------------------
 
+  /** Landing spot: first clear candidate away from the player, robots and probed props. */
+  function chooseLanding(c: GameContext): void {
+    const obstacles: LandingObstacle[] = [];
+    for (const e of c.enemies.alive()) {
+      obstacles.push({ x: e.position.x, z: e.position.z, r: BOSS_LOCAL.landing.enemyRadius * scale });
+    }
+    const L = BOSS_LOCAL.landing;
+    const spot = pickLandingSpot({
+      centre: origin,
+      arenaRadius,
+      footprint: BOSS_LOCAL.footprintRadius * scale,
+      player: { x: c.player.position.x, z: c.player.position.z },
+      obstacles,
+      clearance: L.clearance * scale,
+      blocked: (x, z, r) => {
+        for (let i = 0; i < 9; i++) {
+          const a = (i / 8) * Math.PI * 2;
+          const k = i === 0 ? 0 : r * 0.85;
+          probe.x = x + Math.cos(a) * k;
+          probe.z = z + Math.sin(a) * k;
+          probe.y = L.probeHeight;
+          const hit = c.physics.raycast(probe, DOWN, L.probeHeight + 2, { groups: QueryGroups.worldOnly });
+          if (hit && hit.point.y > L.probeMaxGround) return true;
+        }
+        return false;
+      },
+    });
+    landing.x = spot.x;
+    landing.z = spot.z;
+    landing.clear = spot.clear;
+  }
+
   function spawn(): void {
     const c = ctx;
     if (!c || spawned) return;
@@ -160,12 +214,14 @@ export function createBossModule(): GameModule {
     const res = c.resources.scope('boss');
     body = new BossBody(res, scale);
     c.scene.add(body.root);
-    colliders = new BossColliders(c.physics, scale, handlers);
+    colliders = new BossColliders(c.physics, scale, handlers, body.kneeRoot, body.restBones);
     projectiles = new BossProjectiles(res, c.scene, c.physics, scale);
+    fx = new CinematicFx(res, c.scene, c.uiRoot, scale);
 
-    pos.x = origin.x;
-    pos.z = origin.z;
-    pos.y = BOSS_LOCAL.dropHeight * scale;
+    chooseLanding(c);
+    pos.x = landing.x;
+    pos.z = landing.z;
+    pos.y = BOSS_LOCAL.cinematic.skyHeight * scale;
     yaw = Math.atan2(-(c.player.position.x - pos.x), -(c.player.position.z - pos.z));
 
     if (c.flags.params.get('bossphase') === 'core') {
@@ -178,15 +234,117 @@ export function createBossModule(): GameModule {
     }
     applyPose();
 
-    bossCentre(evPos);
-    c.events.emit('boss:spawned', {
-      name: BOSS.name,
-      coreHp: BOSS.coreHp,
-      weakPoints: BOSS.weakPointCount,
-      position: evPos,
-    });
     c.events.emit('game:checkpoint', { id: 'boss-start', position: checkpointPos.copy(c.player.position), yaw: c.player.yaw });
     handleEvents(model.spawn());
+    beginCinematic(c);
+  }
+
+  // ---- cinematic -----------------------------------------------------------------------
+
+  function beginCinematic(c: GameContext): void {
+    cin.active = true;
+    cin.t = 0;
+    cin.impacted = false;
+    cin.ended = false;
+    c.player.controlsLocked = true;
+    c.player.velocity.set(0, 0, 0);
+    c.player.pendingImpulse.set(0, 0, 0);
+    hiddenCamChildren.length = 0;
+    for (const o of c.camera.children) {
+      hiddenCamChildren.push({ o, was: o.visible });
+      o.visible = false;
+    }
+    cinematicFrame(0, cin.frame);
+  }
+
+  function endCinematic(): void {
+    const c = ctx;
+    if (!c || !cin.active) return;
+    cin.active = false;
+    cin.ended = true;
+    c.player.controlsLocked = false;
+    c.player.invulnerableFor = Math.max(c.player.invulnerableFor, BOSS_LOCAL.cinematic.graceAfter);
+    for (const h of hiddenCamChildren) h.o.visible = h.was;
+    hiddenCamChildren.length = 0;
+    fx?.update(null, pos.x, pos.y, pos.z, 0, false);
+    handleEvents(model.finishAwakening());
+  }
+
+  function impactMoment(c: GameContext): void {
+    cin.impacted = true;
+    const s = scale;
+    evPos.set(pos.x, 0.5, pos.z);
+    fx?.startShock(pos.x, pos.z);
+    vfx('explosion', evPos, 5 * s);
+    const R = BOSS_LOCAL.footprintRadius * s;
+    for (let i = 0; i < 10; i++) {
+      const a = (i / 10) * Math.PI * 2;
+      evPos.set(pos.x + Math.cos(a) * R, 0.3, pos.z + Math.sin(a) * R);
+      vfx('dust', evPos, 14 * s);
+    }
+    bossCentre(evPos);
+    c.events.emit('boss:spawned', { name: BOSS.name, coreHp: BOSS.coreHp, weakPoints: BOSS.weakPointCount, position: evPos });
+  }
+
+  /** Jump to the release stage (E after the skip delay, or the test hook). */
+  function skipCinematic(force: boolean): boolean {
+    if (!cin.active) return false;
+    if (!force && !canSkip(cin.t)) return false;
+    const target = BOSS_LOCAL.cinematic.duration - 0.5;
+    if (cin.t >= target) return false;
+    cin.t = target;
+    return true;
+  }
+
+  function cinematicStep(dt: number, c: GameContext): void {
+    cin.t = Math.min(BOSS_LOCAL.cinematic.duration, cin.t + dt);
+    cinematicFrame(cin.t, cin.frame);
+    pos.y = cin.frame.height * BOSS_LOCAL.cinematic.skyHeight * scale;
+    c.player.invulnerableFor = Math.max(c.player.invulnerableFor, 0.5);
+    c.player.velocity.x = 0;
+    c.player.velocity.z = 0;
+    if (cin.frame.impacted && !cin.impacted) impactMoment(c);
+    handleEvents(model.update(dt));
+    if (cin.t >= BOSS_LOCAL.cinematic.duration || (model.phase !== 'awakening' && cin.active)) endCinematic();
+  }
+
+  /** Camera for this frame: leaves the player, looks up at the fall, then at the landed boss. */
+  function cinematicCamera(c: GameContext): void {
+    const f = cin.frame;
+    const cfg = BOSS_LOCAL.cinematic;
+    const s = scale;
+    let dx = c.player.position.x - landing.x;
+    let dz = c.player.position.z - landing.z;
+    const d = Math.hypot(dx, dz);
+    if (d < 1e-3) {
+      dx = 0;
+      dz = 1;
+    } else {
+      dx /= d;
+      dz /= d;
+    }
+    const dist = Math.min(cfg.cameraDistance * s, Math.max(d, 30 * s));
+    const push = f.stage === 'title' || f.stage === 'release' ? 0.12 * Math.min(1, (f.t - cfg.impactAt) / 2) : 0;
+    const k = dist * (1 - push);
+    camPos.set(landing.x + dx * k, cfg.cameraHeight * s, landing.z + dz * k);
+    camTarget.set(pos.x, pos.y + BODY_Y * s, pos.z);
+    if (f.impacted) camTarget.y = Math.min(camTarget.y, BODY_Y * 1.15 * s);
+    c.player.getEyePosition(tmpLocal);
+    const leave = f.leave;
+    const shake = f.shake * cfg.shakeAmount * s;
+    const t = c.clock.simTime;
+    c.camera.position.set(
+      tmpLocal.x + (camPos.x - tmpLocal.x) * leave + Math.sin(t * 61) * shake,
+      tmpLocal.y + (camPos.y - tmpLocal.y) * leave + Math.cos(t * 53) * shake,
+      tmpLocal.z + (camPos.z - tmpLocal.z) * leave + Math.sin(t * 47 + 1) * shake,
+    );
+    lookM.lookAt(camPos, camTarget, UP);
+    camQ.setFromRotationMatrix(lookM);
+    playerEuler.set(c.player.pitch, c.player.yaw, 0, 'YXZ');
+    playerQ.setFromEuler(playerEuler);
+    c.camera.quaternion.copy(playerQ).slerp(camQ, leave);
+    CAM_ROLL.setFromAxisAngle(ROLL_AXIS, Math.sin(t * 37) * 0.02 * f.shake);
+    c.camera.quaternion.multiply(CAM_ROLL);
   }
 
   function beginCollapse(): void {
@@ -248,11 +406,9 @@ export function createBossModule(): GameModule {
     }
   }
 
+  /** The cannon fires from the eye. */
   function muzzleWorld(out: Vector3): Vector3 {
-    const c = Math.cos(yaw);
-    const s = Math.sin(yaw);
-    const lz = -BOSS_LOCAL.heavyCannon.muzzleForward * scale;
-    return out.set(pos.x + lz * s, pos.y + BOSS_LOCAL.heavyCannon.muzzleHeight * scale, pos.z + lz * c);
+    return worldPoint(EYE_LOCAL, out);
   }
 
   function impact(step: AttackStep): void {
@@ -359,7 +515,14 @@ export function createBossModule(): GameModule {
           liveMissiles: projectiles?.liveMissiles ?? 0,
           droppedShots: projectiles?.droppedShots ?? 0,
           meshCount: countMeshes(),
+          fxDrawCalls: fx?.drawCalls ?? 0,
+          kneeWorld: body ? body.kneeRoot.map((k) => ({ ...worldPoint(k, new Vector3()) })) : [],
+          yaw,
+          height: body?.measuredHeight ?? 0,
+          landing: { x: landing.x, z: landing.z, clear: landing.clear },
+          cinematic: { active: cin.active, ended: cin.ended, t: cin.t, stage: cin.frame.stage, impacted: cin.impacted, duration: BOSS_LOCAL.cinematic.duration },
         }),
+        skipCinematic: (): boolean => skipCinematic(true),
         damageWeakPoint: (i: number, amount: number): DamageResult => outcome(model.hitWeakPoint(i, amount), 'weakpoint'),
         damageCore: (amount: number): DamageResult => outcome(model.hitCore(amount), 'core'),
         forceAttack: (id: string): boolean => {
@@ -392,12 +555,13 @@ export function createBossModule(): GameModule {
         return;
       }
 
-      handleEvents(model.update(dt));
-
-      if (model.phase === 'awakening') {
-        const p = Math.min(1, elapsed / BOSS.awakeningDuration);
-        pos.y = BOSS_LOCAL.dropHeight * scale * (1 - p) * (1 - p);
+      if (cin.active) {
+        cinematicStep(dt, c);
       } else {
+        handleEvents(model.update(dt));
+      }
+
+      if (model.phase !== 'awakening' && !cin.active) {
         pos.y = 0;
         walkStep(dt, c);
         route(scheduler.update(dt, schedulerInput()));
@@ -412,6 +576,7 @@ export function createBossModule(): GameModule {
 
       projectiles?.fixedStep(dt, onExplode);
       applyPose();
+      if (body) colliders?.syncWeakPoints(body.kneeRoot);
     },
 
     update(dt) {
@@ -423,6 +588,11 @@ export function createBossModule(): GameModule {
       body.update(c.clock.simTime, dt, anim);
       anim.travelled = 0;
       projectiles?.update();
+      if (cin.active) {
+        if (c.input.wasPressed('interact')) skipCinematic(false);
+        cinematicCamera(c);
+      }
+      fx?.update(cin.active ? cin.frame : null, pos.x, pos.y, pos.z, dt, canSkip(cin.t));
     },
 
     dispose() {
@@ -431,9 +601,16 @@ export function createBossModule(): GameModule {
       if (ctx) {
         delete ctx.testHooks.boss;
         colliders?.dispose();
+        fx?.dispose();
+        if (cin.active) {
+          ctx.player.controlsLocked = false;
+          for (const h of hiddenCamChildren) h.o.visible = h.was;
+        }
+        resetArmorTextures();
         ctx.resources.scope('boss').dispose();
       }
       body = null;
+      fx = null;
       colliders = null;
       projectiles = null;
       ctx = null;
@@ -485,7 +662,7 @@ export function createBossModule(): GameModule {
     const p = Math.min(1, collapseElapsed / BOSS_LOCAL.collapseDuration);
     anim.collapse = p;
     anim.walk = 0;
-    pos.y = -p * (BODY_Y - BODY_R * 0.6) * scale;
+    pos.y = -p * BOSS_LOCAL.collapseSink * scale;
     applyPose();
     if (collapseElapsed >= nextBurst) {
       nextBurst += 0.5;

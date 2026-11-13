@@ -35,6 +35,14 @@ describe('BossModel', () => {
     expect(m.update(1)).toEqual([{ type: 'phaseChanged', phase: 'weakpoint-hunt' }]);
   });
 
+  it('finishAwakening ends the awakening at once and is a no-op afterwards', () => {
+    const m = new BossModel();
+    m.spawn();
+    expect(m.finishAwakening()).toEqual([{ type: 'phaseChanged', phase: 'weakpoint-hunt' }]);
+    expect(m.vulnerable).toBe(true);
+    expect(m.finishAwakening()).toEqual([]);
+  });
+
   it('armour absorbs everything', () => {
     const m = awake();
     const r = m.hitArmor(9999);
