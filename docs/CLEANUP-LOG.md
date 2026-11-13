@@ -69,3 +69,49 @@ No leftover debugger statements, TODO/FIXME markers, skipped tests, or doc refer
 | `dist` total | 16,080 kB | 16,080 kB |
 
 Removed code was almost all already tree-shaken; the saving is 73 bytes.
+
+# Cleanup log, T-23 Phase B
+
+Baseline: merge commit `5ddd769` (T-19..T-22 merged). Owner instruction: no e2e, no smoke, no screenshots were run.
+Verification for this phase: `npx tsc --noEmit` clean, `npm test` 65 files / 466 tests pass, `npm run build` ok.
+
+## Renames (EnemyType ids and everything named after them)
+| Old | New | Where |
+|---|---|---|
+| `EnemyType` `'sphere' \| 'spider' \| 'charger'` | `'army' \| 'spot' \| 'duck'` | `src/core/types.ts`, `ENEMY_FACTORIES` keys, `TYPES` and spawn literals in `population.ts`, `Duck.ts`/`Spot.ts`/`ArmyRobot.ts` |
+| `ENEMY_COUNTS.sphere/spider/charger`, `ENEMY_DISTRIBUTION` keys | `army/spot/duck` | `src/config/tunables.ts`, `src/config/level.ts` and tests |
+| `?enemies=sphere,spider,charger` param values | `army,spot,duck` | `parseEnemyParam`, e2e URLs, docs/PLAN.md |
+| events `charger:windup`, `charger:hitPlayer` | `duck:windup`, `duck:hitPlayer` | `src/core/events.ts`, `Duck.ts`, audio map, tests, e2e |
+| audio ids `chargerWindup`, `chargerHit` | `duckWindup`, `duckHit` | `catalogue.ts`, `sounds.ts`, `eventMap.ts`, tests, T-07 e2e |
+| `ENEMY_VARIANT` keys, VFX `e.type === 'charger'` | `army/spot/duck` | `src/audio/eventMap.ts`, `src/vfx/index.ts` |
+| helpers `SPHERES_SPIDERS`, `yardChargers`, `otherChargers`, `YARD_NS_CHARGERS`, `sphere()`/`spider()` | `ARMY_SPOT_POSTS`, `yardDucks`, `otherDucks`, `YARD_NS_DUCKS`, `army()`/`spot()` | `src/enemies/population.ts` (+ test) |
+Proof: `grep -rnE "\b(spider|charger|SPIDER_ROBOT|CHARGER_ROBOT|SPHERE_ROBOT)\b|'sphere'" src tests scripts` returns nothing
+(left: THREE `sphere(...)` geometry helpers and `HemisphereLight`, which are not enemy ids). `tsc` has no stale key because
+`Record<EnemyType, ...>` and the event map are typed.
+
+## Removals
+| What | Evidence |
+|---|---|
+| `SPIDER_ROBOT` and `CHARGER_ROBOT` blocks (and their `TUNABLES` entries) in `src/config/tunables.ts` | Only users were two ammo-budget tests (`damage.test.ts`, `placements.test.ts`); they now read `SPOT.hp` / `DUCK.hp`. `grep -rnw "SPIDER_ROBOT\|CHARGER_ROBOT" src tests` empty. No `SPHERE_ROBOT` remnant (already `ARMY_ROBOT`). The budget test value changed 432 -> 372 hits because Spot is 70 HP and Duck 60 HP, not the old 150 / 200; supply 870 still covers 744 |
+| `isFrontalHit` (`src/combat/damage.ts`) and its test | Charger front shield, no longer exists; `grep -rnw isFrontalHit src` only definition and its own test |
+| events `charger:chargeStarted`, `charger:stunned`; audio ids `chargerCharge`, `chargerStunned` and their routes/recipes; VFX handler and `VFX.chargerStunScale` | `grep -rn "emit('charger:" src` showed only `windup` and `hitPlayer` emitted; no emitter for the other two |
+| `BOSS.bodyDiameter`, `totalHeight`, `legCount`, `weakPointRadius` (old TITAN-04 numbers) | key-usage script (`grep -rnw <key> src tests` outside definition): 0 hits each |
+| `WORLD.chargerLaneMinLength` | same script: 0 hits |
+| `SPOT.trotStride`, `SPOT.trotLift` (`src/enemies/spot/tunables.ts`) | same script: 0 hits |
+| boss tunables `weakPointProud`, `coreDepth`, `BOSS_TOTAL_HP` | same script / knip "Unused exports": 0 hits |
+| `cylY`, `torusX` (+ `TorusGeometry` import) in `src/enemies/duck/modelKit.ts` | knip; `tsc` TS6133 flagged the import after removal |
+| `export { ArmyRobot }` in `src/enemies/army/index.ts`; `export type { EnemyDeps, EnemyFactory, EnemySpawn }` in `src/enemies/index.ts` | knip "Unused exports/types"; importers use `./BaseEnemy` and `./army/ArmyRobot` directly |
+| stale comments (sphere/spider/charger roles, "hover height for the sphere") | grep above |
+The old robot files (`SphereRobot.ts`, `sphereBrain*`, `charger/`, `spider/`) were already deleted by T-19/T-20; knip reports no unused files in `src`.
+
+## Added
+- `duck:beep` route in `src/audio/eventMap.ts`: reuses the existing `beep` recipe at the duck position (2 lines + a unit test).
+
+## e2e and docs (textual only, not executed)
+- `tests/e2e/*.mjs`: ids, URLs, event names and audio ids updated (T-05, T-07, T-13, T-14, T-16 x3, T-20). `node --check` passes on every e2e and script file. File names (`T-13-spider-robot`, `T-14-charger-robot`, `T-05-...-sphere`) kept so ticket/spec links stay valid.
+- `docs/PLAN.md`, `docs/PERFORMANCE.md`, `docs/PLAYTEST.md` updated; old playtest measurements carry a note that old names mean army/spot/duck. Not touched: `docs/GDD.md`, `docs/reference-models/**`, `specs/**`, `docs/tickets/**`, `docs/REVIEW.md` (dated review snapshot).
+
+## Kept on purpose
+- `WORLD.chargerLaneWidth` (`src/config/tunables.ts`) and the lane data it measures: still used by `containerLayout.test.ts`; lanes are a world concept that the Duck placement reuses. Renaming left to a world-module owner.
+- Remaining knip hits (`ATTACK_KINDS`, `landingCandidates`, `ARMY_BRAIN_CONFIG`, `DUCK_COLORS`, `SPOT_COLORS`, `navBoundsFor`, `yardDucks`, `otherDucks`, types `CinematicStage`, `PivotName`, `SalvoPhase`, `TestClock`): used inside their own file, only the `export` keyword is unneeded; not worth touching.
+- Not verified: e2e, smoke, screenshots (owner instruction).
