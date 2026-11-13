@@ -2,7 +2,7 @@
  * Level contract: coarse layout of the harbor shared by every content ticket.
  *
  * Coordinate system: +X = east, +Y = up, +Z = south. Ground (concrete) is at y = 0.
- * The sea lies north of the dock edge (z < DOCK_EDGE_Z) and west/east of the land.
+ * The sea lies north of the dock edge (z < LAND.minZ) and west/east of the land.
  * Player yaw 0 looks towards -Z (north).
  *
  *            z = -120  ======== dock edge / sea to the north ========
@@ -37,7 +37,6 @@ export interface Vec3Like {
 }
 
 export const LAND = { minX: -120, maxX: 120, minZ: -120, maxZ: 100 } as const;
-export const DOCK_EDGE_Z = LAND.minZ;
 export const SEA_LEVEL_Y = -2;
 
 export const ZONES: Readonly<Record<ZoneId, ZoneDef>> = {
@@ -147,7 +146,7 @@ export function isOnLand(x: number, z: number): boolean {
 }
 
 /** Spawn inside the foundation sandbox scene (`?sandbox`, see src/sandbox). */
-export const SANDBOX_SPAWN = {
+const SANDBOX_SPAWN = {
   position: { x: 0, y: 0, z: 12 } as Vec3Like,
   yaw: 0,
 } as const;

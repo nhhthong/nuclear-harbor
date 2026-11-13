@@ -1,20 +1,7 @@
-import type { QualityPreset } from '@/config/tunables';
-
 /**
  * Pure helpers for the graphics settings (T-17). No three.js, DOM or WebGL types here, so the
  * logic is unit-testable; `Renderer` and `Game` apply the results.
  */
-
-export interface QualityLike {
-  readonly pixelRatioCap: number;
-  readonly shadowMapSize: number;
-  readonly shadows: boolean;
-  readonly viewDistance: number;
-  /** Fog range as a fraction of the view distance: [near, far]. */
-  readonly fogFraction: readonly [number, number];
-  /** How often the (otherwise static) sun shadow is refreshed for moving casters, in Hz (0 = never). */
-  readonly dynamicShadowHz: number;
-}
 
 /** Effective pixel ratio: never above the preset cap, never below 0.5 or a broken device value. */
 export function effectivePixelRatio(devicePixelRatio: number, cap: number): number {
@@ -69,5 +56,3 @@ export class ShadowScheduler {
     return false;
   }
 }
-
-export type { QualityPreset };

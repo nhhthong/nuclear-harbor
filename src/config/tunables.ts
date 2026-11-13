@@ -28,10 +28,6 @@ export const PLAYER = {
   walkSpeed: 5,
   /** GDD 4.2 */
   sprintSpeed: 7.5,
-  /** GDD 4.2: no jump in v1 (Space is the grapple). */
-  canJump: false,
-  /** GDD 4.2: no regeneration, medkits only. */
-  hpRegenPerSecond: 0,
   /** proposed: capsule = radius + 2 * halfHeight (cylinder part) => 1.8 m tall. */
   capsuleRadius: 0.35,
   capsuleHalfHeight: 0.55,
@@ -273,9 +269,7 @@ export const BOSS = {
 
 /** GDD 13.9 / 10 / 13.6 */
 export const PERFORMANCE = {
-  targetFps: 60,
   lowEndFps: 30,
-  dynamicShadowLights: 1,
   /** proposed budgets used by the perf monitor warnings. */
   maxDrawCalls: 350,
   maxTriangles: 1_500_000,
@@ -332,5 +326,4 @@ export const TUNABLES = {
   CAMERA,
 } as const;
 
-export type Tunables = typeof TUNABLES;
 export type QualityPreset = keyof typeof PERFORMANCE.quality;

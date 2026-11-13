@@ -38,7 +38,7 @@ interface MemoryInfo {
   usedJSHeapSize: number;
 }
 
-export function readHeapMb(): number {
+function readHeapMb(): number {
   const mem = (performance as Performance & { memory?: MemoryInfo }).memory;
   return mem ? mem.usedJSHeapSize / DEBUG_TUNABLES.bytesPerMb : NaN;
 }

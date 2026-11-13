@@ -2,7 +2,7 @@
  * Rapier interaction groups: upper 16 bits = membership, lower 16 bits = filter. Two colliders
  * interact when each one's membership intersects the other's filter.
  */
-export const Layer = {
+const Layer = {
   /** Static level geometry (ground, containers, buildings, cranes). */
   WORLD: 1 << 0,
   PLAYER: 1 << 1,
@@ -16,9 +16,9 @@ export const Layer = {
   PROP: 1 << 5,
 } as const;
 
-export const ALL_LAYERS = 0xffff;
+const ALL_LAYERS = 0xffff;
 
-export function interactionGroups(membership: number, filter: number): number {
+function interactionGroups(membership: number, filter: number): number {
   return ((membership & 0xffff) << 16) | (filter & 0xffff);
 }
 

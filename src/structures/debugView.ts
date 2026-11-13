@@ -17,7 +17,7 @@ const KIND_COLORS: Record<GrappleAnchorKind, number> = {
 const SPHERE_RADIUS = 0.6;
 const MARKER_SIZE = { x: 0.6, y: 2.4, z: 0.6 };
 
-export function coverageLine(label: string, coverage: readonly ZoneCoverage[]): string {
+function coverageLine(label: string, coverage: readonly ZoneCoverage[]): string {
   const parts = coverage.map((c) => `${c.zone} ${c.total ? ((100 * c.covered) / c.total).toFixed(1) : '100.0'}% (${c.covered}/${c.total})`);
   return `${label}: ${parts.join(' | ')}`;
 }

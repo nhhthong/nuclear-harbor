@@ -4,7 +4,7 @@
  */
 
 /** Files that never go into the precache: source maps and the service worker itself. */
-export function isPrecacheable(path: string): boolean {
+function isPrecacheable(path: string): boolean {
   return !path.endsWith('.map') && path !== 'sw.js';
 }
 

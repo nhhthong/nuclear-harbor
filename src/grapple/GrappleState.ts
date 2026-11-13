@@ -13,7 +13,7 @@ export interface Vec3Like {
 
 export type GrapplePhase = 'ready' | 'pulling' | 'cooldown';
 export type ReleaseReason = 'arrived' | 'manual' | 'stuck' | 'timeout' | 'death';
-export type FailReason = 'no-target' | 'not-grappleable' | 'cooldown';
+type FailReason = 'no-target' | 'not-grappleable' | 'cooldown';
 
 export interface GrappleConfig {
   maxRange: number;
