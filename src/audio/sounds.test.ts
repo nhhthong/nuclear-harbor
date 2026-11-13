@@ -49,19 +49,19 @@ describe('sound recipes', () => {
     }
   });
 
-  it('charger wind-up lasts the telegraph duration and rises (AC7)', () => {
+  it('duck wind-up lasts the telegraph duration and rises (AC7)', () => {
     for (const duration of [0.8, 1.2, 2]) {
       const r = new Recorder(duration);
-      expect(SOUNDS.chargerWindup(r)).toBeCloseTo(duration, 5);
+      expect(SOUNDS.duckWindup(r)).toBeCloseTo(duration, 5);
       const growl = r.oscs.filter((o) => o.type === 'sawtooth');
       expect(growl.length).toBeGreaterThan(0);
       for (const o of growl) expect(o.f1!).toBeGreaterThan(o.f0);
     }
   });
 
-  it('charger wind-up is lower and longer than the other enemy sounds', () => {
+  it('duck wind-up is lower and longer than the other enemy sounds', () => {
     const windup = new Recorder(1.2);
-    SOUNDS.chargerWindup(windup);
+    SOUNDS.duckWindup(windup);
     const windupTop = Math.max(...windup.oscs.map((o) => Math.max(o.f0, o.f1 ?? 0)));
     for (const id of ['enemyAlert', 'enemyShot'] as const) {
       for (const variant of [0, 1, 2]) {

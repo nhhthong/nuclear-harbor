@@ -1,8 +1,9 @@
-import { Mesh, MeshBasicMaterial, SphereGeometry, Vector3 } from 'three';
+import { CylinderGeometry, Mesh, MeshBasicMaterial, SphereGeometry, Vector3 } from 'three';
 import type { ResourceTracker } from '@/assets/ResourceTracker';
 import type { GameContext } from '@/core/GameContext';
 import { ObjectPool } from '@/core/ObjectPool';
 import { QueryGroups } from '@/physics/groups';
+import { splashDamage } from './army/splash';
 import { ENEMY_PROJECTILE } from './tunables';
 
 interface Bolt {
@@ -14,7 +15,20 @@ interface Bolt {
   travelled: number;
 }
 
+interface Rocket {
+  mesh: Mesh;
+  velocity: Vector3;
+  speed: number;
+  damage: number;
+  splashRadius: number;
+  life: number;
+  travelled: number;
+}
+
 const origin = new Vector3();
+const aimAt = new Vector3();
+const axisPoint = new Vector3();
+const blast = new Vector3();
 const dir = new Vector3();
 const toPlayer = new Vector3();
 const closest = new Vector3();
@@ -50,6 +64,7 @@ function segmentHitsCapsule(
  */
 export class EnemyProjectiles {
   private readonly pool: ObjectPool<Bolt>;
+  private readonly rockets: ObjectPool<Rocket>;
 
   constructor(
     private readonly ctx: GameContext,
@@ -75,6 +90,62 @@ export class EnemyProjectiles {
       },
     });
     res.onDispose(() => this.pool.dispose());
+
+    const rocketGeo = new CylinderGeometry(
+      ENEMY_PROJECTILE.rocketRadius,
+      ENEMY_PROJECTILE.rocketRadius * 0.6,
+      ENEMY_PROJECTILE.rocketLength,
+      8,
+    );
+    rocketGeo.rotateX(Math.PI / 2); // length along +Z (Object3D.lookAt points +Z at the target)
+    const rocketGeometry = res.track(rocketGeo);
+    const rocketMaterial = res.track(new MeshBasicMaterial({ color: 0xffb347 }));
+    this.rockets = new ObjectPool<Rocket>({
+      capacity: ENEMY_PROJECTILE.rocketPoolCap,
+      create: () => {
+        const mesh = new Mesh(rocketGeometry, rocketMaterial);
+        mesh.visible = false;
+        mesh.frustumCulled = false;
+        ctx.scene.add(mesh);
+        return { mesh, velocity: new Vector3(), speed: 0, damage: 0, splashRadius: 0, life: 0, travelled: 0 };
+      },
+      reset: (r) => {
+        r.mesh.visible = false;
+      },
+      dispose: (r) => {
+        r.mesh.removeFromParent();
+      },
+    });
+    res.onDispose(() => this.rockets.dispose());
+  }
+
+  get liveRockets(): number {
+    return this.rockets.liveCount;
+  }
+
+  get rocketCapacity(): number {
+    return this.rockets.capacity;
+  }
+
+  get rocketsDropped(): number {
+    return this.rockets.droppedCount;
+  }
+
+  /** Fires a slow, visible rocket that explodes with splash damage; false when the rocket pool is exhausted. */
+  fireRocket(from: Vector3, direction: Vector3, speed: number, damage: number, splashRadius: number): boolean {
+    const r = this.rockets.acquire();
+    if (!r) return false;
+    r.mesh.position.copy(from);
+    r.velocity.copy(direction).normalize().multiplyScalar(speed);
+    aimAt.copy(from).add(r.velocity);
+    r.mesh.lookAt(aimAt);
+    r.mesh.visible = true;
+    r.speed = speed;
+    r.damage = damage;
+    r.splashRadius = splashRadius;
+    r.life = ENEMY_PROJECTILE.rocketLifetime;
+    r.travelled = 0;
+    return true;
   }
 
   get liveCount(): number {
@@ -106,10 +177,67 @@ export class EnemyProjectiles {
   /** Advance every live bolt by one fixed tick. */
   step(dt: number): void {
     this.pool.forEachLive((b) => this.advance(b, dt));
+    this.rockets.forEachLive((r) => this.advanceRocket(r, dt));
   }
 
   releaseAll(): void {
     this.pool.releaseAll();
+    this.rockets.releaseAll();
+  }
+
+  private advanceRocket(r: Rocket, dt: number): void {
+    const { ctx } = this;
+    const length = r.speed * dt;
+    origin.copy(r.mesh.position);
+    dir.copy(r.velocity).divideScalar(r.speed);
+    const hit = ctx.physics.raycast(origin, dir, length, { groups: QueryGroups.enemyShot });
+    const worldDistance = hit ? hit.distance : length;
+
+    let playerDistance = -1;
+    if (ctx.player.alive && hit?.meta.kind !== 'player') {
+      playerDistance = segmentHitsCapsule(
+        origin,
+        dir,
+        worldDistance,
+        ctx.player.position,
+        ENEMY_PROJECTILE.fallbackPlayerRadius,
+        ENEMY_PROJECTILE.fallbackPlayerHeight,
+        closest,
+      );
+    }
+    if (playerDistance >= 0 || (hit && hit.meta.kind === 'player')) {
+      blast.copy(hit && hit.meta.kind === 'player' ? hit.point : closest);
+      this.explode(r, blast);
+      return;
+    }
+    if (hit) {
+      blast.copy(hit.point).addScaledVector(dir, -0.15);
+      this.explode(r, blast);
+      return;
+    }
+    r.mesh.position.addScaledVector(dir, length);
+    r.travelled += length;
+    r.life -= dt;
+    if (r.life <= 0 || r.travelled >= ENEMY_PROJECTILE.rocketMaxRange) this.rockets.release(r);
+  }
+
+  /** Splash on the player (linear falloff, measured to the player's capsule axis), explosion VFX, release. */
+  private explode(r: Rocket, point: Vector3): void {
+    const { ctx } = this;
+    ctx.events.emit('vfx:spawn', { kind: 'explosion', position: point, normal: normalUp });
+    if (ctx.player.alive) {
+      const feet = ctx.player.position;
+      axisPoint.set(feet.x, Math.min(Math.max(point.y, feet.y), feet.y + ENEMY_PROJECTILE.fallbackPlayerHeight), feet.z);
+      const d = Math.max(0, point.distanceTo(axisPoint) - ENEMY_PROJECTILE.fallbackPlayerRadius);
+      const amount = Math.round(splashDamage(d, r.splashRadius, r.damage));
+      if (amount > 0) {
+        toPlayer.copy(axisPoint).sub(point);
+        if (toPlayer.lengthSq() < 1e-6) toPlayer.copy(dir);
+        toPlayer.normalize();
+        ctx.player.applyDamage({ amount, zone: 'body', source: 'enemy', point, direction: toPlayer });
+      }
+    }
+    this.rockets.release(r);
   }
 
   private advance(b: Bolt, dt: number): void {

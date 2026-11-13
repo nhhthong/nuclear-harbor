@@ -9,10 +9,10 @@ import {
   MeshBasicMaterial,
 } from 'three';
 
-export type TowerVisualState = 'inactive' | 'activating' | 'active';
+type TowerVisualState = 'inactive' | 'activating' | 'active';
 
-export const TOWER_HEIGHT = 3;
-export const TOWER_BEAM_HEIGHT = 40;
+const TOWER_HEIGHT = 3;
+const TOWER_BEAM_HEIGHT = 40;
 
 export interface TowerModel {
   group: Group;

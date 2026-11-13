@@ -26,7 +26,7 @@ Everything else is read-only for this ticket.
 
 - `ViewModel` interface from T-02 (`src/weapon/viewmodel/ViewModel.ts`)
 - Blender 4.0.2 headless (`blender --background --python ...`); three.js `GLTFLoader` (already part of `three/examples/jsm`, bundled, no CDN)
-- The archive supplied by the user (gamebanana.com is not reachable from the build environment)
+- `assets-src/weapons/g36c/v_g36c.mdl`, supplied by the owner (no archive, no download; see the Update section)
 
 ## Interfaces provided
 
@@ -58,8 +58,8 @@ around it locally. Read `docs/PLAN.md` sections 3-7 before planning.
 
 ## Step-by-step guidance
 
-1. STOP condition: if no archive has been uploaded, do only the licence-independent groundwork (pipeline scripts tested on a self-made MDL-free sample such as an OBJ, the `GlbViewModel` loader tested with a procedurally exported GLB) and report the ticket as blocked. Never download from mirrors.
-2. Inspect the archive in an isolated directory (treat as untrusted data): list files, identify `v_` / `p_` / `w_` models and textures, read any readme; record file names, author and stated terms in `docs/ASSETS.md` (GDD 5.1, 17.1).
+1. (Superseded by the Update section: the asset was supplied, so this ticket is NOT blocked.) Original STOP condition: if no archive had been uploaded, do only the licence-independent groundwork (pipeline scripts tested on a self-made MDL-free sample such as an OBJ, the `GlbViewModel` loader tested with a procedurally exported GLB) and report the ticket as blocked. Never download from mirrors.
+2. Inspect the archive in an isolated directory (treat as untrusted data): list files, identify `v_` / `p_` / `w_` models and textures, read any readme; record file names, author and stated terms in `docs/ASSETS.md` (GDD 5.1, 17.1). (Done for `v_g36c.mdl`.)
 3. Licence gate: unless the readme or author explicitly permits redistribution/modification, do NOT commit any derived model. Record the decision; the procedural model remains the shipped asset (GDD 5.1 "mandatory fallback").
 4. Conversion (GDD 5.2): Blender has no GoldSrc importer built in. Options in order: (a) a pure-Python MDL v10 reader written in `tools/asset-pipeline/` (header, bones, bodyparts/meshes with triangle strips/fans, embedded 8-bit paletted textures → PNG, sequences if feasible) building the mesh through `bpy`; (b) an existing open-source importer add-on only if it can be vendored offline with a compatible licence. Document the choice.
 5. Blender script: import → validate mesh (normals, UVs, scale to metres, orientation −Z forward/+Y up), materials (unlit base colour texture), skeleton/animations if recovered; export GLB (optionally meshopt-free, small). If animations cannot be recovered, export the static mesh and drive it with the same procedural animation as the placeholder (GDD 5.3).
@@ -68,9 +68,9 @@ around it locally. Read `docs/PLAN.md` sections 3-7 before planning.
 
 ## Acceptance criteria
 
-- [ ] **AC1** `docs/ASSETS.md` records the GameBanana source URL, the archive contents, author and licence findings, and the ship/no-ship decision.
+- [ ] **AC1** `docs/ASSETS.md` records the supplied file, its contents, author and the owner-stated permission, and the ship decision.
 - [ ] **AC2** No file derived from the mod is committed unless the licence check passed; raw archives are never committed.
-- [ ] **AC3** A scripted, repeatable headless Blender conversion produces a GLB from the supplied `v_*.mdl` (or the ticket is reported blocked with the groundwork done).
+- [ ] **AC3** A scripted, repeatable headless Blender conversion produces a GLB from the supplied `v_*.mdl` .
 - [ ] **AC4** The converted model renders correctly as the first-person view model in three.js with correct orientation, scale and textures.
 - [ ] **AC5** Animations are verified, or replaced by the procedural fire/reload motion, and the choice is documented.
 - [ ] **AC6** The procedural view model remains the default and the automatic fallback when the GLB is missing or fails to load.
@@ -78,14 +78,13 @@ around it locally. Read `docs/PLAN.md` sections 3-7 before planning.
 
 ## Notes
 
-This ticket never blocks a milestone. GDD 16 "Weapon Asset" items about the archive stay open until the user uploads it.
+This ticket never blocked a milestone. The GDD 16 "Weapon Asset" archive items are superseded by the supplied `v_g36c.mdl` (see `docs/ASSETS.md`).
 
 ## How to verify
 
 ```bash
 npm run typecheck && npm test && npm run build && npm run smoke
-# requires the user-provided archive in tools/asset-pipeline/input/
-bash tools/asset-pipeline/convert.sh tools/asset-pipeline/input/<archive>
+bash tools/asset-pipeline/convert.sh   # reads assets-src/weapons/g36c/v_g36c.mdl
 # manual: npm run dev → http://localhost:5173/?sandbox&viewmodel=glb
 ```
 

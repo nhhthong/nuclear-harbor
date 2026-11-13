@@ -55,7 +55,7 @@ function mastWithAnchor(opts: {
 }
 
 /** Free-standing perch tower: slab >= 4x4 m on a central column, mast at the arena-facing edge. */
-export function perchTower(opts: {
+function perchTower(opts: {
   id: string;
   x: number;
   z: number;

@@ -71,7 +71,7 @@ Worst view requirement (AC2): `medium`, all 30 robots alive, 218 draw calls and 
 ## 4. LOD and culling (AC4)
 
 Already in place: cranes use `THREE.LOD` (T-04), containers are one `InstancedMesh` with a computed bounding sphere,
-spider robots switch to a simplified far representation that stops animating legs (`SpiderRobot`, `simLevel`), the ship is
+Spot dogs switch to a simplified far representation that stops animating legs (`Spot`, `simLevel`), the ship is
 a single mesh without shadows, view distance and fog follow the preset (`low` 300 m, `medium` 450 m, `high` 600 m; fog range
 18 % to 95 % of it, applied on quality change). Not done: LOD for the boss legs (one instance, cost is small) and splitting
 the container `InstancedMesh` per block (the whole level fits in 118 to 218 calls, so a culling gain is not measurable here).

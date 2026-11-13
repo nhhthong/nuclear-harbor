@@ -7,7 +7,7 @@ import { ProceduralViewModel } from './ProceduralViewModel';
 import type { ViewModel, ViewModelState } from './ViewModel';
 
 /** Loads the converted model; injectable so tests can simulate failures. */
-export type ModelLoader = () => Promise<LoadedModel>;
+type ModelLoader = () => Promise<LoadedModel>;
 
 export interface ViewModelOptions {
   loader?: ModelLoader;
@@ -16,7 +16,7 @@ export interface ViewModelOptions {
 }
 
 /** Default loader: same-origin GLB next to the page, parsed by the bundled GLTFLoader (no CDN). */
-export function defaultGlbLoader(): Promise<LoadedModel> {
+function defaultGlbLoader(): Promise<LoadedModel> {
   const url = new URL(GLB_VIEW.url, document.baseURI).href;
   return new GLTFLoader().loadAsync(url);
 }

@@ -3,13 +3,13 @@ import { shotsToKill } from '@/combat/damage';
 import { BOSS_ARENA, PLAYER_SPAWN, TOWERS, isOnLand, zoneAt } from '@/config/level';
 import {
   BOSS,
-  CHARGER_ROBOT,
   ECONOMY,
   ENEMY_COUNTS,
-  SPHERE_ROBOT,
-  SPIDER_ROBOT,
+  ARMY_ROBOT,
   WEAPON,
 } from '@/config/tunables';
+import { DUCK } from '@/enemies/duck/tunables';
+import { SPOT } from '@/enemies/spot/tunables';
 import { buildWarehouse, buildControlCenter } from '@/world/buildings';
 import { generateContainerLayout } from '@/world/containerLayout';
 import { supplyBudget } from './logic';
@@ -34,9 +34,9 @@ describe('placement budget (GDD 5.4)', () => {
   });
   it('supply (start 210 + crates) covers the demand at 50% accuracy without drops', () => {
     const hits =
-      ENEMY_COUNTS.sphere * shotsToKill(SPHERE_ROBOT.hp) +
-      ENEMY_COUNTS.spider * shotsToKill(SPIDER_ROBOT.hp) +
-      ENEMY_COUNTS.charger * shotsToKill(CHARGER_ROBOT.hp) +
+      ENEMY_COUNTS.army * shotsToKill(ARMY_ROBOT.hp) +
+      ENEMY_COUNTS.spot * shotsToKill(SPOT.hp) +
+      ENEMY_COUNTS.duck * shotsToKill(DUCK.hp) +
       BOSS.weakPointCount * shotsToKill(BOSS.weakPointHp) +
       shotsToKill(BOSS.coreHp);
     const crates = count(ZONE_PLACEMENTS, 'ammo') + count(BOSS_PLACEMENTS, 'ammo');

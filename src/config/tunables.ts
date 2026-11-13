@@ -28,10 +28,6 @@ export const PLAYER = {
   walkSpeed: 5,
   /** GDD 4.2 */
   sprintSpeed: 7.5,
-  /** GDD 4.2: no jump in v1 (Space is the grapple). */
-  canJump: false,
-  /** GDD 4.2: no regeneration, medkits only. */
-  hpRegenPerSecond: 0,
   /** proposed: capsule = radius + 2 * halfHeight (cylinder part) => 1.8 m tall. */
   capsuleRadius: 0.35,
   capsuleHalfHeight: 0.55,
@@ -136,82 +132,44 @@ export const ECONOMY = {
 
 export const ENEMY_COUNTS = {
   /** GDD 6 */
-  sphere: 14,
-  spider: 10,
-  charger: 6,
+  army: 14,
+  spot: 10,
+  duck: 6,
   total: 30,
 } as const;
 
-/** GDD 6.1 */
-export const SPHERE_ROBOT = {
-  hp: 100,
-  damage: 8,
-  speed: 3.5,
-  attackRange: 20,
-  detectionRange: 25,
-  /** proposed */
-  radius: 0.7,
-  hoverHeight: 1.2,
-  /** proposed; T-17 raised 1.2 -> 2.0 s (defend phase was lethal, docs/PLAYTEST.md). */
-  fireInterval: 2.0,
-  projectileSpeed: 30,
-  /** proposed: stop approaching at this fraction of attack range. */
-  preferredRangeFactor: 0.7,
-  /** proposed: retreat when HP fraction is below this (GDD: "retreat, if designed"). */
-  retreatHpFraction: 0.25,
-  loseTargetTime: 4,
-} as const;
-
-/** GDD 6.2 */
-export const SPIDER_ROBOT = {
+/**
+ * GDD 6.1 role (14 of them), now the T-20 Vanguard army mech: slow patrol, disciplined combat movement,
+ * telegraphed rocket salvos. HP, speeds and ranges are proposals (ROBOT-REFRESH T-20).
+ */
+export const ARMY_ROBOT = {
   hp: 150,
+  /** Rocket centre damage (splash falls off linearly to 0 at `splashRadius`). */
   damage: 12,
-  speed: 5,
-  attackRange: 12,
+  /** Patrol walk speed (m/s). */
+  speed: 1.5,
+  /** Combat speeds (m/s). */
+  advanceSpeed: 3.4,
+  strafeSpeed: 1.6,
+  retreatSpeed: 2.4,
+  /** Speed change limits (m/s^2) and yaw turn rate (rad/s). */
+  accel: 1.8,
+  decel: 2.6,
+  turnRate: 1.1,
   detectionRange: 30,
-  legCount: 6,
-  /** proposed */
-  bodyRadius: 0.8,
-  bodyHeight: 0.9,
-  /** proposed; T-17 raised 0.9 -> 1.5 s (defend phase was lethal, docs/PLAYTEST.md). */
-  fireInterval: 1.5,
-  projectileSpeed: 26,
-  flankAngleDeg: 55,
-  flankDistance: 9,
-  hopMaxObstacleHeight: 1.0,
-  loseTargetTime: 5,
-} as const;
-
-/** GDD 6.3 */
-export const CHARGER_ROBOT = {
-  hp: 200,
-  /** contact damage */
-  damage: 20,
-  walkSpeed: 3,
-  /** GDD: 10-12 m/s, faster than the player's sprint. */
-  chargeSpeedMin: 10,
-  chargeSpeedMax: 12,
-  maxChargeDistance: 30,
-  chargeTriggerMin: 8,
-  chargeTriggerMax: 25,
-  detectionRange: 25,
-  cooldown: 6,
-  /** GDD: 90% reduction from the front. */
-  frontDamageMultiplier: 0.1,
-  /** GDD: back and flanks take crit x2. */
-  rearCritMultiplier: 2.0,
-  telegraphDuration: 1.0,
-  wallStunDuration: 2.5,
-  /** proposed: hits within this half-angle of the facing direction count as frontal. */
-  frontArcHalfAngleDeg: 60,
-  /** proposed */
-  knockbackSpeed: 12,
-  knockbackUp: 5,
-  halfExtents: { x: 0.9, y: 0.9, z: 1.3 },
-  /** proposed: forward probe distance for obstacles and the dock edge. */
-  edgeProbeDistance: 2.5,
-  edgeProbeDepth: 1.5,
-  recoverDuration: 1.0,
+  /** Preferred firing band to the player (m) and the distance below which the mech backs off. */
+  bandMin: 18,
+  bandMax: 25,
+  retreatDistance: 8,
+  rocketSpeed: 25,
+  splashRadius: 3,
+  /** Salvo size range, delay between rockets, telegraph before the first one, cooldown after the last (s). */
+  salvoMin: 2,
+  salvoMax: 3,
+  shotInterval: 0.5,
+  telegraphTime: 1.0,
+  cooldown: 3,
+  loseTargetTime: 4,
 } as const;
 
 /** GDD 13.7 */
@@ -250,9 +208,6 @@ export const OBJECTIVES = {
 /** GDD 9 */
 export const BOSS = {
   name: 'TITAN-04',
-  bodyDiameter: 15,
-  totalHeight: 22,
-  legCount: 4,
   coreHp: 4000,
   weakPointCount: 4,
   weakPointHp: 500,
@@ -263,7 +218,6 @@ export const BOSS = {
   perchHeights: [8, 14, 20],
   /** proposed */
   awakeningDuration: 4,
-  weakPointRadius: 1.2,
   attackInterval: 5,
   heavyCannon: { damage: 30, telegraph: 1.2, projectileSpeed: 40, splashRadius: 4, cooldown: 6 },
   groundSlam: { damage: 35, telegraph: 1.5, radius: 14, cooldown: 9 },
@@ -273,9 +227,7 @@ export const BOSS = {
 
 /** GDD 13.9 / 10 / 13.6 */
 export const PERFORMANCE = {
-  targetFps: 60,
   lowEndFps: 30,
-  dynamicShadowLights: 1,
   /** proposed budgets used by the perf monitor warnings. */
   maxDrawCalls: 350,
   maxTriangles: 1_500_000,
@@ -294,8 +246,7 @@ export const WORLD = {
   /** ISO 20 ft container (length, height, width). */
   container: { length: 6.06, height: 2.59, width: 2.44 },
   maxContainerStack: 3,
-  /** GDD 6.3: Charger lanes. */
-  chargerLaneMinLength: 30,
+  /** GDD 6.3: Duck lanes. */
   chargerLaneWidth: 6,
   /** GDD 7.4 */
   craneCountMin: 5,
@@ -321,9 +272,7 @@ export const TUNABLES = {
   WEAPON,
   ECONOMY,
   ENEMY_COUNTS,
-  SPHERE_ROBOT,
-  SPIDER_ROBOT,
-  CHARGER_ROBOT,
+  ARMY_ROBOT,
   AI_SCHEDULING,
   OBJECTIVES,
   BOSS,
@@ -332,5 +281,4 @@ export const TUNABLES = {
   CAMERA,
 } as const;
 
-export type Tunables = typeof TUNABLES;
 export type QualityPreset = keyof typeof PERFORMANCE.quality;

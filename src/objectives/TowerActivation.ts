@@ -1,4 +1,4 @@
-export type CancelReason = 'left-range' | 'released' | 'died';
+type CancelReason = 'left-range' | 'released' | 'died';
 
 export interface ActivationInput {
   inRange: boolean;

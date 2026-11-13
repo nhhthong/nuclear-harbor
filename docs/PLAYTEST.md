@@ -3,13 +3,16 @@
 Honest scope statement: no human played this build. Everything below comes from (a) scripted runs in headless
 Chromium with software WebGL (`tests/e2e/T-16-*.e2e.mjs`), (b) one-off probe scripts driving the real game
 through `window.__NH__.game`, (c) static numbers from `src/config/tunables.ts`, and (d) four screenshots I
-looked at. Feel (aiming, grapple flow, fear of the Charger) is NOT verified; items marked "unverified" need a
+looked at. Feel (aiming, grapple flow, fear of the Bomber Duck) is NOT verified; items marked "unverified" need a
 person with a mouse. Headless FPS is not performance data.
 
-## 1. Vertical slice (GDD 15.1, `?sandbox&autostart&enemies=sphere,charger&countdown=600`)
+Note (T-23 phase B): measurements and screenshot notes below were taken with the old placeholder robots; "sphere", "spider" and
+"charger" there mean the robots now called army mech, Spot dog and Bomber Duck (ids `army`, `spot`, `duck`). Numbers are not re-measured.
+
+## 1. Vertical slice (GDD 15.1, `?sandbox&autostart&enemies=army,duck&countdown=600`)
 
 `tests/e2e/T-16-vertical-slice.e2e.mjs` passes: walk, hit a dummy, grapple the pillar (arrives, rises above 8 m),
-kill the sphere with real shots, dodge the Charger into the wall (wind-up, charge, stun), collect the ammo crate,
+kill the army mech with real shots, survive the Bomber Duck (wind-up countdown and blast), collect the ammo crate,
 hold E on the sandbox tower, boss spawns with a `boss-start` checkpoint, 4 weak points then the core die via the
 boss test hook, victory screen after the collapse, best result stored. Zero console errors. The loop closes; the
 slice does not prove the loop is fun. The weapon hit 5 of 5 shots at 8 to 15 m range in the script, which says
@@ -31,7 +34,7 @@ menu then Play" after a finished run reloads instead of resuming a dead run.
 
 ### Robot counts and placement
 
-14 sphere / 10 spider / 6 charger, verified in unit tests against the real container layout (nav grid rasterised
+14 army / 10 spot / 6 duck, verified in unit tests against the real container layout (nav grid rasterised
 from the world generator's boxes) and in the browser. Four Chargers start on the three longest N-S yard lanes and
 one long E-W aisle, one in the warehouse corridor, one on the open dock strip. Only 2 robots start within 60 m of
 the player spawn. Guard counts within 40 m of each tower at spawn time: T1 = 1, T2 = 4, T3 = 4, T4 = 5.

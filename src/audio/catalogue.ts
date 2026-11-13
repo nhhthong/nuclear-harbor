@@ -49,10 +49,8 @@ export const SOUND_DEFS = {
   enemyAlert: d('sfx', 4, 3, 200, true),
   enemyShot: d('sfx', 4, 5, 90, true),
   enemyDestroyed: d('sfx', 6, 4, 80, true, 6),
-  chargerWindup: d('sfx', 7, 2, 300, true, 8),
-  chargerCharge: d('sfx', 6, 2, 300, true, 8),
-  chargerStunned: d('sfx', 6, 2, 300, true, 6),
-  chargerHit: d('sfx', 7, 2, 200, true),
+  duckWindup: d('sfx', 7, 2, 300, true, 8),
+  duckHit: d('sfx', 7, 2, 200, true),
   // objective
   towerCancel: d('sfx', 5, 1, 150),
   towerActivated: d('sfx', 8, 2, 300, true, 10),

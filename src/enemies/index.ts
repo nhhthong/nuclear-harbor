@@ -4,11 +4,9 @@ import type { GameModule } from '@/core/GameModule';
 import type { EnemyType } from '@/core/types';
 import { EnemyManager } from './EnemyManager';
 
-export type { EnemyDeps, EnemyFactory, EnemySpawn } from './BaseEnemy';
-
 /**
  * Robot framework: manager, AI scheduler, navigation, robot types (GDD 6, 13.7).
- * T-05 owns the framework and the sphere robot; T-13 / T-14 replace spider/ and charger/.
+ * Robot types live in army/ (Vanguard mech), spot/ (Spot dog) and duck/ (Bomber Duck).
  */
 export function createEnemiesModule(): GameModule {
   let manager: EnemyManager | null = null;

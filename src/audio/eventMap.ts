@@ -3,7 +3,7 @@ import type { BossAttackId } from '@/core/types';
 import type { SoundId } from './catalogue';
 import { AUDIO } from './tunables';
 
-export interface Vec3Like {
+interface Vec3Like {
   x: number;
   y: number;
   z: number;
@@ -14,14 +14,14 @@ export interface SoundRequest {
   id: SoundId;
   position?: Vec3Like;
   intensity?: number;
-  /** Seconds; sounds that follow a telegraph (charger wind-up, reload) use it. */
+  /** Seconds; sounds that follow a telegraph (duck wind-up, reload) use it. */
   duration?: number;
   variant?: number;
 }
 
 type Route<K extends keyof GameEvents> = (e: GameEvents[K]) => SoundRequest | SoundRequest[] | null;
 
-export const BOSS_ATTACK_ORDER: readonly BossAttackId[] = [
+const BOSS_ATTACK_ORDER: readonly BossAttackId[] = [
   'heavy-cannon',
   'ground-slam',
   'missile-barrage',
@@ -34,7 +34,7 @@ function attackVariant(attack: BossAttackId): number {
   return Math.max(0, BOSS_ATTACK_ORDER.indexOf(attack));
 }
 
-const ENEMY_VARIANT = { sphere: 0, spider: 1, charger: 2 } as const;
+const ENEMY_VARIANT = { army: 0, spot: 1, duck: 2 } as const;
 
 /** Event -> sound routing. Stateful sounds (tower hum, beacon, ambience) live in the module. */
 export const EVENT_ROUTES = {
@@ -60,12 +60,11 @@ export const EVENT_ROUTES = {
   'combat:impact': (e) => ({ id: 'impact', position: e.point }),
   // enemies
   'enemy:alerted': (e) => ({ id: 'enemyAlert', position: e.position, variant: ENEMY_VARIANT[e.type] }),
-  'enemy:attacked': (e) => (e.type === 'charger' ? null : { id: 'enemyShot', position: e.position }),
+  'enemy:attacked': (e) => (e.type === 'duck' ? null : { id: 'enemyShot', position: e.position }),
   'enemy:destroyed': (e) => ({ id: 'enemyDestroyed', position: e.position }),
-  'charger:windup': (e) => ({ id: 'chargerWindup', position: e.position, duration: e.duration }),
-  'charger:chargeStarted': (e) => ({ id: 'chargerCharge', position: e.position }),
-  'charger:stunned': (e) => ({ id: 'chargerStunned', position: e.position }),
-  'charger:hitPlayer': (e) => ({ id: 'chargerHit', position: e.position }),
+  'duck:windup': (e) => ({ id: 'duckWindup', position: e.position, duration: e.duration }),
+  'duck:beep': (e) => ({ id: 'beep', position: e.position }),
+  'duck:hitPlayer': (e) => ({ id: 'duckHit', position: e.position }),
   // objective
   'tower:activationCancelled': () => ({ id: 'towerCancel' }),
   'tower:activated': (e) => ({ id: 'towerActivated', position: e.position }),

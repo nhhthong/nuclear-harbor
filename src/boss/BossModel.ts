@@ -89,6 +89,13 @@ export class BossModel {
     return [{ type: 'phaseChanged', phase: 'weakpoint-hunt' }];
   }
 
+  /** Cinematic skipped: end the awakening now (same events as the timer running out). */
+  finishAwakening(): BossModelEvent[] {
+    if (this.phase !== 'awakening') return [];
+    this.awakeningLeft = 0;
+    return this.update(0);
+  }
+
   /** Armour (hull, legs): absorbs everything (armorDamageMultiplier is 0). */
   hitArmor(amount: number): HitOutcome {
     const raw = this.vulnerable ? Math.max(0, amount) * this.config.armorDamageMultiplier : 0;

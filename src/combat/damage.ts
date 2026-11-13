@@ -13,7 +13,7 @@ export const DEFAULT_ZONE_MULTIPLIERS: ZoneMultipliers = {
   core: 1,
 };
 
-export function zoneMultiplier(zone: HitZone, profile: ZoneMultipliers = DEFAULT_ZONE_MULTIPLIERS): number {
+function zoneMultiplier(zone: HitZone, profile: ZoneMultipliers = DEFAULT_ZONE_MULTIPLIERS): number {
   return profile[zone] ?? 1;
 }
 
@@ -33,23 +33,6 @@ export function resolveDamage(
   const dealt = Math.min(hp, raw);
   const hpAfter = hp - dealt;
   return { dealt, zone, killed: hpAfter <= 0 && dealt > 0, absorbed: dealt <= 0, hpAfter };
-}
-
-/**
- * True when an attack travelling along `attackDir` strikes the front of a target facing
- * `facing` (both XZ, need not be normalised). Used by the Charger's front shield (GDD 6.3).
- */
-export function isFrontalHit(
-  facing: { x: number; z: number },
-  attackDir: { x: number; z: number },
-  frontArcHalfAngleDeg: number,
-): boolean {
-  const fl = Math.hypot(facing.x, facing.z);
-  const al = Math.hypot(attackDir.x, attackDir.z);
-  if (fl === 0 || al === 0) return false;
-  // the attack comes from the front when it travels against the facing direction
-  const cos = -(facing.x * attackDir.x + facing.z * attackDir.z) / (fl * al);
-  return cos >= Math.cos((frontArcHalfAngleDeg * Math.PI) / 180);
 }
 
 /** Shots needed to deal `totalHp` with base damage per shot (GDD 5.4 budget table). */

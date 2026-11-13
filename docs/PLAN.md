@@ -19,9 +19,9 @@ Inputs: [`docs/GDD.md`](GDD.md) (design spec), [`docs/REVIEW.md`](REVIEW.md) (ac
 | Area | Assessment |
 |---|---|
 | Scope | 4 zones, 30 robots, 1 boss, 1 weapon: feasible with primitives. Biggest volume is level content and three enemy types. |
-| Main risks | (1) Grapple feel and "landing on top" of perches; (2) enemy navigation among container rows; (3) Charger edge/obstacle safety; (4) boss weak points at 22 m reachable only via perches; (5) merge conflicts between parallel workers. |
+| Main risks | (1) Grapple feel and "landing on top" of perches; (2) enemy navigation among container rows; (3) Bomber Duck edge/obstacle safety; (4) boss weak points at 22 m reachable only via perches; (5) merge conflicts between parallel workers. |
 | Mitigation | (1) perch anchors carry a `landing` point, sandbox has a perch; (2) one nav grid service inside the enemies module, baked on `world:ready`; (3) pure, unit-tested charge planner; (4) perches at 8/14/20 m are part of the level contract; (5) exclusive file ownership + pre-wired module slots. |
-| Assets | None available. Everything procedural. GameBanana and Blender hosts are blocked; the asset pipeline is ticket T-18, blocked on a user upload. |
+| Assets | Everything procedural except the G36C view model, supplied by the owner and converted by the T-18 pipeline (`docs/ASSETS.md`); the procedural view model stays the default and fallback. |
 | Gate | Vertical slice (GDD 15.1) is reachable after wave 2 inside `?sandbox`; T-16 turns it into a scripted end-to-end check before content is scaled to 30 robots. |
 
 ## 2. Architecture decisions
@@ -59,7 +59,7 @@ src/
 ├── assets/     ResourceTracker                                                         foundation
 ├── sandbox/    test scene                                                              foundation
 ├── player/     T-01      ├── weapon/     T-02      ├── world/      T-03
-├── structures/ T-04      ├── enemies/    T-05 (+ spider/ T-13, charger/ T-14)
+├── structures/ T-04      ├── enemies/    T-05 (+ army/ T-20, spot/ + duck/ T-19)
 ├── ui/         T-06      ├── audio/      T-07      ├── objectives/ T-08
 ├── pickups/    T-09      ├── vfx/        T-10      ├── debug/      T-11
 ├── grapple/    T-12      ├── boss/       T-15      └── flow/       T-16
@@ -139,7 +139,7 @@ Input rule: hold state anywhere; `wasPressed` / `consumeLookDelta` only in `upda
 | player | `player:damaged`, `player:healed`, `player:died` (emitted by `PlayerState`), `player:landed`, `player:footstep` | T-01 → ui, audio, flow |
 | weapon | `weapon:fired`, `weapon:dryFire`, `weapon:reloadStarted`, `weapon:reloadFinished`, `weapon:ammoChanged`, `combat:hit`, `combat:impact`; request `weapon:grantAmmo` | T-02 → ui, audio, vfx; T-09 → T-02 |
 | grapple | `grapple:fired`, `grapple:attached`, `grapple:released`, `grapple:failed`, `grapple:cooldown` | T-12 → ui, audio |
-| enemies | `enemy:spawned`, `enemy:alerted`, `enemy:attacked`, `enemy:damaged`, `enemy:destroyed`, `charger:windup`, `charger:chargeStarted`, `charger:stunned`, `charger:hitPlayer` | T-05/13/14 → ui, audio, vfx, pickups |
+| enemies | `enemy:spawned`, `enemy:alerted`, `enemy:attacked`, `enemy:damaged`, `enemy:destroyed`, `duck:windup`, `duck:beep`, `duck:explode`, `duck:hitPlayer` | T-05/13/14 → ui, audio, vfx, pickups |
 | objectives | `tower:registered`, `tower:activationStarted`, `tower:activationProgress`, `tower:activationCancelled`, `tower:activated`, `objectives:defendStarted`, `objectives:allActivated`, `countdown:tick`, `countdown:stopped`, `countdown:expired`, `interact:prompt` | T-08 → ui, audio, enemies, boss, flow |
 | pickups | `pickup:spawned`, `pickup:collected` | T-09 → ui, audio, vfx |
 | boss | `boss:spawned`, `boss:phaseChanged`, `boss:weakPointDamaged`, `boss:weakPointDestroyed`, `boss:coreExposed`, `boss:coreDamaged`, `boss:attackTelegraph`, `boss:attack`, `boss:defeated` | T-15 → ui, audio, vfx, flow |
@@ -147,8 +147,8 @@ Input rule: hold state anywhere; `wasPressed` / `consumeLookDelta` only in `upda
 
 ### 4.5 `src/config/tunables.ts`
 
-Sections `SIM, PLAYER, GRAPPLE, WEAPON, ECONOMY, ENEMY_COUNTS, SPHERE_ROBOT, SPIDER_ROBOT,
-CHARGER_ROBOT, AI_SCHEDULING, OBJECTIVES, BOSS, PERFORMANCE, WORLD, CAMERA`. Each value is tagged
+Sections `SIM, PLAYER, GRAPPLE, WEAPON, ECONOMY, ENEMY_COUNTS, ARMY_ROBOT,
+AI_SCHEDULING, OBJECTIVES, BOSS, PERFORMANCE, WORLD, CAMERA`. Each value is tagged
 `GDD x.y` (from the spec) or `proposed` (engineering default). A unit test checks the GDD 5.4 ammo
 budget (404 hits needed, 870 rounds supplied) so balance edits that break the budget fail CI.
 
@@ -167,7 +167,7 @@ budget (404 hits needed, 870 rounds supplied) so balance edits that break the bu
 | Towers | T1 (20, 0, 62) C · T2 (−72, 0, −12) A · T3 (72, **10**, −12) B on a gantry platform · T4 (60, 0, −96) D |
 | Cranes | 3 in B, 1 at the yard edge, 2 on the dock (`CRANE_SITES`) |
 | Boss arena | centre (−28, 0, −90), radius 28, perches at 8 / 14 / 20 m |
-| Robots per zone (sphere/spider/charger) | A 5/3/4 · B 4/3/0 · C 3/2/1 · D 2/2/1 |
+| Robots per zone (army/spot/duck) | A 5/3/4 · B 4/3/0 · C 3/2/1 · D 2/2/1 |
 | Keep-clear discs (`KEEP_CLEAR`) | spawn r 6 · boss arena r 32 · each tower r 7 · each crane site r 14. Below 9 m only the disc's owner builds inside it. |
 
 ### 4.7 Query parameters
@@ -175,7 +175,7 @@ budget (404 hits needed, 870 rounds supplied) so balance edits that break the bu
 | Parameter | Owner | Effect |
 |---|---|---|
 | `sandbox`, `autostart`, `debug` | foundation | Test scene / skip menu / debug overlay on. |
-| `enemies=sphere,spider,charger\|none` | T-05 | Sandbox robot fixtures. |
+| `enemies=army,spot,duck\|none` | T-05 | Sandbox robot fixtures. |
 | `countdown=<s>`, `towers=<n>` | T-08 | Countdown override / pre-activated towers. |
 | `boss`, `bossphase=core` | T-15 | Spawn the boss at boot / start with the core exposed. |
 | `anchors` | T-04 | Anchor and coverage debug view. |
@@ -247,7 +247,7 @@ Headless Chromium uses software WebGL: FPS numbers from smoke/e2e are not perfor
 | T-02 | Weapon | 1 | — | `src/weapon/` |
 | T-03 | World greybox | 1 | — | `src/world/` |
 | T-04 | Cranes, perches, grapple anchors | 1 | — | `src/structures/` |
-| T-05 | Enemy framework + sphere robot | 1 | — | `src/enemies/` (except `spider/`, `charger/` bodies) |
+| T-05 | Enemy framework + sphere robot (now the army mech) | 1 | — | `src/enemies/` (except `spider/`, `charger/` bodies) |
 | T-06 | HUD, menus, settings | 1 | — | `src/ui/` |
 | T-07 | Procedural audio | 1 | — | `src/audio/` |
 | T-08 | Towers + countdown | 1 | — | `src/objectives/` |
@@ -255,8 +255,8 @@ Headless Chromium uses software WebGL: FPS numbers from smoke/e2e are not perfor
 | T-10 | VFX | 1 | — | `src/vfx/` |
 | T-11 | Perf monitor + debug overlay | 1 | — | `src/debug/` |
 | T-12 | Grappling hook | 2 | T-01 (soft: T-04) | `src/grapple/` |
-| T-13 | Spider robot | 2 | T-05 | `src/enemies/spider/` |
-| T-14 | Charger robot | 2 | T-05 (soft: T-01) | `src/enemies/charger/` |
+| T-13 | Spider robot (now Spot dog) | 2 | T-05 | `src/enemies/spot/` (was spider/) |
+| T-14 | Charger robot (now Bomber Duck) | 2 | T-05 (soft: T-01) | `src/enemies/duck/` (was charger/) |
 | T-15 | TITAN-04 boss | 2 | T-02 (soft: T-04, T-10) | `src/boss/` |
 | T-16 | Game flow, population, vertical slice | 3 | T-01…T-15 | `src/flow/`, `src/enemies/population.ts`, `src/pickups/placements.ts` |
 | T-17 | Optimisation + offline packaging | 4 | T-16 | cross-cutting (see ticket) |
@@ -270,7 +270,7 @@ foundation ──┬─ T-01 ──┬─ T-12 ───────────
              ├─ T-05 ──┬─ T-13 ──────────────┼─ T-16 ── T-17
              │         └─ T-14 ──────────────┤
              ├─ T-06, T-07, T-08, T-09, T-10, T-11 ─┘
-             └─ (T-02) ·· T-18 optional, blocked on user upload
+             └─ (T-02) ·· T-18 optional (done, asset supplied)
 ```
 
 "Soft" dependency = the ticket is developed and tested against the sandbox/contract and only needs

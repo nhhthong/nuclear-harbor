@@ -81,10 +81,8 @@ export interface GameEvents {
   'enemy:attacked': { id: string; type: EnemyType; position: Vector3 };
   'enemy:damaged': { id: string; type: EnemyType; hp: number; maxHp: number; zone: HitZone };
   'enemy:destroyed': { id: string; type: EnemyType; position: Vector3; remaining: number };
-  'charger:windup': { id: string; position: Vector3; direction: Vector3; duration: number };
-  'charger:chargeStarted': { id: string; position: Vector3; direction: Vector3 };
-  'charger:stunned': { id: string; position: Vector3; duration: number };
-  'charger:hitPlayer': { id: string; position: Vector3 };
+  'duck:windup': { id: string; position: Vector3; direction: Vector3; duration: number };
+  'duck:hitPlayer': { id: string; position: Vector3 };
 
   // ---- objectives (T-08) ---------------------------------------------------------------
   /** Emitted once per tower from the objectives module's `world:ready` handler (HUD compass, audio). */
@@ -123,4 +121,3 @@ export interface GameEvents {
   'ui:toast': { text: string; seconds?: number };
 }
 
-export type GameEventName = keyof GameEvents;

@@ -19,10 +19,10 @@ describe('level contract', () => {
   });
 
   it('distributes exactly 14 / 10 / 6 robots (GDD 6)', () => {
-    const sum = (k: 'sphere' | 'spider' | 'charger') => Object.values(ENEMY_DISTRIBUTION).reduce((n, z) => n + z[k], 0);
-    expect(sum('sphere')).toBe(ENEMY_COUNTS.sphere);
-    expect(sum('spider')).toBe(ENEMY_COUNTS.spider);
-    expect(sum('charger')).toBe(ENEMY_COUNTS.charger);
+    const sum = (k: 'army' | 'spot' | 'duck') => Object.values(ENEMY_DISTRIBUTION).reduce((n, z) => n + z[k], 0);
+    expect(sum('army')).toBe(ENEMY_COUNTS.army);
+    expect(sum('spot')).toBe(ENEMY_COUNTS.spot);
+    expect(sum('duck')).toBe(ENEMY_COUNTS.duck);
   });
 
   it('has 5-6 cranes on land and a boss arena inside the dock zone (GDD 7.4, 9.1)', () => {

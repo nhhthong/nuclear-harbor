@@ -23,14 +23,19 @@ describe('event routes', () => {
 
   it('covers every GDD 11 group', () => {
     const routed = Object.keys(EVENT_ROUTES);
-    for (const e of ['weapon:fired', 'player:footstep', 'grapple:fired', 'enemy:alerted', 'enemy:destroyed', 'charger:windup', 'tower:activated', 'countdown:tick', 'boss:spawned', 'boss:attack', 'boss:weakPointDestroyed', 'boss:defeated']) {
+    for (const e of ['weapon:fired', 'player:footstep', 'grapple:fired', 'enemy:alerted', 'enemy:destroyed', 'duck:windup', 'tower:activated', 'countdown:tick', 'boss:spawned', 'boss:attack', 'boss:weakPointDestroyed', 'boss:defeated']) {
       expect(routed).toContain(e);
     }
   });
 
-  it('passes the charger telegraph duration to the wind-up sound', () => {
-    const out = EVENT_ROUTES['charger:windup']({ id: 'c', position: v(), direction: v(), duration: 1.4 });
-    expect(out).toMatchObject({ id: 'chargerWindup', duration: 1.4 });
+  it('passes the duck telegraph duration to the wind-up sound', () => {
+    const out = EVENT_ROUTES['duck:windup']({ id: 'c', position: v(), direction: v(), duration: 1.4 });
+    expect(out).toMatchObject({ id: 'duckWindup', duration: 1.4 });
+  });
+
+  it('routes the duck fuse beep to the existing beep recipe at the duck position', () => {
+    const out = EVENT_ROUTES['duck:beep']({ id: 'c', position: v(), count: 3 });
+    expect(out).toMatchObject({ id: 'beep' });
   });
 
   it('routes the countdown: alarm when critical, beeps in the last 10 s, silence otherwise', () => {

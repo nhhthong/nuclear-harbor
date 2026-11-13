@@ -2,7 +2,7 @@
  * Level contract: coarse layout of the harbor shared by every content ticket.
  *
  * Coordinate system: +X = east, +Y = up, +Z = south. Ground (concrete) is at y = 0.
- * The sea lies north of the dock edge (z < DOCK_EDGE_Z) and west/east of the land.
+ * The sea lies north of the dock edge (z < LAND.minZ) and west/east of the land.
  * Player yaw 0 looks towards -Z (north).
  *
  *            z = -120  ======== dock edge / sea to the north ========
@@ -37,7 +37,6 @@ export interface Vec3Like {
 }
 
 export const LAND = { minX: -120, maxX: 120, minZ: -120, maxZ: 100 } as const;
-export const DOCK_EDGE_Z = LAND.minZ;
 export const SEA_LEVEL_Y = -2;
 
 export const ZONES: Readonly<Record<ZoneId, ZoneDef>> = {
@@ -127,12 +126,12 @@ export function isKeepClear(x: number, z: number, margin = 0): boolean {
 /** Decorative cargo ship (GDD 7.1), static, out at sea. */
 export const SHIP_BACKDROP = { position: { x: -40, y: SEA_LEVEL_Y, z: -190 } as Vec3Like, yaw: 0.12 } as const;
 
-/** Enemy distribution per zone; sums to GDD 6 totals (14 / 10 / 6). Mostly Chargers in the yard (GDD 6.3). */
-export const ENEMY_DISTRIBUTION: Readonly<Record<ZoneId, { sphere: number; spider: number; charger: number }>> = {
-  A: { sphere: 5, spider: 3, charger: 4 },
-  B: { sphere: 4, spider: 3, charger: 0 },
-  C: { sphere: 3, spider: 2, charger: 1 },
-  D: { sphere: 2, spider: 2, charger: 1 },
+/** Enemy distribution per zone; sums to GDD 6 totals (14 / 10 / 6). Mostly Ducks in the yard (GDD 6.3). */
+export const ENEMY_DISTRIBUTION: Readonly<Record<ZoneId, { army: number; spot: number; duck: number }>> = {
+  A: { army: 5, spot: 3, duck: 4 },
+  B: { army: 4, spot: 3, duck: 0 },
+  C: { army: 3, spot: 2, duck: 1 },
+  D: { army: 2, spot: 2, duck: 1 },
 };
 
 export function zoneAt(x: number, z: number): ZoneId | null {
@@ -147,7 +146,7 @@ export function isOnLand(x: number, z: number): boolean {
 }
 
 /** Spawn inside the foundation sandbox scene (`?sandbox`, see src/sandbox). */
-export const SANDBOX_SPAWN = {
+const SANDBOX_SPAWN = {
   position: { x: 0, y: 0, z: 12 } as Vec3Like,
   yaw: 0,
 } as const;

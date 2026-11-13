@@ -92,15 +92,9 @@ export function createVfxModule(): GameModule {
 
       on('enemy:destroyed', (e) => {
         const p = e.position;
-        const scale = e.type === 'charger' ? 1.6 : 1;
+        const scale = e.type === 'duck' ? 1.6 : 1;
         spawn('explosion', p.x, p.y, p.z, 0, 1, 0, scale);
         spawn('smoke', p.x, p.y + 0.4, p.z, 0, 1, 0, scale);
-      });
-
-      on('charger:stunned', (e) => {
-        const p = e.position;
-        spawn('spark', p.x, p.y + 1, p.z, 0, 1, 0, VFX.chargerStunScale);
-        spawn('smoke', p.x, p.y + 1, p.z, 0, 1, 0, 0.8);
       });
 
       on('pickup:collected', (e) => spawn('pickup', e.position.x, e.position.y, e.position.z, 0, 1, 0, 1));

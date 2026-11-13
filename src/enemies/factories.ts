@@ -1,14 +1,15 @@
 import type { EnemyType } from '@/core/types';
 import type { EnemyFactory } from './BaseEnemy';
-import { createChargerRobot } from './charger';
-import { SphereRobot } from './SphereRobot';
-import { createSpiderRobot } from './spider';
+import { createArmyRobot } from './army';
+import { createDuckRobot } from './duck';
+import { createSpotRobot } from './spot';
 
-export const createSphereRobot: EnemyFactory = (deps, spawn) => new SphereRobot(deps, spawn);
-
-/** One factory per enemy type. T-13 / T-14 replace only their own folder. */
+/**
+ * One factory per enemy type. Ids are kept from the placeholders and renamed in T-23 phase B:
+ * `army` = Vanguard army mech (T-20), `spot` = Spot dog (T-19), `duck` = Bomber Duck (T-19).
+ */
 export const ENEMY_FACTORIES: Readonly<Record<EnemyType, EnemyFactory>> = {
-  sphere: createSphereRobot,
-  spider: createSpiderRobot,
-  charger: createChargerRobot,
+  army: createArmyRobot,
+  spot: createSpotRobot,
+  duck: createDuckRobot,
 };

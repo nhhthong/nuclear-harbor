@@ -15,7 +15,7 @@ export interface BudgetInput {
   readonly lowFpsSustained: boolean;
 }
 
-export type BudgetKey = 'drawCalls' | 'triangles' | 'heap' | 'fps';
+type BudgetKey = 'drawCalls' | 'triangles' | 'heap' | 'fps';
 
 export interface BudgetWarning {
   readonly key: BudgetKey;

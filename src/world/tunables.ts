@@ -33,7 +33,7 @@ export const WORLD_LOCAL = {
   },
   /** Extra clearance around keep-clear discs when placing containers (m). */
   keepClearMargin: 0.5,
-  /** Charger lane requirements (ticket T-03, GDD 6.3). */
+  /** Duck lane requirements (ticket T-03, GDD 6.3). */
   lane: { minLength: 30, minWidth: 6 },
   /** Muted container palette (sRGB hex). */
   containerColors: [0x8a3b2e, 0x3a5a78, 0x4f6b4a, 0xb08a2e, 0x6b6e70, 0x7a5a3c, 0x9a9a8c, 0x4b4f5c] as readonly number[],

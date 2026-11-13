@@ -37,7 +37,7 @@ export const DEFAULT_BINDINGS: Bindings = {
 
 export const ALL_ACTIONS = Object.keys(DEFAULT_BINDINGS) as Action[];
 
-export function mouseButtonCode(button: number): string {
+function mouseButtonCode(button: number): string {
   return `Mouse${button}`;
 }
 

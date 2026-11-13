@@ -14,7 +14,7 @@ import { WORLD_LOCAL } from './tunables';
  * side by side with the same stack height); each run yields at most two merged collider boxes.
  */
 
-export interface ContainerInstance {
+interface ContainerInstance {
   x: number;
   /** Centre height. */
   y: number;
@@ -36,7 +36,7 @@ export interface ColliderBox {
   zone: ZoneId;
 }
 
-export interface StackTop {
+interface StackTop {
   /** Top edge centre of the stack. */
   x: number;
   y: number;
@@ -44,7 +44,7 @@ export interface StackTop {
   zone: ZoneId;
 }
 
-/** A straight, obstacle-free strip for Charger runs (centre line + width). */
+/** A straight, obstacle-free strip for Duck runs (centre line + width). */
 export interface Lane {
   id: string;
   axis: 'x' | 'z';
@@ -345,4 +345,3 @@ export function generateContainerLayout(params: Partial<LayoutParams> = {}): Con
   return layout;
 }
 
-export const CONTAINER_HEIGHT = H;
