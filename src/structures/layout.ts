@@ -4,7 +4,7 @@ import { placeCrane } from './craneLayout';
 import type { PlacedCrane } from './craneLayout';
 import { lampParts, lampPosts } from './lampLayout';
 import type { LampPost } from './lampLayout';
-import { bossPerches, towerPlatform } from './perchLayout';
+import { towerPlatform } from './perchLayout';
 import type { PlacedPerch } from './perchLayout';
 
 export interface StructureLayout {
@@ -21,7 +21,8 @@ export interface StructureLayout {
 /** Whole level layout of T-04, pure data (no three.js, no physics). */
 export function buildLayout(): StructureLayout {
   const cranes = CRANE_SITES.map(placeCrane);
-  const perches = bossPerches();
+  // The grappling hook was removed: no boss perch towers. The tower-3 platform stays (double jump).
+  const perches: PlacedPerch[] = [];
   const platform = towerPlatform();
   const fixedBoxes = [...cranes.flatMap((c) => c.boxes), ...perches.flatMap((p) => p.boxes), ...platform.boxes];
   const fixedAnchors = [...cranes.flatMap((c) => c.anchors), ...perches.flatMap((p) => p.anchors), ...platform.anchors];

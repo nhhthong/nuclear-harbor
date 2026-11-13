@@ -73,25 +73,17 @@ export interface CorridorData {
  * partial boots). A unit test compares it with the real generator so drift is caught.
  */
 export const FALLBACK_LANES: readonly LaneData[] = [
-  { id: 'yard-ns-0', axis: 'z', start: { x: -88.16, z: -59 }, end: { x: -88.16, z: 39 }, width: 6.6, length: 98 },
-  { id: 'yard-ns-1', axis: 'z', start: { x: -57.02, z: -59 }, end: { x: -57.02, z: 39 }, width: 6.6, length: 98 },
-  { id: 'yard-ns-2', axis: 'z', start: { x: -25.88, z: -54.5 }, end: { x: -25.88, z: 39 }, width: 6.6, length: 93.5 },
-  { id: 'yard-ew-0', axis: 'x', start: { x: -119, z: -39.45 }, end: { x: -1, z: -39.45 }, width: 6.6, length: 118 },
-  { id: 'yard-ew-1', axis: 'x', start: { x: -92, z: -27.67 }, end: { x: -1, z: -27.67 }, width: 6.6, length: 91 },
-  { id: 'yard-ew-2', axis: 'x', start: { x: -62, z: -15.89 }, end: { x: -1, z: -15.89 }, width: 6.6, length: 61 },
-  { id: 'yard-ew-3', axis: 'x', start: { x: -65, z: -4.11 }, end: { x: -1, z: -4.11 }, width: 6.6, length: 64 },
-  { id: 'yard-ew-4', axis: 'x', start: { x: -119, z: 7.67 }, end: { x: -1, z: 7.67 }, width: 6.6, length: 118 },
-  { id: 'yard-ew-5', axis: 'x', start: { x: -119, z: 19.45 }, end: { x: -1, z: 19.45 }, width: 6.6, length: 118 },
+  { id: 'yard-ns-1', axis: 'z', start: { x: -21.34, z: -27 }, end: { x: -21.34, z: 23 }, width: 6.6, length: 50 },
+  { id: 'yard-ew-0', axis: 'x', start: { x: -71, z: -14.78 }, end: { x: -1.5, z: -14.78 }, width: 6.6, length: 69.5 },
+  { id: 'yard-ew-2', axis: 'x', start: { x: -41.5, z: 8.78 }, end: { x: -1, z: 8.78 }, width: 6.6, length: 40.5 },
 ];
 
-export const FALLBACK_CORRIDOR: CorridorData = { minX: -48, maxX: 48, minZ: 73, maxZ: 79 };
+export const FALLBACK_CORRIDOR: CorridorData = { minX: -28, maxX: 28, minZ: 40, maxZ: 46 };
 
 /** Distance kept from lane / corridor ends when placing a Duck (m). */
 const LANE_INSET = 6;
 /** Ducks on yard lanes (zone A); the remaining two stand in the warehouse corridor and on the open dock. */
-const YARD_NS_DUCKS = 3;
-/** Spots hug container walls: offset from the lane centre line (lane half-width is 3.3 m, cells are 1.5 m). */
-const COVER_OFFSET = 1.6;
+const YARD_DUCKS = 4;
 /** Arm length of the plus-shaped patrol at lane intersections (m). */
 const ARM = 8;
 
@@ -158,33 +150,33 @@ const spot = (patrol: XZ[]): Authored => ({ type: 'spot', at: patrol[0] ?? [0, 0
 /** Army loops (towers, intersections) and spot cover spots; Ducks come from lane data. */
 const ARMY_SPOT_POSTS: readonly Authored[] = [
   // A Container Yard (5 army, 3 spot)
-  army(ring(-72, -12, 6)), // tower 2
-  army(cross(-57.02, -4.11), [-57.02, -4.11]),
-  army(cross(-25.88, -27.67), [-25.88, -27.67]),
-  army(cross(-25.88, 19.45), [-25.88, 19.45]),
-  army(cross(-88.16, 7.67), [-88.16, 7.67]),
-  spot(line([-88.16 + COVER_OFFSET, -30], [-88.16 + COVER_OFFSET, -12])),
-  spot(line([-57.02, 31], [-57.02, 23])),
-  spot(line([-25.88 + COVER_OFFSET, -46], [-25.88 + COVER_OFFSET, -34])),
+  army(ring(-36, -3, 5)), // tower 2
+  army(cross(-21.34, -14.78), [-21.34, -14.78]),
+  army(cross(-21.34, 8.78), [-21.34, 8.78]),
+  army(cross(-46.3, -14.78), [-46.3, -14.78]),
+  army(line([-44, 21], [-10, 21])), // apron between the yard and the warehouse
+  spot(line([-46.3, -28], [-46.3, -18])),
+  spot(line([-66, -14.78], [-53, -14.78])),
+  spot(line([-3, -10], [-3, 6])),
   // B Crane Zone (4 army, 3 spot)
-  army(ring(72, -12, 6)), // tower 3 (platform base)
-  army(ring(20, -8, 5)),
-  army(ring(10, -44, 5)),
-  army(ring(105, 14, 5)),
-  spot(line([40, -5.5], [52, -5.5])),
-  spot(line([60, -36.5], [72, -36.5])),
-  spot(line([94, 5], [94, 17])),
-  // C Warehouse (3 army, 2 spot); tower 1 is lightly guarded by a single army
-  army(line([30, 58], [12, 58])), // tower 1 aisle
-  army(ring(-70, 68, 6)),
-  army(ring(70, 68, 6)),
-  spot(line([-84, 50], [-84, 62])),
-  spot(line([84, 50], [84, 62])),
+  army(ring(38, -4, 6)), // tower 3 (around the gantry legs)
+  army(ring(34, -25, 4)),
+  army(ring(39, 19, 3.5)),
+  army(line([66, -2], [66, 18])),
+  spot(line([4, -28], [24, -28])),
+  spot(line([29, -4], [29, -14])),
+  spot(line([6, 22], [28, 22])),
+  // C Warehouse (3 army, 2 spot); tower 1 is lightly guarded by a single army, out of sight of the door
+  army(line([25, 36], [16, 36])), // tower 1 hall
+  army(ring(-50, 40, 5)), // west side yard
+  army(ring(50, 40, 5)), // east side yard
+  spot(line([-45, 29], [-60, 29])),
+  spot(line([45, 29], [60, 29])),
   // D Dock (2 army, 2 spot); everything stands within reach of tower 4
-  army(ring(60, -96, 6)), // tower 4 (heaviest guard)
-  army(ring(46, -80, 4)),
-  spot(line([47, -108], [57, -108])),
-  spot(line([58, -76], [70, -76])),
+  army(ring(32, -56, 5)), // tower 4 (heaviest guard)
+  army(line([22, -62], [42, -66])),
+  spot(line([40, -46], [40, -56])),
+  spot(line([26, -47], [26, -62])),
 ];
 
 function laneAlong(lane: LaneData, d: number): XZ {
@@ -192,39 +184,34 @@ function laneAlong(lane: LaneData, d: number): XZ {
   return lane.axis === 'z' ? [lane.start.x, lane.start.z + t] : [lane.start.x + t, lane.start.z];
 }
 
-/** Yard Ducks: the longest N-S lanes (alternating the end they start from) and one long aisle. */
+/** Yard Ducks: one per yard lane, longest first; further Ducks reuse the lanes from the other end. */
 export function yardDucks(lanes: readonly LaneData[]): Authored[] {
-  const yard = lanes.filter((l) => l.id.startsWith('yard'));
-  const ns = yard.filter((l) => l.axis === 'z').sort((a, b) => b.length - a.length || a.start.x - b.start.x);
-  const ew = yard
-    .filter((l) => l.axis === 'x')
-    .sort((a, b) => b.length - a.length || Math.abs(a.start.z + 10) - Math.abs(b.start.z + 10));
+  const yard = lanes
+    .filter((l) => l.id.startsWith('yard'))
+    .sort((a, b) => b.length - a.length || a.id.localeCompare(b.id));
   const out: Authored[] = [];
-  ns.slice(0, YARD_NS_DUCKS)
-    .sort((a, b) => a.start.x - b.start.x)
-    .forEach((lane, i) => {
-      const a = laneAlong(lane, 0);
-      const b = laneAlong(lane, lane.length);
-      const patrol = i % 2 === 0 ? line(a, b) : line(b, a);
-      out.push({ type: 'duck', at: patrol[0] ?? a, patrol });
-    });
-  const aisle = ew[0];
-  if (aisle) {
-    const a = laneAlong(aisle, 0);
-    const b = laneAlong(aisle, aisle.length);
-    out.push({ type: 'duck', at: a, patrol: line(a, b) });
+  for (let i = 0; i < YARD_DUCKS && yard.length > 0; i++) {
+    const lane = yard[i % yard.length] as LaneData;
+    const a = laneAlong(lane, 0);
+    const b = laneAlong(lane, lane.length);
+    const reversed = Math.floor(i / yard.length) % 2 === 1;
+    const patrol = reversed ? line(b, a) : line(a, b);
+    out.push({ type: 'duck', at: patrol[0] ?? a, patrol });
   }
   return out;
 }
 
-/** Warehouse corridor Duck (west to east) and the open-dock Duck (east to west, GDD 6.3). */
+/**
+ * Warehouse corridor Duck (west half, hidden from the south door so it does not see the spawn) and
+ * the open-dock Duck (east to west along the yard / dock border).
+ */
 export function otherDucks(corridor: CorridorData): Authored[] {
   const z = (corridor.minZ + corridor.maxZ) / 2;
-  const a: XZ = [corridor.minX + 8, z];
-  const b: XZ = [corridor.maxX - 8, z];
+  const a: XZ = [corridor.minX + 2, z];
+  const b: XZ = [corridor.minX + 16, z];
   return [
     { type: 'duck', at: a, patrol: line(a, b) },
-    { type: 'duck', at: [80, -64], patrol: line([80, -64], [40, -64]) },
+    { type: 'duck', at: [64, -32.5], patrol: line([64, -32.5], [6, -32.5]) },
   ];
 }
 

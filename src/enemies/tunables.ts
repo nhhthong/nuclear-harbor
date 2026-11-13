@@ -21,7 +21,7 @@ export const ENEMY_LOCAL = {
   sandboxPatrolHalf: 4,
   /** Harbor population. */
   /** Authored population keeps robots at least this far from the player spawn (checked in population.ts). */
-  minDistanceFromSpawn: 40,
+  minDistanceFromSpawn: 18,
   // T-17: populationSeed, patrolPoints, patrolRadius and sampleAttempts were removed (unused since the
   // harbor population became authored, T-16).
 } as const;

@@ -56,7 +56,7 @@ export const LAMP = {
   armLength: 1.6,
   armHalf: 0.1,
   /** Target spacing of the regular pattern; actual spacing divides each zone evenly. */
-  spacing: 36,
+  spacing: 24,
   /** Candidate grid for the greedy fill. */
   candidateStep: 5,
   /** Margin kept from keep-clear discs and the land border. */

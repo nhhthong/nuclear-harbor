@@ -5,6 +5,7 @@ import type { GameContext } from '@/core/GameContext';
 import { buildControlCenter, buildWarehouse } from '@/world/buildings';
 import { generateContainerLayout } from '@/world/containerLayout';
 import { NavGrid } from './nav/NavGrid';
+import { ENEMY_LOCAL } from './tunables';
 import {
   FALLBACK_CORRIDOR,
   FALLBACK_LANES,
@@ -83,8 +84,8 @@ describe('authored harbor population (AC4)', () => {
     }
   });
 
-  it('keeps every robot more than 40 m from the player spawn', () => {
-    for (const p of authored) expect(dist(p.at, PLAYER_SPAWN.position.x, PLAYER_SPAWN.position.z)).toBeGreaterThan(40);
+  it('keeps every robot away from the player spawn', () => {
+    for (const p of authored) expect(dist(p.at, PLAYER_SPAWN.position.x, PLAYER_SPAWN.position.z)).toBeGreaterThan(ENEMY_LOCAL.minDistanceFromSpawn);
   });
 
   it('puts every spawn and patrol point on a walkable cell of the real layout', () => {
@@ -140,7 +141,7 @@ describe('authored harbor population (AC4)', () => {
   });
 
   it('guards tower 1 lightly and tower 4 the heaviest', () => {
-    const guards = TOWERS.map((t) => authored.filter((p) => dist(p.at, t.position.x, t.position.z) <= 40).length);
+    const guards = TOWERS.map((t) => authored.filter((p) => dist(p.at, t.position.x, t.position.z) <= 18).length);
     expect(guards[0]).toBeLessThanOrEqual(2);
     expect(guards[3]).toBe(Math.max(...guards));
     expect(guards[3]).toBeGreaterThan(guards[1]!);

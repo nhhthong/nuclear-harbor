@@ -95,7 +95,7 @@ describe('placements against the real layout (AC5)', () => {
 
   it('puts every elevated supply on a container top or the gantry, inside the top face', () => {
     for (const p of ZONE_PLACEMENTS.filter((q) => q.elevated)) {
-      const gantry = p.zone === 'B' && Math.hypot(p.x - 72, p.z + 12) < 8; // tower-3 platform (T-04)
+      const gantry = p.zone === 'B' && Math.hypot(p.x - 38, p.z + 4) < 5; // tower-3 platform (structures module)
       if (gantry) continue;
       expect(surfaceAt(p.x, p.z, castY(p), -0.6), `${p.kind} at ${p.x}, ${p.z}`).toBeGreaterThanOrEqual(2.5);
     }

@@ -4,7 +4,20 @@ import { GRAPPLE } from '@/config/tunables';
 import { checkCoverage, groundFootprints, sampleWalkable } from './coverage';
 import type { SamplePoint } from './coverage';
 import type { AnchorSpec, StructureBox, V3 } from './boxes';
+import { generateContainerLayout } from '@/world/containerLayout';
 import { ANCHOR, LAMP } from './tunables';
+
+/** Container footprints (pure, seeded generator) so lamp posts never stand inside a stack. */
+let containerRects: Array<{ minX: number; maxX: number; minZ: number; maxZ: number }> | null = null;
+function insideContainers(x: number, z: number, margin: number): boolean {
+  containerRects ??= generateContainerLayout().boxes.map((b) => ({
+    minX: b.center.x - b.halfExtents.x,
+    maxX: b.center.x + b.halfExtents.x,
+    minZ: b.center.z - b.halfExtents.z,
+    maxZ: b.center.z + b.halfExtents.z,
+  }));
+  return containerRects.some((r) => x > r.minX - margin && x < r.maxX + margin + LAMP.armLength && z > r.minZ - margin && z < r.maxZ + margin);
+}
 
 export interface LampPost {
   x: number;
@@ -18,6 +31,7 @@ function validLamp(x: number, z: number, avoid: readonly V3[]): boolean {
   const zone = zoneAt(x, z);
   if (zone !== 'B' && zone !== 'D') return false;
   if (isKeepClear(x, z, LAMP.keepClearMargin)) return false;
+  if (insideContainers(x, z, 1.2)) return false;
   const c = CONTROL_CENTER_FOOTPRINT;
   const b = LAMP.buildingMargin;
   if (x > c.minX - b && x < c.maxX + b + LAMP.armLength && z > c.minZ - b && z < c.maxZ + b) return false;
