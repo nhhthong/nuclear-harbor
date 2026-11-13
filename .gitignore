@@ -12,3 +12,5 @@ playwright-report/
 .env.*
 # raw third-party weapon archives must never be committed (licence unverified, see docs/tickets/T-18)
 tools/asset-pipeline/input/
+# agent worktrees
+.claude/worktrees/
