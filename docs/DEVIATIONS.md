@@ -29,4 +29,4 @@ The DesertTech MDR / GameBanana idea was dropped. The owner supplied a GoldSrc v
 - Zones: 4, as in GDD v1.2; cargo ship is a static backdrop.
 
 ## Engineering decisions that were not in the GDD
-Rapier KCC; procedural audio (Web Audio) and procedural models, no asset files except the G36C GLB; shared `src/config/tunables.ts` plus per-module tunables; static sun shadow refreshed at 6 Hz (medium) / 12 Hz (high); global budget 350 draw calls (menu ~213, harbor ~215 before the robot refresh); hand-written service worker for offline; bundle ~5.3 MB (Rapier WASM is 82%); no streaming (not needed after the benchmark); credits screen in the menu.
+Rapier KCC; procedural audio (Web Audio) and procedural models, no asset files except the G36C GLB; shared `src/config/tunables.ts` plus per-module tunables; static sun shadow refreshed at 6 Hz (medium) / 12 Hz (high); global budget 350 draw calls (menu ~213, harbor ~215 before the robot refresh); hand-written service worker for offline; bundle ~5.3 MB (Rapier WASM is 82%); no zone streaming (never built; the whole harbor loads at once); credits screen in the menu.
