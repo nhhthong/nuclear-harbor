@@ -87,9 +87,21 @@ export const WORLD_LOCAL = {
     stripeColor: 0xe0b020,
   },
   ocean: { size: 1600, deep: 0x0d3b4f, shallow: 0x2f7f8f, waveSpeed: 0.6 },
-  sky: { horizon: 0xcfd9dc, zenith: 0x5b8bb5, radius: 540 },
-  sun: { color: 0xffd9a8, intensity: 3.2, distance: 400, frustumHalf: 112 },
-  hemi: { sky: 0xbfd4e6, ground: 0x6d6a60, intensity: 0.9 },
+  sky: {
+    horizon: 0xc4d2dc,
+    zenith: 0x3f76ad,
+    /** Warm tint of the horizon, clouds and disc on the sun side. */
+    sunTint: 0xffc48a,
+    /** Colour below the horizon (reflection probe only). */
+    ground: 0x5a5d5c,
+    fog: 0xc9d0d3,
+    /** Must stay inside the far plane of every quality preset (low = 300 m) or the dome is clipped. */
+    radius: 260,
+    environmentIntensity: 0.85,
+  },
+  sun: { color: 0xffd2a0, intensity: 3.6, distance: 400, frustumHalf: 112 },
+  /** Lower than before: the reflection probe now supplies most of the ambient light. */
+  hemi: { sky: 0xbfd4e6, ground: 0x6d6a60, intensity: 0.4 },
   colors: {
     wall: 0x8c8f90,
     roof: 0x5e6264,

@@ -243,12 +243,14 @@ export const PERFORMANCE = {
   maxDrawCalls: 350,
   maxTriangles: 1_500_000,
   jsHeapWarnMb: 512,
+  /** Bloom post-process (medium/high presets): only HDR-bright pixels (emissives, muzzle flash, sun glints) glow. */
+  bloom: { strength: 0.3, radius: 0.5, threshold: 1.0, msaaSamples: 4 },
   quality: {
     // T-17: fogFraction = [near, far] as a share of viewDistance; dynamicShadowHz = refresh rate of the
     // otherwise static sun shadow for moving casters (0 = static only).
-    low: { pixelRatioCap: 1, shadowMapSize: 1024, shadows: false, viewDistance: 300, fogFraction: [0.18, 0.95], dynamicShadowHz: 0 },
-    medium: { pixelRatioCap: 1.5, shadowMapSize: 2048, shadows: true, viewDistance: 450, fogFraction: [0.18, 0.95], dynamicShadowHz: 6 },
-    high: { pixelRatioCap: 2, shadowMapSize: 4096, shadows: true, viewDistance: 600, fogFraction: [0.18, 0.95], dynamicShadowHz: 12 },
+    low: { pixelRatioCap: 1, shadowMapSize: 1024, shadows: false, viewDistance: 300, fogFraction: [0.18, 0.95], dynamicShadowHz: 0, bloom: false },
+    medium: { pixelRatioCap: 1.5, shadowMapSize: 2048, shadows: true, viewDistance: 450, fogFraction: [0.18, 0.95], dynamicShadowHz: 6, bloom: true },
+    high: { pixelRatioCap: 2, shadowMapSize: 4096, shadows: true, viewDistance: 600, fogFraction: [0.18, 0.95], dynamicShadowHz: 12, bloom: true },
   },
 } as const;
 

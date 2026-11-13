@@ -25,7 +25,7 @@ import { generateContainerLayout } from './containerLayout';
 import { createLighting } from './lighting';
 import { createOcean, type Ocean } from './ocean';
 import { createShip } from './ship';
-import { createConcreteTexture } from './textures';
+import { createConcreteTexture, createCorrugatedBump, createGroundRoughness, createWornRoughness } from './textures';
 import { WORLD_LOCAL } from './tunables';
 
 const MODULE_ID = 'world';
@@ -48,6 +48,7 @@ function mergeBoxes(boxes: readonly BuildingBox[]): BufferGeometry {
 export function createWorldModule(): GameModule {
   let ocean: Ocean | null = null;
   let dome: Object3D | null = null;
+  let tickSky: ((dt: number) => void) | null = null;
   let camera: Object3D | null = null;
   let res: ReturnType<GameContext['resources']['scope']> | null = null;
   let anchorIds: string[] = [];
@@ -74,12 +75,15 @@ export function createWorldModule(): GameModule {
       scope.track(lighting.dome);
       scene.add(lighting.sun, lighting.sun.target, lighting.hemi, lighting.dome);
       dome = lighting.dome;
+      tickSky = lighting.update;
       scope.onDispose(() => {
         lighting.sun.shadow.map?.dispose();
         lighting.sun.shadow.dispose();
         lighting.sun.target.removeFromParent();
         scene.fog = null;
         scene.background = null;
+        scene.environment = null;
+        lighting.environment?.dispose();
         scene.userData.hasWorldLighting = false;
       });
       scope.onDispose(
@@ -95,11 +99,14 @@ export function createWorldModule(): GameModule {
       const landCz = (LAND.minZ + LAND.maxZ) / 2;
       const concrete = createConcreteTexture();
       concrete.repeat.set(landW / WORLD_LOCAL.concreteTileMeters, landD / WORLD_LOCAL.concreteTileMeters);
+      const groundRough = createGroundRoughness();
+      // a different period than the colour tile hides the repetition of the puddles
+      groundRough.repeat.set(landW / (WORLD_LOCAL.concreteTileMeters * 1.7), landD / (WORLD_LOCAL.concreteTileMeters * 1.7));
       concrete.wrapS = RepeatWrapping;
       concrete.wrapT = RepeatWrapping;
       const ground = new Mesh(
         new PlaneGeometry(landW, landD).rotateX(-Math.PI / 2),
-        new MeshStandardMaterial({ map: concrete, roughness: 0.95, metalness: 0 }),
+        new MeshStandardMaterial({ map: concrete, roughnessMap: groundRough, roughness: 1, metalness: 0, envMapIntensity: 1.15 }),
       );
       ground.name = 'ground';
       ground.position.set(landCx, 0, landCz);
@@ -132,7 +139,17 @@ export function createWorldModule(): GameModule {
 
       // ---- containers -------------------------------------------------------------------------
       const layout = generateContainerLayout();
-      const containerMat = new MeshStandardMaterial({ color: 0xffffff, roughness: 0.8, metalness: 0.15 });
+      // painted corrugated steel: ribs as a bump map, scuffed paint as roughness, sky reflections
+      const ribs = createCorrugatedBump();
+      const worn = createWornRoughness();
+      const containerMat = new MeshStandardMaterial({
+        color: 0xffffff,
+        roughness: 0.9,
+        roughnessMap: worn,
+        metalness: 0.55,
+        bumpMap: ribs,
+        bumpScale: 2.2,
+      });
       const containers = new InstancedMesh(
         new BoxGeometry(WORLD.container.length, WORLD.container.height, WORLD.container.width),
         containerMat,
@@ -192,7 +209,16 @@ export function createWorldModule(): GameModule {
       (Object.keys(materials) as BuildingBoxKind[]).forEach((kind) => {
         const boxes = allBuilding.filter((b) => b.kind === kind);
         if (boxes.length === 0) return;
-        const mesh = new Mesh(mergeBoxes(boxes), new MeshStandardMaterial({ color: materials[kind], roughness: 0.9 }));
+        const clad = kind === 'wall' || kind === 'roof' || kind === 'control';
+        const mesh = new Mesh(
+          mergeBoxes(boxes),
+          new MeshStandardMaterial({
+            color: materials[kind],
+            roughness: clad ? 0.62 : 0.8,
+            metalness: clad ? 0.45 : kind === 'controlUpper' ? 0.7 : 0.1,
+            ...(clad ? { bumpMap: ribs, bumpScale: 1.4, roughnessMap: worn } : {}),
+          }),
+        );
         mesh.name = `building-${kind}`;
         mesh.castShadow = true;
         mesh.receiveShadow = true;
@@ -295,6 +321,7 @@ export function createWorldModule(): GameModule {
     update(dt) {
       if (ocean) (ocean.material.uniforms.uTime as { value: number }).value += dt;
       if (dome && camera) dome.position.copy(camera.position);
+      tickSky?.(dt);
     },
 
     dispose() {
@@ -302,6 +329,7 @@ export function createWorldModule(): GameModule {
       res = null;
       ocean = null;
       dome = null;
+      tickSky = null;
       camera = null;
     },
   };

@@ -67,8 +67,8 @@ export function createStructuresModule(): GameModule {
 
       const layout = buildLayout();
       const box = scope.track(new BoxGeometry(1, 1, 1));
-      const frameMat = scope.track(new MeshStandardMaterial({ color: 0xffffff, roughness: 0.55, metalness: 0.5 }));
-      const accentMat = scope.track(new MeshStandardMaterial({ color: CRANE.accentColor, roughness: 0.7, metalness: 0.4 }));
+      const frameMat = scope.track(new MeshStandardMaterial({ color: 0xffffff, roughness: 0.42, metalness: 0.78 }));
+      const accentMat = scope.track(new MeshStandardMaterial({ color: CRANE.accentColor, roughness: 0.5, metalness: 0.7 }));
 
       // --- cranes: one base model, scale/colour variants, two LOD levels -----------------------
       const parts = craneLocalParts();
