@@ -1,4 +1,4 @@
-import { BoxGeometry, Color, Group, InstancedMesh, LOD, MeshStandardMaterial, Object3D, Vector3 } from 'three';
+import { BoxGeometry, Color, Group, InstancedMesh, LOD, MeshBasicMaterial, MeshStandardMaterial, Object3D, Vector3 } from 'three';
 import type { ResourceTracker } from '@/assets/ResourceTracker';
 import { GRAPPLE } from '@/config/tunables';
 import type { GameContext } from '@/core/GameContext';
@@ -102,6 +102,38 @@ export function createStructuresModule(): GameModule {
         const mesh = makeInstanced(box, role === 'frame' ? frameMat : accentMat, specs, role === 'frame');
         ctx.scene.add(scope.track(mesh));
       }
+
+      // --- lights: lamp heads and red crane beacons as HDR emissive boxes (they bloom; no real lights) ---
+      const glow = (color: readonly [number, number, number], specs: InstanceSpec[]): void => {
+        if (specs.length === 0) return;
+        const mat = scope.track(new MeshBasicMaterial({ color: 0xffffff }));
+        mat.color.setRGB(color[0], color[1], color[2]);
+        const mesh = new InstancedMesh(box, mat, specs.length);
+        specs.forEach((sp, i) => {
+          scratch.position.set(sp.center.x, sp.center.y, sp.center.z);
+          scratch.rotation.set(0, 0, 0);
+          scratch.scale.set(sp.half.x * 2, sp.half.y * 2, sp.half.z * 2);
+          scratch.updateMatrix();
+          mesh.setMatrixAt(i, scratch.matrix);
+        });
+        mesh.instanceMatrix.needsUpdate = true;
+        mesh.name = 'structure-lights';
+        ctx.scene.add(scope.track(mesh));
+      };
+      glow(
+        [3.4, 2.7, 1.5],
+        layout.anchors
+          .filter((a) => a.kind === 'lamp-post')
+          .map((a) => ({ center: { x: a.position.x - 0.15, y: a.position.y, z: a.position.z }, half: { x: 0.28, y: 0.07, z: 0.14 }, yaw: 0 })),
+      );
+      glow(
+        [4, 0.35, 0.25],
+        layout.cranes.map((c) => ({
+          center: { x: c.site.position.x, y: (CRANE.cabin.centerY + CRANE.cabin.y + 0.35) * c.site.scale, z: c.site.position.z },
+          half: { x: 0.25, y: 0.25, z: 0.25 },
+          yaw: 0,
+        })),
+      );
 
       // --- colliders and anchors --------------------------------------------------------------
       const anchorOfBox = new Map(layout.anchors.map((a) => [a.boxId, a.id]));

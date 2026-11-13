@@ -12,7 +12,7 @@ Browser FPS (Three.js + TypeScript + Vite + Rapier), single player, offline. Des
 ## Commands
 ```bash
 npm install
-npm run dev               # http://localhost:5173/  (?sandbox test scene, ?autostart skips the menu, ?debug overlay, ?seed=N, ?enemies=army,spot,duck|none)
+npm run dev               # http://localhost:5173/  (?sandbox test scene, ?autostart skips the menu, ?debug overlay, ?seed=N, ?enemies=army,spot,duck|none, ?viewmodel=procedural)
 npx tsc --noEmit && npm test && npm run build
 npm run smoke / npm run e2e -- T-XX    # browser checks, see policy below
 ```
@@ -26,7 +26,9 @@ npm run smoke / npm run e2e -- T-XX    # browser checks, see policy below
 - Everything is procedural (no CDN, no network at runtime) except the G36C GLB; `docs/reference-models/*.html` are visual references only.
 
 ## Status (update this block when it changes)
-- Tickets T-01..T-18 done and green (unit, build, smoke, all e2e) before the robot refresh. T-19..T-23 (new robots, dinosaur, final boss, cleanup) are merged with typecheck + unit tests (466) + build only: **no e2e, no smoke, no visual check after those merges**.
-- Known unverified: full run (4 towers -> boss -> victory) after the refresh (T-16 e2e timed out under CPU load); dinosaur fight (hits/damage never completed in e2e); draw-call total with the new robots; side-by-side look versus the reference models; Bomber Duck beep audio; real-device benchmarks (`docs/PERFORMANCE.md` has the empty table); nobody has played it.
-- Known limits: bundle ~5.3 MB (Rapier 82%); shadow refresh rate is lower than frame rate; no boss-leg LOD; in-game Restart reloads the page; optional boss attacks not built.
-- **Next: UI improvements** (scope to be defined by the owner; make it a ticket from `docs/tickets/_TEMPLATE.md` with Spec Kit).
+- Latest: compact-harbor rework (see the last section of `docs/DEVIATIONS.md`): 144 x 152 m map, barriers, no grapple, double jump, faster movement, visual and VFX upgrade. Verified by `tsc`, 439 unit tests, build and three manual screenshots (sky, materials, shadows render; no console errors). **Not verified**: a full run, enemy behaviour on the new map, the look of tracers/muzzle flash/explosions (too brief to capture), frame rate with bloom on a real GPU.
+- **All `tests/e2e/*.mjs` are stale** (old coordinates, grapple steps): update them before running e2e again. Owner policy at the time: no Spec Kit, no e2e for this rework.
+- Earlier: T-01..T-18 were green (unit, build, smoke, e2e) on the old map; T-19..T-23 (new robots, dinosaur, final boss, cleanup) were merged with typecheck + unit tests + build only.
+- Known unverified from before: dinosaur fight (hits/damage), draw-call total with all robots, Bomber Duck beep audio, real-device benchmarks (`docs/PERFORMANCE.md`); nobody has played it.
+- Known limits: bundle ~5.3 MB (Rapier 82%); shadow refresh rate is lower than frame rate; in-game Restart reloads the page; optional boss attacks not built; `GRAPPLE` tunables and the anchor registry remain only for the lamp-coverage helper.
+- **Next: UI improvements** (scope to be defined by the owner).

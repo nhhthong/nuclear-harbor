@@ -51,44 +51,52 @@ export interface Recipe {
   ring?: RingSpec;
 }
 
-const SPARK_HOT: Rgba = [1, 0.85, 0.4, 1];
-const SPARK_END: Rgba = [1, 0.25, 0.05, 0];
+// Additive colours are linear HDR: components above 1 feed the bloom pass.
+const SPARK_HOT: Rgba = [3.2, 2.3, 0.9, 1];
+const SPARK_END: Rgba = [1.2, 0.25, 0.05, 0];
 
 export const RECIPES: Record<RecipeId, Recipe> = {
+  // bullet impact: fast ricochet sparks, a hot core flash and a small puff of dust
   spark: {
     layers: [
-      { buffer: 'add', count: 10, speedMin: 3, speedMax: 8, coneDeg: 55, lifeMin: 0.15, lifeMax: 0.4, size0: 0.05, size1: 0.02, gravity: 0.8, drag: 1, from: SPARK_HOT, to: SPARK_END, lowPriority: false, spread: 0.02 },
+      { buffer: 'add', count: 14, speedMin: 4, speedMax: 13, coneDeg: 50, lifeMin: 0.15, lifeMax: 0.45, size0: 0.055, size1: 0.015, gravity: 1, drag: 1, from: SPARK_HOT, to: SPARK_END, lowPriority: false, spread: 0.02 },
+      { buffer: 'add', count: 1, speedMin: 0, speedMax: 0.2, coneDeg: 180, lifeMin: 0.06, lifeMax: 0.08, size0: 0.38, size1: 0.1, gravity: 0, drag: 0, from: [4, 3, 1.6, 1], to: [1.5, 0.6, 0.1, 0], lowPriority: false, spread: 0 },
+      { buffer: 'alpha', count: 4, speedMin: 0.4, speedMax: 1.6, coneDeg: 60, lifeMin: 0.35, lifeMax: 0.7, size0: 0.12, size1: 0.5, gravity: -0.03, drag: 2, from: [0.6, 0.58, 0.55, 0.4], to: [0.5, 0.48, 0.45, 0], lowPriority: true, spread: 0.04 },
     ],
   },
   'armor-spark': {
     layers: [
-      { buffer: 'add', count: 16, speedMin: 6, speedMax: 14, coneDeg: 22, lifeMin: 0.2, lifeMax: 0.5, size0: 0.07, size1: 0.02, gravity: 0.5, drag: 0.6, from: [0.9, 0.95, 1, 1], to: [0.4, 0.7, 1, 0], lowPriority: false, spread: 0.02 },
-      { buffer: 'add', count: 1, speedMin: 0, speedMax: 0.5, coneDeg: 180, lifeMin: 0.08, lifeMax: 0.1, size0: 0.45, size1: 0.15, gravity: 0, drag: 0, from: [1, 1, 1, 1], to: [0.6, 0.8, 1, 0], lowPriority: false, spread: 0 },
+      { buffer: 'add', count: 20, speedMin: 7, speedMax: 16, coneDeg: 24, lifeMin: 0.2, lifeMax: 0.5, size0: 0.07, size1: 0.02, gravity: 0.6, drag: 0.6, from: [1.8, 2.4, 3.4, 1], to: [0.4, 0.7, 1.4, 0], lowPriority: false, spread: 0.02 },
+      { buffer: 'add', count: 1, speedMin: 0, speedMax: 0.5, coneDeg: 180, lifeMin: 0.08, lifeMax: 0.1, size0: 0.55, size1: 0.15, gravity: 0, drag: 0, from: [3, 3.4, 4, 1], to: [0.6, 0.8, 1.2, 0], lowPriority: false, spread: 0 },
     ],
   },
   'weakpoint-burst': {
     layers: [
-      { buffer: 'add', count: 20, speedMin: 2, speedMax: 7, coneDeg: 80, lifeMin: 0.25, lifeMax: 0.6, size0: 0.12, size1: 0.03, gravity: 0.3, drag: 1.2, from: [1, 0.2, 0.1, 1], to: [0.6, 0, 0, 0], lowPriority: false, spread: 0.04 },
-      { buffer: 'add', count: 1, speedMin: 0, speedMax: 0.2, coneDeg: 180, lifeMin: 0.12, lifeMax: 0.14, size0: 0.7, size1: 0.3, gravity: 0, drag: 0, from: [1, 0.35, 0.25, 1], to: [1, 0, 0, 0], lowPriority: false, spread: 0 },
+      { buffer: 'add', count: 26, speedMin: 2, speedMax: 9, coneDeg: 80, lifeMin: 0.25, lifeMax: 0.7, size0: 0.13, size1: 0.03, gravity: 0.4, drag: 1.2, from: [3.6, 0.7, 0.3, 1], to: [1, 0, 0, 0], lowPriority: false, spread: 0.04 },
+      { buffer: 'add', count: 1, speedMin: 0, speedMax: 0.2, coneDeg: 180, lifeMin: 0.12, lifeMax: 0.16, size0: 0.9, size1: 0.3, gravity: 0, drag: 0, from: [4, 1.2, 0.8, 1], to: [1.5, 0, 0, 0], lowPriority: false, spread: 0 },
     ],
+    flash: { color: 0xff4020, intensity: 18, range: 9, duration: 0.14 },
   },
+  // fireball core, fast embers that arc and fall, rolling smoke, light flash and a shock ring
   explosion: {
     layers: [
-      { buffer: 'add', count: 36, speedMin: 2, speedMax: 9, coneDeg: 180, lifeMin: 0.3, lifeMax: 0.8, size0: 0.35, size1: 0.1, gravity: 0.2, drag: 1.5, from: [1, 0.8, 0.3, 1], to: [0.8, 0.1, 0, 0], lowPriority: false, spread: 0.2 },
-      { buffer: 'add', count: 1, speedMin: 0, speedMax: 0.1, coneDeg: 180, lifeMin: 0.18, lifeMax: 0.2, size0: 1.2, size1: 2.8, gravity: 0, drag: 0, from: [1, 0.95, 0.7, 1], to: [1, 0.4, 0.1, 0], lowPriority: false, spread: 0 },
-      { buffer: 'alpha', count: 14, speedMin: 0.5, speedMax: 3, coneDeg: 180, lifeMin: 1, lifeMax: 1.8, size0: 0.5, size1: 2, gravity: -0.15, drag: 1.2, from: [0.25, 0.25, 0.25, 0.7], to: [0.1, 0.1, 0.1, 0], lowPriority: true, spread: 0.3 },
+      { buffer: 'add', count: 30, speedMin: 2, speedMax: 9, coneDeg: 180, lifeMin: 0.3, lifeMax: 0.8, size0: 0.42, size1: 0.1, gravity: 0.15, drag: 1.6, from: [3.4, 2.2, 0.7, 1], to: [1, 0.12, 0, 0], lowPriority: false, spread: 0.25 },
+      { buffer: 'add', count: 2, speedMin: 0, speedMax: 0.1, coneDeg: 180, lifeMin: 0.18, lifeMax: 0.24, size0: 1.3, size1: 3.2, gravity: 0, drag: 0, from: [5, 4, 2.4, 1], to: [1.6, 0.5, 0.1, 0], lowPriority: false, spread: 0.1 },
+      { buffer: 'add', count: 22, speedMin: 8, speedMax: 20, coneDeg: 180, lifeMin: 0.5, lifeMax: 1.1, size0: 0.07, size1: 0.02, gravity: 1.1, drag: 0.5, from: [4, 2.6, 0.8, 1], to: [1.4, 0.2, 0, 0], lowPriority: true, spread: 0.1 },
+      { buffer: 'alpha', count: 16, speedMin: 0.5, speedMax: 3.2, coneDeg: 180, lifeMin: 1.1, lifeMax: 2.2, size0: 0.55, size1: 2.4, gravity: -0.16, drag: 1.2, from: [0.22, 0.2, 0.19, 0.75], to: [0.1, 0.1, 0.1, 0], lowPriority: true, spread: 0.3 },
     ],
-    flash: { color: 0xffaa55, intensity: 40, range: 14, duration: 0.25 },
-    ring: { radius: 3, duration: 0.4, color: 0xffaa55, useRequestDuration: false },
+    flash: { color: 0xffa040, intensity: 90, range: 20, duration: 0.3 },
+    ring: { radius: 4, duration: 0.4, color: 0xffb060, useRequestDuration: false },
   },
   'big-explosion': {
     layers: [
-      { buffer: 'add', count: 120, speedMin: 3, speedMax: 16, coneDeg: 180, lifeMin: 0.5, lifeMax: 1.4, size0: 0.6, size1: 0.15, gravity: 0.25, drag: 1.2, from: [1, 0.85, 0.4, 1], to: [0.9, 0.15, 0, 0], lowPriority: false, spread: 0.6 },
-      { buffer: 'add', count: 3, speedMin: 0, speedMax: 0.2, coneDeg: 180, lifeMin: 0.3, lifeMax: 0.4, size0: 3, size1: 8, gravity: 0, drag: 0, from: [1, 0.95, 0.75, 1], to: [1, 0.35, 0.05, 0], lowPriority: false, spread: 0.5 },
-      { buffer: 'alpha', count: 40, speedMin: 1, speedMax: 6, coneDeg: 180, lifeMin: 1.5, lifeMax: 2.6, size0: 1.2, size1: 5, gravity: -0.2, drag: 1, from: [0.2, 0.2, 0.2, 0.75], to: [0.08, 0.08, 0.08, 0], lowPriority: true, spread: 0.8 },
+      { buffer: 'add', count: 110, speedMin: 3, speedMax: 16, coneDeg: 180, lifeMin: 0.5, lifeMax: 1.4, size0: 0.7, size1: 0.15, gravity: 0.2, drag: 1.2, from: [3.6, 2.4, 0.9, 1], to: [1.1, 0.15, 0, 0], lowPriority: false, spread: 0.6 },
+      { buffer: 'add', count: 4, speedMin: 0, speedMax: 0.2, coneDeg: 180, lifeMin: 0.3, lifeMax: 0.45, size0: 3.2, size1: 9, gravity: 0, drag: 0, from: [5.5, 4.4, 2.6, 1], to: [1.6, 0.4, 0.05, 0], lowPriority: false, spread: 0.5 },
+      { buffer: 'add', count: 60, speedMin: 12, speedMax: 34, coneDeg: 180, lifeMin: 0.7, lifeMax: 1.6, size0: 0.1, size1: 0.03, gravity: 1, drag: 0.4, from: [4.2, 2.8, 0.9, 1], to: [1.4, 0.2, 0, 0], lowPriority: true, spread: 0.3 },
+      { buffer: 'alpha', count: 44, speedMin: 1, speedMax: 6, coneDeg: 180, lifeMin: 1.6, lifeMax: 3, size0: 1.3, size1: 5.5, gravity: -0.2, drag: 1, from: [0.2, 0.19, 0.18, 0.8], to: [0.08, 0.08, 0.08, 0], lowPriority: true, spread: 0.8 },
     ],
-    flash: { color: 0xffbb66, intensity: 120, range: 40, duration: 0.5 },
-    ring: { radius: 8, duration: 0.7, color: 0xffbb66, useRequestDuration: false },
+    flash: { color: 0xffb860, intensity: 260, range: 55, duration: 0.6 },
+    ring: { radius: 11, duration: 0.7, color: 0xffc070, useRequestDuration: false },
   },
   smoke: {
     layers: [
@@ -102,7 +110,7 @@ export const RECIPES: Record<RecipeId, Recipe> = {
   },
   pickup: {
     layers: [
-      { buffer: 'add', count: 18, speedMin: 0.8, speedMax: 3, coneDeg: 180, lifeMin: 0.5, lifeMax: 1, size0: 0.1, size1: 0.02, gravity: -0.25, drag: 1.5, from: [0.6, 1, 0.7, 1], to: [0.2, 0.9, 1, 0], lowPriority: false, spread: 0.2 },
+      { buffer: 'add', count: 18, speedMin: 0.8, speedMax: 3, coneDeg: 180, lifeMin: 0.5, lifeMax: 1, size0: 0.1, size1: 0.02, gravity: -0.25, drag: 1.5, from: [1.4, 2.6, 1.8, 1], to: [0.3, 1.2, 1.6, 0], lowPriority: false, spread: 0.2 },
     ],
   },
   'telegraph-ring': {
