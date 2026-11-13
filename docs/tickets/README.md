@@ -22,7 +22,7 @@ Plan, architecture and Definition of Done: [`docs/PLAN.md`](../PLAN.md). Workflo
 | [T-15](T-15-boss-titan04.md) | TITAN-04 boss fight | 2 | T-02 (to shoot it in play). Soft: T-04 (arena perches), T-10 (effects), T-06 (boss HUD) — all through events |
 | [T-16](T-16-game-flow-integration.md) | Game flow, level population and vertical slice | 3 | T-01 … T-15 merged |
 | [T-17](T-17-optimization-offline.md) | Optimisation and offline packaging | 4 | T-16 (and T-11 for measurements) |
-| [T-18](T-18-weapon-asset-pipeline.md) | Weapon asset pipeline MDL → GLB (optional) | optional | T-02 merged AND the user uploads the GameBanana archive (BLOCKED until then) |
+| [T-18](T-18-weapon-asset-pipeline.md) | Weapon asset pipeline MDL → GLB (optional) | optional | T-02 merged (done; asset supplied, see `docs/ASSETS.md`) |
 
 Wave 1 tickets are independent of each other and can all start immediately. A later wave starts
 when its dependencies are merged.

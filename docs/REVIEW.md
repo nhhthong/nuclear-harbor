@@ -14,7 +14,7 @@ Khả thi cho web, phạm vi đã được thu gọn hợp lý (4 zone, 30 robot
 |---|---|---|
 | 1 | Chuột phải nạp đạn, không nhảy | Input map có thể rebind. Mặc định theo GDD; thêm R làm alias nạp đạn. Không nhảy ở v1 (grapple thay thế). |
 | 2 | Điểm yếu Boss cao 22 m, grapple chỉ kéo tới điểm neo rồi nhả | Khu Boss cần "perch" (bệ đứng) trên crane/tháp ở 8/14/20 m. Không làm treo/đu dây ở v1. |
-| 3 | Asset GameBanana (CS 1.6 MDR) | Giấy phép gần như chắc chắn không rõ. Mạng sandbox chặn gamebanana.com. Dùng view model procedural ngay từ đầu; pipeline MDL→GLB là track tùy chọn, chỉ chạy khi người dùng tải archive lên. |
+| 3 | Asset GameBanana (CS 1.6 MDR) | Giấy phép gần như chắc chắn không rõ. Mạng sandbox chặn gamebanana.com. Dùng view model procedural ngay từ đầu; pipeline MDL→GLB là track tùy chọn, chỉ chạy khi người dùng tải archive lên. (Đã thay thế: chủ dự án cung cấp `v_g36c.mdl`, xem `docs/ASSETS.md` và T-18.) |
 | 4 | "Baked lighting" khó với scene procedural | Dùng `shadowMap.autoUpdate=false` + render shadow một lần cho tĩnh; shadow động chỉ trong frustum nhỏ quanh người chơi. |
 | 5 | Va chạm/character controller | Thế giới chủ yếu là hộp → dùng Rapier KCC (capsule) ngay từ M1; tránh tự viết collision. |
 | 6 | Đợt địch khi bảo vệ trụ mâu thuẫn tổng 30 | Đợt bảo vệ lấy robot hiện có trong zone (kéo về trụ), không spawn thêm. |
