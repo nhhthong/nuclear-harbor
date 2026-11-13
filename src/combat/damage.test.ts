@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BOSS, CHARGER_ROBOT, ECONOMY, ENEMY_COUNTS, SPHERE_ROBOT, SPIDER_ROBOT, WEAPON } from '@/config/tunables';
+import { BOSS, CHARGER_ROBOT, ECONOMY, ENEMY_COUNTS, ARMY_ROBOT, SPIDER_ROBOT, WEAPON } from '@/config/tunables';
 import { isFrontalHit, resolveDamage, shotsToKill } from './damage';
 
 describe('resolveDamage', () => {
@@ -40,14 +40,14 @@ describe('isFrontalHit', () => {
 });
 
 describe('ammo budget (GDD 5.4)', () => {
-  it('needs about 404 hits and the supply covers 50% accuracy', () => {
+  it('needs about 432 hits (T-20: army mech 150 HP) and the supply covers 50% accuracy', () => {
     const hits =
-      ENEMY_COUNTS.sphere * shotsToKill(SPHERE_ROBOT.hp) +
+      ENEMY_COUNTS.sphere * shotsToKill(ARMY_ROBOT.hp) +
       ENEMY_COUNTS.spider * shotsToKill(SPIDER_ROBOT.hp) +
       ENEMY_COUNTS.charger * shotsToKill(CHARGER_ROBOT.hp) +
       BOSS.weakPointCount * shotsToKill(BOSS.weakPointHp) +
       shotsToKill(BOSS.coreHp);
-    expect(hits).toBe(404);
+    expect(hits).toBe(432);
     const supply =
       WEAPON.magazineSize +
       WEAPON.reserveAmmo +

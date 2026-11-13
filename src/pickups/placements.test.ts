@@ -6,7 +6,7 @@ import {
   CHARGER_ROBOT,
   ECONOMY,
   ENEMY_COUNTS,
-  SPHERE_ROBOT,
+  ARMY_ROBOT,
   SPIDER_ROBOT,
   WEAPON,
 } from '@/config/tunables';
@@ -34,7 +34,7 @@ describe('placement budget (GDD 5.4)', () => {
   });
   it('supply (start 210 + crates) covers the demand at 50% accuracy without drops', () => {
     const hits =
-      ENEMY_COUNTS.sphere * shotsToKill(SPHERE_ROBOT.hp) +
+      ENEMY_COUNTS.sphere * shotsToKill(ARMY_ROBOT.hp) +
       ENEMY_COUNTS.spider * shotsToKill(SPIDER_ROBOT.hp) +
       ENEMY_COUNTS.charger * shotsToKill(CHARGER_ROBOT.hp) +
       BOSS.weakPointCount * shotsToKill(BOSS.weakPointHp) +

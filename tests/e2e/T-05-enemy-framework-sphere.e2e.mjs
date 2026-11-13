@@ -1,6 +1,6 @@
 /**
- * T-05: sphere robot in the sandbox. It spawns, detects the player teleported within 20 m with
- * line of sight, fires and reduces player HP; killing it through applyDamage emits
+ * T-05 (updated by T-20): the army mech (internal type 'sphere') in the sandbox. It spawns, detects the player
+ * teleported within range with line of sight, fires rockets and reduces player HP; killing it through applyDamage emits
  * enemy:destroyed and empties the registry. `?enemies=spider,charger` spawns the placeholders.
  */
 export default async function ({ openGame, wait, assert }) {
@@ -11,7 +11,7 @@ export default async function ({ openGame, wait, assert }) {
   await page.waitForFunction(() => window.__NH__.game.ctx.testHooks.enemies?.list().length === 1, null, { timeout: 10_000 });
   const [robot] = await hooks();
   assert.equal(robot.type, 'sphere');
-  assert.equal(robot.hp, 100);
+  assert.equal(robot.hp, 150);
   assert.equal(robot.state, 'patrol');
 
   await page.evaluate(() => {
@@ -28,7 +28,7 @@ export default async function ({ openGame, wait, assert }) {
   const seen = await page.evaluate(() => ({ ...window.__t05, hp: window.__NH__.game.ctx.player.hp }));
   assert.ok(seen.alerted >= 1, 'robot alerted');
   assert.ok(seen.attacked >= 1, 'robot attacked');
-  assert.ok(seen.hp < 100 && (100 - seen.hp) % 8 === 0, `player lost HP in 8-point hits (hp ${seen.hp})`);
+  assert.ok(seen.hp < 100 && (100 - seen.hp) % 12 === 0, `player lost HP in 12-point rocket hits (hp ${seen.hp})`);
 
   // kill it through the shared damage path
   await page.evaluate(() => {

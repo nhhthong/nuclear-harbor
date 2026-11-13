@@ -142,23 +142,37 @@ export const ENEMY_COUNTS = {
   total: 30,
 } as const;
 
-/** GDD 6.1 */
-export const SPHERE_ROBOT = {
-  hp: 100,
-  damage: 8,
-  speed: 3.5,
-  attackRange: 20,
-  detectionRange: 25,
-  /** proposed */
-  radius: 0.7,
-  hoverHeight: 1.2,
-  /** proposed; T-17 raised 1.2 -> 2.0 s (defend phase was lethal, docs/PLAYTEST.md). */
-  fireInterval: 2.0,
-  projectileSpeed: 30,
-  /** proposed: stop approaching at this fraction of attack range. */
-  preferredRangeFactor: 0.7,
-  /** proposed: retreat when HP fraction is below this (GDD: "retreat, if designed"). */
-  retreatHpFraction: 0.25,
+/**
+ * GDD 6.1 role (14 of them), now the T-20 Vanguard army mech: slow patrol, disciplined combat movement,
+ * telegraphed rocket salvos. HP, speeds and ranges are proposals (ROBOT-REFRESH T-20).
+ */
+export const ARMY_ROBOT = {
+  hp: 150,
+  /** Rocket centre damage (splash falls off linearly to 0 at `splashRadius`). */
+  damage: 12,
+  /** Patrol walk speed (m/s). */
+  speed: 1.5,
+  /** Combat speeds (m/s). */
+  advanceSpeed: 3.4,
+  strafeSpeed: 1.6,
+  retreatSpeed: 2.4,
+  /** Speed change limits (m/s^2) and yaw turn rate (rad/s). */
+  accel: 1.8,
+  decel: 2.6,
+  turnRate: 1.1,
+  detectionRange: 30,
+  /** Preferred firing band to the player (m) and the distance below which the mech backs off. */
+  bandMin: 18,
+  bandMax: 25,
+  retreatDistance: 8,
+  rocketSpeed: 25,
+  splashRadius: 3,
+  /** Salvo size range, delay between rockets, telegraph before the first one, cooldown after the last (s). */
+  salvoMin: 2,
+  salvoMax: 3,
+  shotInterval: 0.5,
+  telegraphTime: 1.0,
+  cooldown: 3,
   loseTargetTime: 4,
 } as const;
 
@@ -321,7 +335,7 @@ export const TUNABLES = {
   WEAPON,
   ECONOMY,
   ENEMY_COUNTS,
-  SPHERE_ROBOT,
+  ARMY_ROBOT,
   SPIDER_ROBOT,
   CHARGER_ROBOT,
   AI_SCHEDULING,
