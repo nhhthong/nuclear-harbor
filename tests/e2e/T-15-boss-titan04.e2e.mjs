@@ -1,4 +1,8 @@
-/** T-15 e2e: TITAN-04 spawn, absorb rules, weak points, core, attacks and defeat in the sandbox. */
+/**
+ * T-15 e2e: TITAN-04 spawn, absorb rules, weak points, core, attacks and defeat in the sandbox.
+ * T-22: the boss now arrives with a ~6 s landing cinematic; the tests fast-forward it with the
+ * `skipCinematic` hook, `boss:spawned` is emitted at the impact, and the body is <= 40 draw calls.
+ */
 const RECORD = `
   window.__rec = {};
   const ev = window.__NH__.game.ctx.events;
@@ -19,6 +23,10 @@ export default async function ({ openGame, assert }) {
     });
   };
   const hook = (page, expr) => page.evaluate(`(() => { const b = window.__NH__.game.ctx.testHooks.boss; return ${expr}; })()`);
+  const endCinematic = async (page) => {
+    await hook(page, 'b.skipCinematic()');
+    await page.waitForFunction(() => window.__NH__.game.ctx.testHooks.boss.getState().phase !== 'awakening', null, { timeout: 120_000, polling: 50 });
+  };
   const count = (page, name) => page.evaluate((n) => window.__rec[n].length, name);
 
   // run 1: ?boss spawns by itself, at sandbox scale and position
@@ -31,7 +39,8 @@ export default async function ({ openGame, assert }) {
     assert.ok(['awakening', 'weakpoint-hunt'].includes(st.phase));
     assert.deepEqual(st.weakPoints, [500, 500, 500, 500]);
     assert.equal(st.coreHp, 4000);
-    assert.ok(st.meshCount <= 25, `boss body draw calls ${st.meshCount} <= 25`);
+    assert.ok(st.meshCount <= 40, `boss body draw calls ${st.meshCount} <= 40`);
+    assert.ok(st.height > 16 && st.height < 20, `boss about 18 m tall (${st.height})`);
     assert.deepEqual(failures, [], 'no console errors');
     await page.close();
   }
@@ -43,10 +52,8 @@ export default async function ({ openGame, assert }) {
     assert.equal((await hook(page, 'b.getState()')).spawned, false, 'no boss before the event');
     await page.evaluate(() => window.__NH__.game.ctx.events.emit('objectives:allActivated', { timeRemaining: 100 }));
     await wait(page, 0.3);
-    assert.equal(await count(page, 'boss:spawned'), 1, 'boss:spawned once');
+    assert.equal(await count(page, 'boss:spawned'), 0, 'boss:spawned (roar) waits for the impact');
     const rec0 = await page.evaluate(() => window.__rec);
-    assert.equal(rec0['boss:spawned'][0].p.weakPoints, 4);
-    assert.equal(rec0['boss:spawned'][0].p.coreHp, 4000);
     assert.equal(rec0['game:checkpoint'].at(-1).p.id, 'boss-start');
     assert.equal(rec0['boss:phaseChanged'][0].p.phase, 'awakening');
 
@@ -54,8 +61,12 @@ export default async function ({ openGame, assert }) {
     const early = await hook(page, 'b.damageWeakPoint(0, 100)');
     assert.equal(early.absorbed, true, 'absorbed while awakening');
 
-    await wait(page, 4.3);
+    await endCinematic(page);
     assert.equal((await hook(page, 'b.getState()')).phase, 'weakpoint-hunt');
+    assert.equal(await count(page, 'boss:spawned'), 1, 'boss:spawned once');
+    const rec1a = await page.evaluate(() => window.__rec);
+    assert.equal(rec1a['boss:spawned'][0].p.weakPoints, 4);
+    assert.equal(rec1a['boss:spawned'][0].p.coreHp, 4000);
 
     // core absorbs everything before the weak points are gone
     const core = await hook(page, 'b.damageCore(4000)');
@@ -119,7 +130,7 @@ export default async function ({ openGame, assert }) {
     const { page, failures } = await openGame('?sandbox&autostart');
     await page.evaluate(RECORD);
     await page.evaluate(() => window.__NH__.game.ctx.events.emit('objectives:allActivated', { timeRemaining: 100 }));
-    await wait(page, 4.4);
+    await endCinematic(page);
     const place = (x, z) =>
       page.evaluate(([px, pz]) => {
         const p = window.__NH__.game.ctx.player;
