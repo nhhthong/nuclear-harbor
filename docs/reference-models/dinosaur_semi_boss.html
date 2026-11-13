@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Mecha T-Rex Boss - Crimson Edition</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            user-select: none;
+        }
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+        #ui-overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 10;
+            pointer-events: none;
+        }
+        h1 {
+            margin: 0 0 5px 0;
+            font-size: 24px;
+            color: #111;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.05);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            color: #444;
+            font-weight: 600;
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #ff3300;
+            border-radius: 50%;
+            margin-right: 8px;
+            box-shadow: 0 0 8px #ff3300;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.2); opacity: 1; box-shadow: 0 0 12px #ff3300; }
+            100% { transform: scale(0.95); opacity: 0.8; }
+        }
+        #controls {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            display: flex;
+            gap: 12px;
+            background: rgba(255, 255, 255, 0.85);
+            padding: 12px 20px;
+            border-radius: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0,0,0,0.08);
+        }
+        .btn {
+            background: #1a1a1a;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        }
+        .btn:hover {
+            background: #ff3300;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(255,51,0,0.3);
+        }
+        .btn.active {
+            background: #ff6600;
+            box-shadow: 0 0 15px rgba(255,102,0,0.5);
+        }
+        #instructions {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 10;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 12px 18px;
+            border-radius: 12px;
+            font-size: 12px;
+            color: #555;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            border: 1px solid rgba(0,0,0,0.06);
+            pointer-events: none;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div id="ui-overlay">
+        <h1>Crimson Rex</h1>
+        <div class="status-badge">
+            <div class="status-dot" id="status-dot"></div>
+            <span id="status-text">System Normal: Ready</span>
+        </div>
+    </div>
+
+    <div id="instructions">
+        <b>🖱️ Xoay:</b> Chuột trái + Kéo<br>
+        <b>🔍 Phóng to:</b> Lăn chuột<br>
+        <b>✋ Di chuyển:</b> Chuột phải + Kéo
+    </div>
+
+    <div id="controls">
+        <button class="btn" id="btn-overdrive">⚡ Boss Overdrive</button>
+        <button class="btn" id="btn-roar">🔥 Gầm (Roar)</button>
+        <button class="btn" id="btn-rotate">🔄 Tự Xoay: Bật</button>
+        <button class="btn" id="btn-reset">🏠 Đặt Lại</button>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <!-- Import Three.js và OrbitControls qua CDN ES Modules chính thức -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // --- KHỞI TẠO SCENE, CAMERA, RENDERER ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xffffff);
+        scene.fog = new THREE.FogExp2(0xffffff, 0.015);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 3.5, 9);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.2;
+        container.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.maxPolarAngle = Math.PI / 2 - 0.05;
+        controls.minDistance = 3;
+        controls.maxDistance = 15;
+        controls.target.set(0, 1.2, 0);
+
+        // --- ÁNH SÁNG STUDIO ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 2.5);
+        dirLight.position.set(6, 10, 6);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 2048;
+        dirLight.shadow.mapSize.height = 2048;
+        dirLight.shadow.bias = -0.0001;
+        scene.add(dirLight);
+
+        const fillLight = new THREE.DirectionalLight(0xddeeff, 1.0);
+        fillLight.position.set(-6, 5, -6);
+        scene.add(fillLight);
+
+        const rimLight = new THREE.DirectionalLight(0xff5522, 1.5);
+        rimLight.position.set(0, -3, -6);
+        scene.add(rimLight);
+
+        // Sàn hiển thị bóng đổ
+        const shadowPlaneGeo = new THREE.PlaneGeometry(30, 30);
+        const shadowPlaneMat = new THREE.ShadowMaterial({ opacity: 0.12 });
+        const shadowPlane = new THREE.Mesh(shadowPlaneGeo, shadowPlaneMat);
+        shadowPlane.rotation.x = -Math.PI / 2;
+        shadowPlane.receiveShadow = true;
+        scene.add(shadowPlane);
+
+        // --- VẬT LIỆU MECHA (ĐỎ, CAM, ĐEN) ---
+        const redArmorMat = new THREE.MeshStandardMaterial({
+            color: 0xcc1111,
+            metalness: 0.85,
+            roughness: 0.25,
+            name: 'redArmor'
+        });
+
+        const darkMetalMat = new THREE.MeshStandardMaterial({
+            color: 1579032,
+            metalness: 0.95,
+            roughness: 0.2,
+            name: 'darkMetal'
+        });
+
+        const lightMetalMat = new THREE.MeshStandardMaterial({
+            color: 0xdddddd,
+            metalness: 0.9,
+            roughness: 0.3,
+            name: 'lightMetal'
+        });
+
+        const jointMat = new THREE.MeshStandardMaterial({
+            color: 0x333333,
+            metalness: 0.9,
+            roughness: 0.4
+        });
+
+        const orangeGlowMat = new THREE.MeshStandardMaterial({
+            color: 0xff5500,
+            emissive: 0xff4400,
+            emissiveIntensity: 1.5,
+            metalness: 0.5,
+            roughness: 0.2,
+            name: 'orangeGlow'
+        });
+
+        const clawMat = new THREE.MeshStandardMaterial({
+            color: 0x1a1a1a,
+            metalness: 0.95,
+            roughness: 0.15
+        });
+
+        // --- XÂY DỰNG MÔ HÌNH MECHA T-REX (TỈ LỆ CÂN ĐỐI) ---
+        const mechaGroup = new THREE.Group();
+        scene.add(mechaGroup);
+
+        // Nhóm chuyển động sinh học (thở, gầm)
+        const animationRig = new THREE.Group();
+        mechaGroup.add(animationRig);
+
+        // 1. Hông & Thân dưới
+        const hipGeo = new THREE.CylinderGeometry(0.55, 0.5, 0.7, 16);
+        hipGeo.rotateZ(Math.PI / 2);
+        const hipMesh = new THREE.Mesh(hipGeo, darkMetalMat);
+        hipMesh.position.set(0, 1.2, 0);
+        hipMesh.castShadow = true;
+        animationRig.add(hipMesh);
+
+        // 2. Lồng ngực & Bụng (Thân trên gọn gàng)
+        const torsoGroup = new THREE.Group();
+        torsoGroup.position.set(0, 1.2, 0);
+        animationRig.add(torsoGroup);
+
+        const chestGeo = new THREE.BoxGeometry(0.9, 1.1, 1.3);
+        const chestMesh = new THREE.Mesh(chestGeo, redArmorMat);
+        chestMesh.position.set(0, 0.5, 0.1);
+        chestMesh.castShadow = true;
+        torsoGroup.add(chestMesh);
+
+        // Giáp ngực phụ (Chest Armor Plates)
+        const plateGeo = new THREE.BoxGeometry(0.95, 0.5, 1.1);
+        const plateMesh = new THREE.Mesh(plateGeo, darkMetalMat);
+        plateMesh.position.set(0, 0.45, 0.25);
+        plateMesh.castShadow = true;
+        torsoGroup.add(plateMesh);
+
+        // Lò phản ứng ngực (Arc Reactor / Core)
+        const coreGeo = new THREE.CylinderGeometry(0.22, 0.22, 0.15, 20);
+        coreGeo.rotateX(Math.PI / 2);
+        const coreMesh = new THREE.Mesh(coreGeo, orangeGlowMat);
+        coreMesh.position.set(0, 0.45, 0.81);
+        torsoGroup.add(coreMesh);
+
+        // Đĩa khớp vai hai bên
+        [-0.52, 0.52].forEach(x => {
+            const shoulderJoint = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.2, 16), lightMetalMat);
+            shoulderJoint.rotation.x = Math.PI / 2;
+            shoulderJoint.position.set(x, 0.8, 0.3);
+            torsoGroup.add(shoulderJoint);
+        });
+
+        // 3. Cổ & Đầu (Phóng to uy lực, tỷ lệ lớn)
+        const neckGroup = new THREE.Group();
+        neckGroup.position.set(0, 1.1, 0.4);
+        torsoGroup.add(neckGroup);
+
+        const neckGeo = new THREE.CylinderGeometry(0.35, 0.45, 0.9, 16);
+        const neckMesh = new THREE.Mesh(neckGeo, darkMetalMat);
+        neckMesh.rotation.x = -Math.PI / 6;
+        neckMesh.position.set(0, 0.35, -0.1);
+        neckMesh.castShadow = true;
+        neckGroup.add(neckMesh);
+
+        // Đốt sống cổ cơ khí phía sau
+        for (let i = 0; i < 4; i++) {
+            const spinePlate = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.18, 0.15), redArmorMat);
+            spinePlate.position.set(0, 0.1 + i * 0.18, -0.32 - i * 0.05);
+            spinePlate.rotation.x = Math.PI / 8;
+            neckGroup.add(spinePlate);
+        }
+
+        // Đầu T-Rex (Đầu to ấn tượng)
+        const headGroup = new THREE.Group();
+        headGroup.position.set(0, 0.8, -0.25);
+        neckGroup.add(headGroup);
+
+        const skullGeo = new THREE.BoxGeometry(0.75, 0.75, 1.1);
+        const skullMesh = new THREE.Mesh(skullGeo, redArmorMat);
+        skullMesh.position.set(0, 0.2, 0.15);
+        skullMesh.castShadow = true;
+        headGroup.add(skullMesh);
+
+        // Mõm trên
+        const snoutGeo = new THREE.BoxGeometry(0.65, 0.5, 0.85);
+        const snoutMesh = new THREE.Mesh(snoutGeo, redArmorMat);
+        snoutMesh.position.set(0, 0.1, 0.85);
+        snoutMesh.castShadow = true;
+        headGroup.add(snoutMesh);
+
+        // Mắt cảm biến phát sáng
+        [-0.38, 0.38].forEach(x => {
+            const eye = new THREE.Mesh(new THREE.SphereGeometry(0.09, 16, 16), orangeGlowMat);
+            eye.position.set(x, 0.3, 0.35);
+            headGroup.add(eye);
+        });
+
+        // Mang tai cơ khí & đĩa khớp hàm
+        [-0.4, 0.4].forEach(x => {
+            const earDisc = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.1, 16), lightMetalMat);
+            earDisc.rotation.z = Math.PI / 2;
+            earDisc.position.set(x, 0.1, -0.1);
+            headGroup.add(earDisc);
+        });
+
+        // Hàm dưới có thể gầm mở
+        const jawGroup = new THREE.Group();
+        jawGroup.position.set(0, -0.05, 0.5);
+        headGroup.add(jawGroup);
+
+        const jawGeo = new THREE.BoxGeometry(0.6, 0.3, 0.9);
+        const jawMesh = new THREE.Mesh(jawGeo, darkMetalMat);
+        jawMesh.position.set(0, -0.1, 0.3);
+        jawMesh.castShadow = true;
+        jawGroup.add(jawMesh);
+
+        // Răng nhọn sắc bén (Hàm trên & Hàm dưới)
+        for (let i = 0; i < 5; i++) {
+            const zPos = 0.45 + i * 0.12;
+            [-0.31, 0.31].forEach(x => {
+                const upperTooth = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.15, 4), lightMetalMat);
+                upperTooth.position.set(x, -0.15, zPos);
+                upperTooth.rotation.x = Math.PI;
+                headGroup.add(upperTooth);
+
+                const lowerTooth = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.13, 4), lightMetalMat);
+                lowerTooth.position.set(x * 0.9, 0.08, zPos - 0.05);
+                jawGroup.add(lowerTooth);
+            });
+        }
+
+        // Lõi Plasma trong vòm họng (phát sáng khi gầm)
+        const throatCore = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 16), orangeGlowMat);
+        throatCore.position.set(0, 0.05, 0.7);
+        throatCore.scale.set(0.01, 0.01, 0.01); // Ẩn mặc định
+        headGroup.add(throatCore);
+
+        // 4. Tay trước cơ khí (nhỏ đặc trưng mecha T-Rex)
+        [-0.5, 0.5].forEach(x => {
+            const armGroup = new THREE.Group();
+            armGroup.position.set(x, 0.8, 0.7);
+            armGroup.rotation.x = -Math.PI / 6;
+
+            const bicep = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.07, 0.4, 12), darkMetalMat);
+            bicep.position.set(0, -0.2, 0);
+            armGroup.add(bicep);
+
+            const forearm = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.05, 0.35, 12), lightMetalMat);
+            forearm.position.set(0, -0.5, 0.1);
+            forearm.rotation.x = Math.PI / 4;
+            armGroup.add(forearm);
+
+            // 2 vuốt sắc
+            for (let i = 0; i < 2; i++) {
+                const claw = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.15, 6), clawMat);
+                claw.position.set((i - 0.5) * 0.06, -0.7, 0.22);
+                claw.rotation.x = Math.PI / 3;
+                armGroup.add(claw);
+            }
+            torsoGroup.add(armGroup);
+        });
+
+        // 5. Chân cơ khí vững chãi (Thiết kế Boss)
+        [-0.65, 0.65].forEach(x => {
+            const legGroup = new THREE.Group();
+            legGroup.position.set(x, 0.9, 0.1);
+            animationRig.add(legGroup);
+
+            // Đùi cơ khí giáp dày
+            const thigh = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.25, 0.9, 16), redArmorMat);
+            thigh.position.set(0, -0.4, 0);
+            thigh.rotation.x = -Math.PI / 12;
+            thigh.castShadow = true;
+            legGroup.add(thigh);
+
+            // Khớp gối cầu
+            const knee = new THREE.Mesh(new THREE.SphereGeometry(0.22, 16, 16), orangeGlowMat);
+            knee.position.set(0, -0.85, 0.1);
+            legGroup.add(knee);
+
+            // Cẳng chân
+            const shin = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.18, 0.85, 16), darkMetalMat);
+            shin.position.set(0, -1.35, 0.15);
+            shin.rotation.x = Math.PI / 10;
+            shin.castShadow = true;
+            legGroup.add(shin);
+
+            // Bàn chân máy & móng vuốt
+            const foot = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.3, 0.65), lightMetalMat);
+            foot.position.set(0, -1.8, 0.25);
+            foot.castShadow = true;
+            legGroup.add(foot);
+
+            for (let i = 0; i < 3; i++) {
+                const toe = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.3, 6), clawMat);
+                toe.position.set((i - 1) * 0.11, -1.92, 0.55);
+                toe.rotation.x = Math.PI / 2;
+                legGroup.add(toe);
+            }
+        });
+
+        // 6. Đuôi dài 11 đốt vươn cong đối trọng hoàn hảo
+        const tailJoints = [];
+        let parentGroup = animationRig;
+        let tailBaseZ = -0.4;
+
+        for (let i = 0; i < 11; i++) {
+            const segmentGroup = new THREE.Group();
+            if (i === 0) {
+                segmentGroup.position.set(0, 1.1, tailBaseZ);
+            } else {
+                segmentGroup.position.set(0, 0, -0.45);
+            }
+
+            const scale = Math.max(0.4, 1 - i * 0.07);
+            const segGeo = new THREE.BoxGeometry(0.6 * scale, 0.55 * scale, 0.5 * scale);
+            const segMesh = new THREE.Mesh(segGeo, i % 2 === 0 ? redArmorMat : darkMetalMat);
+            segMesh.position.set(0, 0.1 * scale, -0.2);
+            segMesh.castShadow = true;
+            segmentGroup.add(segMesh);
+
+            // Gai năng lượng lưng đuôi
+            if (i < 8) {
+                const tailSpine = new THREE.Mesh(new THREE.ConeGeometry(0.08 * scale, 0.25 * scale, 4), orangeGlowMat);
+                tailSpine.position.set(0, 0.35 * scale, -0.2);
+                tailSpine.rotation.x = -Math.PI / 6;
+                segmentGroup.add(tailSpine);
+            }
+
+            parentGroup.add(segmentGroup);
+            tailJoints.push(segmentGroup);
+            parentGroup = segmentGroup;
+        }
+
+        // --- HỆ THỐNG HIỆU ỨNG ĐẶC BIỆT (PARTICLES & SHOCKWAVE) ---
+        const particleCount = 120;
+        const particleGeo = new THREE.BufferGeometry();
+        const particlePositions = new Float32Array(particleCount * 3);
+        const particleSpeeds = [];
+
+        for (let i = 0; i < particleCount * 3; i += 3) {
+            particlePositions[i] = (Math.random() - 0.5) * 6;
+            particlePositions[i+1] = Math.random() * 4;
+            particlePositions[i+2] = (Math.random() - 0.5) * 6;
+            particleSpeeds.push(0.02 + Math.random() * 0.04);
+        }
+        particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+
+        const particleMat = new THREE.PointsMaterial({
+            color: 0xff4400,
+            size: 0.08,
+            transparent: true,
+            opacity: 0,
+            blending: THREE.AdditiveBlending
+        });
+        const particleSystem = new THREE.Points(particleGeo, particleMat);
+        scene.add(particleSystem);
+
+        // Vòng sóng xung kích (Shockwave ring)
+        const ringGeo = new THREE.RingGeometry(0.5, 0.7, 32);
+        ringGeo.rotateX(-Math.PI / 2);
+        const ringMat = new THREE.MeshBasicMaterial({
+            color: 0xff5500,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0
+        });
+        const shockwaveRing = new THREE.Mesh(ringGeo, ringMat);
+        shockwaveRing.position.y = 0.05;
+        scene.add(shockwaveRing);
+
+        // --- TRẠNG THÁI & ĐIỀU KHIỂN TƯƠNG TÁC ---
+        let isOverdrive = false;
+        let isRoaring = false;
+        let autoRotate = true;
+        let roarTimer = 0;
+
+        const btnOverdrive = document.getElementById('btn-overdrive');
+        const btnRoar = document.getElementById('btn-roar');
+        const btnRotate = document.getElementById('btn-rotate');
+        const btnReset = document.getElementById('btn-reset');
+        const statusDot = document.getElementById('status-dot');
+        const statusText = document.getElementById('status-text');
+
+        // Overdrive Toggle
+        btnOverdrive.addEventListener('click', () => {
+            isOverdrive = !isOverdrive;
+            btnOverdrive.classList.toggle('active', isOverdrive);
+            
+            if (isOverdrive) {
+                orangeGlowMat.emissiveIntensity = 3.5;
+                redArmorMat.color.setHex(0xe60000);
+                particleMat.opacity = 0.85;
+                statusDot.style.backgroundColor = '#ff6600';
+                statusDot.style.boxShadow = '0 0 12px #ff6600';
+                statusText.innerText = 'OVERDRIVE ACTIVE (100%)';
+                btnOverdrive.innerText = '⚡ Tắt Overdrive';
+            } else {
+                orangeGlowMat.emissiveIntensity = 1.5;
+                redArmorMat.color.setHex(0xcc1111);
+                particleMat.opacity = 0;
+                statusDot.style.backgroundColor = '#ff3300';
+                statusDot.style.boxShadow = '0 0 8px #ff3300';
+                statusText.innerText = 'System Normal: Ready';
+                btnOverdrive.innerText = '⚡ Boss Overdrive';
+            }
+        });
+
+        // Roar Action
+        btnRoar.addEventListener('click', () => {
+            if (isRoaring) return;
+            isRoaring = true;
+            roarTimer = 1.0; // thời gian gầm (giây)
+            if (!isOverdrive) {
+                orangeGlowMat.emissiveIntensity = 3.0;
+            }
+        });
+
+        // Auto Rotate Toggle
+        btnRotate.addEventListener('click', () => {
+            autoRotate = !autoRotate;
+            btnRotate.classList.toggle('active', autoRotate);
+            btnRotate.innerText = autoRotate ? '🔄 Tự Xoay: Bật' : '🔄 Tự Xoay: Tắt';
+        });
+
+        // Reset View
+        btnReset.addEventListener('click', () => {
+            camera.position.set(0, 3.5, 9);
+            controls.target.set(0, 1.2, 0);
+            controls.update();
+        });
+
+        // --- VÒNG LẶP ANIMATION ---
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const elapsedTime = clock.getElapsedTime();
+            const delta = clock.getDelta();
+
+            // Tốc độ dao động khi Overdrive
+            const speedMultiplier = isOverdrive ? 2.5 : 1.0;
+            const roarMult = isRoaring ? 3.5 : 1.0;
+
+            // 1. Nhịp thở cơ thể (lồng ngực phồng lên xuống)
+            torsoGroup.position.y = 1.2 + Math.sin(elapsedTime * 3 * speedMultiplier * roarMult) * 0.04;
+            headGroup.rotation.x = Math.cos(elapsedTime * 2 * speedMultiplier) * 0.05;
+
+            // 2. Chuyển động vẫy đuôi uyển chuyển
+            tailJoints.forEach((joint, index) => {
+                const wave = Math.sin(elapsedTime * 2.5 * speedMultiplier - index * 0.3) * 0.12 * speedMultiplier;
+                joint.rotation.y = wave;
+            });
+
+            // 3. Xử lý hiệu ứng Gầm (Roar)
+            if (isRoaring) {
+                roarTimer -= delta;
+                // Mở hàm rộng
+                jawGroup.rotation.x = THREE.MathUtils.lerp(jawGroup.rotation.x, -0.6, 0.2);
+                headGroup.rotation.x = THREE.MathUtils.lerp(headGroup.rotation.x, -0.3, 0.2);
+                throatCore.scale.lerp(new THREE.Vector3(1.5, 1.5, 1.5), 0.2);
+
+                // Rung camera uy lực
+                camera.position.x += (Math.random() - 0.5) * 0.08;
+                camera.position.y += (Math.random() - 0.5) * 0.08;
+
+                // Sóng xung kích lan tỏa
+                shockwaveRing.scale.addScalar(0.08);
+                ringMat.opacity = Math.max(0, roarTimer);
+
+                if (roarTimer <= 0) {
+                    isRoaring = false;
+                    shockwaveRing.scale.set(1, 1, 1);
+                    ringMat.opacity = 0;
+                    if (!isOverdrive) orangeGlowMat.emissiveIntensity = 1.5;
+                }
+            } else {
+                jawGroup.rotation.x = THREE.MathUtils.lerp(jawGroup.rotation.x, 0, 0.15);
+                throatCore.scale.lerp(new THREE.Vector3(0.01, 0.01, 0.01), 0.15);
+            }
+
+            // 4. Hiệu ứng hạt tia lửa bay khi Overdrive
+            if (isOverdrive || isRoaring) {
+                const positions = particleGeo.attributes.position.array;
+                for (let i = 1; i < positions.length; i += 3) {
+                    positions[i] += particleSpeeds[Math.floor(i/3)] * (isRoaring ? 2.5 : 1.2);
+                    if (positions[i] > 4.5) {
+                        positions[i] = 0;
+                        positions[i-1] = (Math.random() - 0.5) * 3;
+                        positions[i+1] = (Math.random() - 0.5) * 3;
+                    }
+                }
+                particleGeo.attributes.position.needsUpdate = true;
+            }
+
+            // 5. Tự xoay mô hình quanh trục Y
+            if (autoRotate && !controls.state) {
+                mechaGroup.rotation.y += 0.005;
+            }
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+        // --- XỬ LÝ RESIZE MÀN HÌNH ---
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Boston Dynamics Spot — 3D Model</title>
+  <style>
+    :root { color-scheme: light; }
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #fff; }
+    body { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #222; }
+    #stage { position: fixed; inset: 0; background: #fff; }
+    canvas { display: block; width: 100%; height: 100%; outline: none; touch-action: none; }
+    .topbar { position: absolute; top: 22px; left: 26px; z-index: 2; pointer-events: none; display: flex; flex-direction: column; gap: 5px; }
+    .eyebrow { font-size: 10px; font-weight: 700; letter-spacing: .19em; color: #a0a0a0; text-transform: uppercase; }
+    h1 { margin: 0; font-size: clamp(17px, 2vw, 23px); line-height: 1.15; font-weight: 650; letter-spacing: -.035em; color: #202020; }
+    .sub { color: #888; font-size: 12px; }
+    .controls { position: absolute; right: 22px; bottom: 20px; z-index: 2; display: flex; align-items: center; gap: 8px; }
+    button { border: 1px solid #e5e5e5; border-radius: 999px; background: rgba(255,255,255,.95); padding: 10px 14px; color: #333; font-size: 12px; font-weight: 600; cursor: pointer; box-shadow: 0 3px 14px rgba(0,0,0,.05); transition: background .15s, border-color .15s, transform .15s; }
+    button:hover { background: #f6f6f6; border-color: #cfcfcf; }
+    button:active { transform: translateY(1px); }
+    button:focus-visible { outline: 2px solid #e4b51e; outline-offset: 3px; }
+    .hint { position: absolute; left: 26px; bottom: 24px; z-index: 2; color: #a1a1a1; font-size: 11px; pointer-events: none; display: flex; align-items: center; gap: 7px; }
+    .hint-dot { width: 5px; height: 5px; background: #e5b72b; border-radius: 50%; }
+    #loading { position: absolute; inset: 0; display: grid; place-items: center; color: #999; font-size: 13px; background: #fff; z-index: 5; transition: opacity .25s; }
+    #loading.hidden { opacity: 0; pointer-events: none; }
+    #error { display:none; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); max-width: min(440px, 88vw); padding:16px 18px; border:1px solid #eee; border-radius:12px; color:#555; background:#fff; font-size:13px; line-height:1.5; z-index:6; box-shadow:0 8px 28px #0000000d; }
+    @media (max-width: 600px) {
+      .topbar { top: 16px; left: 16px; }
+      .controls { right: 12px; bottom: 12px; gap: 6px; }
+      .hint { left: 16px; bottom: 21px; max-width: 46%; line-height: 1.4; }
+      button { padding: 9px 11px; font-size: 10px; }
+    }
+  </style>
+  <script type="importmap">
+    { "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    } }
+  </script>
+</head>
+<body>
+  <main id="stage" aria-label="Mô hình robot Spot 3D có thể xoay">
+    <div class="topbar">
+      <div class="eyebrow">QUADRUPED ROBOT · 3D</div>
+      <h1>Spot — Boston Dynamics</h1>
+      <div class="sub">Elongated armored chassis · top-mounted equipment · interactive 3D</div>
+    </div>
+    <div class="hint"><span class="hint-dot"></span>Kéo chuột để xoay · Cuộn để zoom · Chuột phải để dịch chuyển</div>
+    <div class="controls">
+      <button id="spinBtn" type="button">Bật tự xoay</button>
+      <button id="resetBtn" type="button">Đặt lại góc nhìn</button>
+    </div>
+    <div id="loading">Đang dựng mô hình 3D…</div>
+    <div id="error">Không tải được thư viện Three.js. Hãy kiểm tra kết nối Internet rồi tải lại trang.</div>
+  </main>
+
+  <script type="module">
+    try {
+      const THREE = await import('three');
+      const { OrbitControls } = await import('three/addons/controls/OrbitControls.js');
+      const { RoundedBoxGeometry } = await import('three/addons/geometries/RoundedBoxGeometry.js');
+      const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironment.js');
+
+      const stage = document.querySelector('#stage');
+      const loading = document.querySelector('#loading');
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0xffffff);
+
+      const camera = new THREE.PerspectiveCamera(32, window.innerWidth / window.innerHeight, 0.1, 100);
+      const initialCamera = new THREE.Vector3(4.9, 3.35, 6.2);
+      camera.position.copy(initialCamera);
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.04;
+      stage.appendChild(renderer.domElement);
+
+      // Studio environment reflections give the yellow shell and metal parts more natural shading.
+      const pmremGenerator = new THREE.PMREMGenerator(renderer);
+      const studioEnvironment = new RoomEnvironment();
+      scene.environment = pmremGenerator.fromScene(studioEnvironment, 0.04).texture;
+      pmremGenerator.dispose();
+
+      const controls = new OrbitControls(camera, renderer.domElement);
+      controls.target.set(0, 1.06, 0);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.055;
+      controls.minDistance = 3.4;
+      controls.maxDistance = 11;
+      controls.maxPolarAngle = Math.PI * 0.49;
+      controls.autoRotate = false;
+      controls.autoRotateSpeed = 0.85;
+
+      // White studio floor and broad soft lighting.
+      scene.add(new THREE.HemisphereLight(0xffffff, 0xb7b8b5, 1.45));
+      const key = new THREE.DirectionalLight(0xffffff, 3.7);
+      key.position.set(4.5, 8.5, 5.5);
+      key.castShadow = true;
+      key.shadow.mapSize.set(3072, 3072);
+      key.shadow.camera.left = -4.5; key.shadow.camera.right = 4.5;
+      key.shadow.camera.top = 5; key.shadow.camera.bottom = -4.5;
+      key.shadow.bias = -0.00018; key.shadow.normalBias = 0.025; key.shadow.radius = 7;
+      scene.add(key);
+      const fill = new THREE.DirectionalLight(0xffffff, 1.45);
+      fill.position.set(-5, 4.5, -4); scene.add(fill);
+      const rim = new THREE.DirectionalLight(0xffffff, 1.15);
+      rim.position.set(-2, 5, 5); scene.add(rim);
+
+      const floor = new THREE.Mesh(
+        new THREE.PlaneGeometry(200, 200),
+        new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.96 })
+      );
+      floor.rotation.x = -Math.PI / 2;
+      floor.position.y = -0.012;
+      floor.receiveShadow = true;
+      scene.add(floor);
+
+      // Materials: warm industrial yellow, dark composite and anodized metal.
+      const yellow = new THREE.MeshStandardMaterial({ color: 0xf4c51c, metalness: 0.20, roughness: 0.27 });
+      const yellowSide = new THREE.MeshStandardMaterial({ color: 0xeab20c, metalness: 0.22, roughness: 0.31 });
+      const yellowHighlight = new THREE.MeshStandardMaterial({ color: 0xffd936, metalness: 0.18, roughness: 0.23 });
+      const dark = new THREE.MeshStandardMaterial({ color: 0x202326, metalness: 0.42, roughness: 0.43 });
+      const black = new THREE.MeshStandardMaterial({ color: 0x111416, metalness: 0.18, roughness: 0.72 });
+      const graphite = new THREE.MeshStandardMaterial({ color: 0x3f4547, metalness: 0.66, roughness: 0.34 });
+      const graphiteLight = new THREE.MeshStandardMaterial({ color: 0x737979, metalness: 0.72, roughness: 0.29 });
+      const silver = new THREE.MeshStandardMaterial({ color: 0xb9c0c0, metalness: 0.88, roughness: 0.21 });
+      const rubber = new THREE.MeshStandardMaterial({ color: 0x171a1a, metalness: 0.04, roughness: 0.92 });
+      const lens = new THREE.MeshStandardMaterial({ color: 0x0a141a, metalness: 0.72, roughness: 0.15 });
+      const glass = new THREE.MeshStandardMaterial({ color: 0x7895a0, metalness: 0.48, roughness: 0.18, emissive: 0x10232b, emissiveIntensity: 0.18 });
+
+      const robot = new THREE.Group();
+      scene.add(robot);
+
+      function addMesh(parent, geometry, material, position, rotation = null) {
+        const m = new THREE.Mesh(geometry, material);
+        m.position.set(...position);
+        if (rotation) m.rotation.set(...rotation);
+        m.castShadow = true; m.receiveShadow = true;
+        parent.add(m);
+        return m;
+      }
+      function box(parent, size, radius, material, position, rotation = [0,0,0]) {
+        return addMesh(parent, new RoundedBoxGeometry(size[0], size[1], size[2], 5, radius), material, position, rotation);
+      }
+      function sphere(parent, radius, material, position, scale = [1,1,1], segments = 28) {
+        const m = addMesh(parent, new THREE.SphereGeometry(radius, segments, 20), material, position);
+        m.scale.set(...scale); return m;
+      }
+      function cylinderX(parent, radius, depth, material, position, segments = 40) {
+        return addMesh(parent, new THREE.CylinderGeometry(radius, radius, depth, segments), material, position, [0,0,Math.PI/2]);
+      }
+      function cylinderY(parent, radius, depth, material, position, segments = 32) {
+        return addMesh(parent, new THREE.CylinderGeometry(radius, radius, depth, segments), material, position);
+      }
+      function cylinderZ(parent, radius, depth, material, position, segments = 48, scale = [1,1,1]) {
+        const m = addMesh(parent, new THREE.CylinderGeometry(radius, radius, depth, segments), material, position, [Math.PI/2,0,0]);
+        m.scale.set(...scale);
+        return m;
+      }
+      function rod(parent, a, b, rA, rB, material, radial = 20) {
+        const start = new THREE.Vector3(...a), end = new THREE.Vector3(...b);
+        const dir = new THREE.Vector3().subVectors(end, start);
+        const mesh = new THREE.Mesh(new THREE.CylinderGeometry(rB, rA, dir.length(), radial), material);
+        mesh.position.copy(start).add(end).multiplyScalar(0.5);
+        mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), dir.normalize());
+        mesh.castShadow = true; mesh.receiveShadow = true; parent.add(mesh);
+        return mesh;
+      }
+      function torusX(parent, major, tube, material, position, segments = 48) {
+        return addMesh(parent, new THREE.TorusGeometry(major, tube, 10, segments), material, position, [0,Math.PI/2,0]);
+      }
+
+      // A swept, elliptical shell following a smooth curved path. This is used for the
+      // sculpted yellow thigh covers and the bowed composite lower legs.
+      function sweptLink(parent, points, radiusA, radiusB, material, radialSegments = 20, tubularSegments = 42) {
+        const curve = new THREE.CatmullRomCurve3(points.map(p => new THREE.Vector3(...p)), false, 'catmullrom', 0.5);
+        const frames = curve.computeFrenetFrames(tubularSegments, false);
+        const vertices = [], normals = [], uvs = [], indices = [];
+        for (let i = 0; i <= tubularSegments; i++) {
+          const t = i / tubularSegments;
+          const center = curve.getPointAt(t);
+          const rA = THREE.MathUtils.lerp(radiusA[0], radiusA[1], t) + Math.sin(Math.PI*t) * (radiusA[2] || 0);
+          const rB = THREE.MathUtils.lerp(radiusB[0], radiusB[1], t) + Math.sin(Math.PI*t) * (radiusB[2] || 0);
+          for (let j = 0; j <= radialSegments; j++) {
+            const v = j / radialSegments * Math.PI * 2;
+            const n = frames.normals[i].clone().multiplyScalar(Math.cos(v) * rA)
+              .add(frames.binormals[i].clone().multiplyScalar(Math.sin(v) * rB));
+            vertices.push(center.x+n.x, center.y+n.y, center.z+n.z);
+            const normal = n.clone().normalize(); normals.push(normal.x,normal.y,normal.z);
+            uvs.push(j/radialSegments, t);
+            if (i < tubularSegments && j < radialSegments) {
+              const a = i*(radialSegments+1)+j, b = a+radialSegments+1;
+              indices.push(a,b,a+1, b,b+1,a+1);
+            }
+          }
+        }
+        const g = new THREE.BufferGeometry();
+        g.setAttribute('position', new THREE.Float32BufferAttribute(vertices,3));
+        g.setAttribute('normal', new THREE.Float32BufferAttribute(normals,3));
+        g.setAttribute('uv', new THREE.Float32BufferAttribute(uvs,2));
+        g.setIndex(indices);
+        const mesh = new THREE.Mesh(g, material);
+        mesh.castShadow = true; mesh.receiveShadow = true;
+        parent.add(mesh);
+        return mesh;
+      }
+
+      // Main chassis: a slim, elongated rectangular armored block with softened edges.
+      // Its cross-section is intentionally box-like (not cylindrical), as requested.
+      box(robot,[0.84,0.52,2.72],0.145,dark,[0,1.90,-0.02]);
+      box(robot,[0.82,0.50,2.68],0.14,yellow,[0,1.94,-0.02]);
+      // Narrow top access panel and fine service seams.
+      box(robot,[0.66,0.045,2.25],0.035,yellowHighlight,[0,2.205,-0.04]);
+      box(robot,[0.48,0.018,1.20],0.014,yellowSide,[0,2.232,-0.40]);
+      for (const z of [-1.03,-0.66,0.20,0.70,1.02]) {
+        box(robot,[0.58,0.008,0.010],0.003,yellowSide,[0,2.234,z]);
+      }
+      for (const x of [-0.29,0.29]) {
+        for (const z of [-1.08,-0.62,0.38,1.08]) {
+          cylinderY(robot,0.012,0.007,silver,[x,2.229,z],14);
+        }
+      }
+
+      // Front sensor nose (+Z): a compact squared-off module attached to the long body.
+      box(robot,[0.90,0.51,0.34],0.105,yellow,[0,1.91,1.40]);
+      box(robot,[0.72,0.35,0.055],0.045,dark,[0,1.89,1.595]);
+      box(robot,[0.43,0.29,0.018],0.018,black,[-0.10,1.89,1.632]);
+      // Fine grille bars in the optical recess.
+      for (let i=0;i<11;i++) {
+        const x=-0.29+i*0.038;
+        box(robot,[0.008,0.25,0.008],0.003,graphite,[x,1.89,1.646]);
+      }
+      // Four vertically stacked optics on the left side of the front fascia.
+      box(robot,[0.17,0.32,0.035],0.035,black,[-0.34,1.90,1.638]);
+      for (let i=0;i<4;i++) {
+        const y=2.015-i*0.074;
+        box(robot,[0.088,0.052,0.018],0.016,graphite,[-0.34,y,1.662]);
+        box(robot,[0.057,0.030,0.012],0.011,lens,[-0.34,y,1.676]);
+        sphere(robot,0.011,glass,[-0.34,y,1.687],[1,0.7,0.25],14);
+      }
+      // Small front corner lamps and lower sensor lip.
+      for (const x of [-0.39,0.39]) {
+        box(robot,[0.075,0.065,0.035],0.02,dark,[x,1.67,1.56]);
+        sphere(robot,0.023,yellowHighlight,[x,1.67,1.588],[1,0.8,0.35],16);
+      }
+      box(robot,[0.68,0.052,0.09],0.025,yellowSide,[0,1.62,1.47]);
+
+      // Side equipment rails, black accent stripe, vents and a small Spot-style brand mark.
+      for (const side of [-1,1]) {
+        box(robot,[0.028,0.11,1.62],0.022,black,[side*0.418,1.80,-0.02],[0,0,side*0.035]);
+        box(robot,[0.022,0.075,1.22],0.016,yellowSide,[side*0.435,1.83,-0.03],[0,0,side*0.035]);
+        // Long dark inset on the rear half of the side panel.
+        box(robot,[0.026,0.17,0.46],0.028,dark,[side*0.421,1.99,-0.66]);
+        for(let i=0;i<4;i++) box(robot,[0.010,0.016,0.32],0.005,graphiteLight,[side*0.437,2.00-i*0.032,-0.66]);
+        // Side hinge mounts at front and rear shoulder stations.
+        for (const z of [0.82,-0.82]) {
+          cylinderX(robot,0.15,0.09,dark,[side*0.445,1.76,z]);
+          cylinderX(robot,0.12,0.13,graphite,[side*0.505,1.76,z]);
+          cylinderX(robot,0.083,0.14,silver,[side*0.56,1.76,z]);
+          cylinderX(robot,0.044,0.15,dark,[side*0.585,1.76,z]);
+          // Radial bolt heads around the exposed bearing cap.
+          for(let k=0;k<8;k++) {
+            const a=k*Math.PI/4;
+            sphere(robot,0.011,silver,[side*0.59,1.76+Math.cos(a)*0.063,z+Math.sin(a)*0.063],[0.55,1,1],10);
+          }
+        }
+      }
+
+      // Logo canvas placed on both outer side panels.
+      function makeLogoTexture() {
+        const c=document.createElement('canvas'); c.width=640; c.height=128;
+        const ctx=c.getContext('2d');
+        ctx.clearRect(0,0,c.width,c.height);
+        ctx.fillStyle='#242628'; ctx.font='600 46px Arial, sans-serif';
+        ctx.textBaseline='middle'; ctx.fillText('Boston Dynamics',18,66);
+        const t=new THREE.CanvasTexture(c); t.colorSpace=THREE.SRGBColorSpace; return t;
+      }
+      const logoTexture=makeLogoTexture();
+      for(const side of [-1,1]) {
+        const mat=new THREE.MeshBasicMaterial({map:logoTexture,transparent:true,depthWrite:false,side:THREE.DoubleSide});
+        const logo=new THREE.Mesh(new THREE.PlaneGeometry(0.80,0.16),mat);
+        logo.position.set(side*0.432,1.98,0.12);
+        logo.rotation.y=side*Math.PI/2;
+        robot.add(logo);
+      }
+
+      // Small low-profile roof service cover: no oversized lidar dome, matching the flatter reference silhouette.
+      box(robot,[0.34,0.035,0.30],0.04,dark,[0,2.22,-0.92]);
+      box(robot,[0.26,0.022,0.22],0.025,graphite,[0,2.247,-0.92]);
+      for(let i=0;i<3;i++) box(robot,[0.018,0.008,0.14],0.005,silver,[-0.07+i*0.07,2.261,-0.92]);
+
+      // Decorative, non-functional long black rifle-shaped equipment mounted lengthwise
+      // on the robot's back. It is a static visual prop, not a working weapon mechanism.
+      const rifle = new THREE.Group();
+      robot.add(rifle);
+      // Low-profile mounting cradle and two attachment saddles.
+      box(rifle,[0.24,0.075,0.78],0.055,dark,[0,2.365,-0.06]);
+      for (const z of [-0.34,0.25]) {
+        box(rifle,[0.31,0.055,0.12],0.025,graphite,[0,2.405,z]);
+      }
+      // Main receiver, rear stock, and long forward barrel (+Z).
+      box(rifle,[0.19,0.17,0.58],0.045,black,[0,2.49,-0.16]);
+      box(rifle,[0.16,0.13,0.42],0.035,dark,[0,2.48,-0.60]);
+      box(rifle,[0.15,0.12,0.19],0.035,black,[0,2.49,-0.88]);
+      cylinderZ(rifle,0.034,0.92,black,[0,2.515,0.57],32);
+      cylinderZ(rifle,0.046,0.12,graphite,[0,2.515,1.06],32);
+      // Compact top optic and a simple upper rail, kept as non-detailed silhouettes.
+      box(rifle,[0.075,0.035,0.55],0.012,graphite,[0,2.595,-0.04]);
+      cylinderZ(rifle,0.052,0.23,black,[0,2.665,-0.18],28,[1,1,1]);
+      box(rifle,[0.09,0.035,0.16],0.012,black,[0,2.635,0.30]);
+      // Small side control block and grip silhouette.
+      box(rifle,[0.055,0.10,0.18],0.018,dark,[0.115,2.435,-0.18]);
+      box(rifle,[0.09,0.19,0.12],0.025,black,[0,2.365,-0.12],[0.18,0,0]);
+      // Enlarge the static prop so it reads clearly as a substantial top-mounted unit.
+      rifle.scale.set(1.42,1.30,1.25);
+      rifle.position.y = -0.83;
+
+      // Four legs: large rounded yellow upper fairings, visible metal links, curved lower blades and small wheels.
+      const legData = [
+        { side: 1, front: true,  z: 0.77, zStep: 0.17 },
+        { side:-1, front: true,  z: 0.77, zStep: 0.17 },
+        { side: 1, front: false, z:-0.78, zStep:-0.15 },
+        { side:-1, front: false, z:-0.78, zStep:-0.15 }
+      ];
+
+      for (const leg of legData) {
+        const s=leg.side*0.78, z=leg.z;
+        const hip=[s*0.70,1.76,z];
+        const shoulderOuter=[s*0.83,1.72,z];
+        const knee=[s*0.99,1.08,z+leg.zStep];
+        const wheel=[s*1.05,0.145,z+leg.zStep+(leg.front?0.13:-0.11)];
+
+        // Shoulder socket and outer bearing: layered circular mechanical joint.
+        sphere(robot,0.215,dark,[s*0.70,1.76,z],[1.0,0.92,0.95],32);
+        cylinderX(robot,0.175,0.19,graphite,[s*0.78,1.76,z]);
+        cylinderX(robot,0.138,0.205,silver,[s*0.865,1.76,z]);
+        cylinderX(robot,0.108,0.215,dark,[s*0.895,1.76,z]);
+        cylinderX(robot,0.072,0.225,graphiteLight,[s*0.91,1.76,z]);
+        sphere(robot,0.026,silver,[s*0.93,1.76,z],[0.6,1,1],18);
+
+        // Hidden inner arm and actuator are offset inward so the mechanical structure remains visible.
+        rod(robot,[s*0.65,1.67,z-0.015],[s*0.78,1.30,z+leg.zStep*0.46],0.085,0.065,dark,18);
+        rod(robot,[s*0.62,1.69,z-0.08],[s*0.83,1.27,z+leg.zStep*0.48],0.026,0.022,silver,14);
+        rod(robot,[s*0.83,1.28,z+leg.zStep*0.48],[s*0.91,1.13,z+leg.zStep*0.85],0.035,0.028,graphiteLight,14);
+
+        // Bulbous yellow shoulder/thigh fairing that narrows toward the knee.
+        sweptLink(robot,
+          [[s*0.75,1.78,z],[s*0.88,1.70,z+leg.zStep*0.12],[s*0.98,1.43,z+leg.zStep*0.48],[s*1.00,1.10,z+leg.zStep]],
+          [0.165,0.075,0.018],[0.145,0.072,0.012],yellow,28,48);
+        // Slight outer glossy cheek gives the thigh the smooth molded shell seen in the photo.
+        sphere(robot,0.145,yellowHighlight,[s*0.91,1.57,z+leg.zStep*0.36],[1.08,1.18,0.82],28);
+        // Dark trim at the lower end of the yellow fairing.
+        cylinderX(robot,0.085,0.17,dark,[s*1.00,1.09,z+leg.zStep]);
+        cylinderX(robot,0.057,0.19,silver,[s*1.055,1.09,z+leg.zStep]);
+        sphere(robot,0.035,graphite,[s*1.06,1.09,z+leg.zStep],[0.65,1,1],18);
+
+        // Knee hinge and bracket.
+        sphere(robot,0.12,dark,knee,[1,0.92,0.92],24);
+        cylinderX(robot,0.105,0.18,graphite,[s*1.02,knee[1],knee[2]],32);
+        cylinderX(robot,0.070,0.20,silver,[s*1.09,knee[1],knee[2]],28);
+        cylinderX(robot,0.043,0.205,dark,[s*1.11,knee[1],knee[2]],24);
+        sphere(robot,0.025,silver,[s*1.12,knee[1],knee[2]],[0.55,1,1],16);
+
+        // Curved graphite lower leg, deliberately flattened and blade-like rather than a straight cylinder.
+        const lowerPath=[
+          [s*1.00,1.02,knee[2]],
+          [s*1.055,0.78,knee[2]+(leg.front?0.035:-0.025)],
+          [s*1.11,0.48,wheel[2]+(leg.front?0.12:-0.10)],
+          [s*1.06,0.20,wheel[2]]
+        ];
+        sweptLink(robot,lowerPath,[0.082,0.060,0.010],[0.046,0.035,0.004],graphite,18,44);
+        // Inner silver actuator and a dark reinforcing rib follow the bent lower link.
+        rod(robot,[s*0.94,0.96,knee[2]-0.035],[s*0.97,0.55,wheel[2]+0.08],0.028,0.022,silver,14);
+        rod(robot,[s*1.01,0.77,knee[2]+0.045],[s*1.035,0.34,wheel[2]+0.045],0.022,0.018,dark,12);
+        // Small gusset close to the ankle.
+        sphere(robot,0.075,graphiteLight,[s*1.06,0.23,wheel[2]],[1.0,0.65,0.72],20);
+
+        // Wheel foot: treaded rubber tire, metal sidewall and axle cap.
+        const wx=wheel[0], wy=wheel[1], wz=wheel[2];
+        cylinderX(robot,0.135,0.19,rubber,[wx,wy,wz],48);
+        torusX(robot,0.112,0.018,graphite,[s*(Math.abs(wx)+0.075),wy,wz]);
+        cylinderX(robot,0.078,0.205,graphite,[s*(Math.abs(wx)+0.012),wy,wz],36);
+        cylinderX(robot,0.045,0.218,silver,[s*(Math.abs(wx)+0.025),wy,wz],32);
+        cylinderX(robot,0.022,0.225,dark,[s*(Math.abs(wx)+0.035),wy,wz],24);
+        // Subtle transverse tread bars around the tire circumference.
+        for(let t=0;t<18;t++) {
+          const a=t/18*Math.PI*2;
+          const tread=box(robot,[0.145,0.018,0.009],0.003,graphite,[wx,wy+Math.cos(a)*0.132,wz+Math.sin(a)*0.132]);
+          tread.rotation.x=a;
+        }
+      }
+
+      // A quiet soft shadow just beneath the chassis supplements the directional floor shadow.
+      const shadowCanvas=document.createElement('canvas'); shadowCanvas.width=256; shadowCanvas.height=256;
+      const ctx=shadowCanvas.getContext('2d');
+      const grad=ctx.createRadialGradient(128,128,14,128,128,124);
+      grad.addColorStop(0,'rgba(0,0,0,0.20)'); grad.addColorStop(0.5,'rgba(0,0,0,0.075)'); grad.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=grad; ctx.fillRect(0,0,256,256);
+      const shadow=new THREE.Mesh(new THREE.PlaneGeometry(3.6,3.5),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(shadowCanvas),transparent:true,depthWrite:false}));
+      shadow.rotation.x=-Math.PI/2; shadow.position.set(0,0.003,0); robot.add(shadow);
+
+      // Reset and auto-rotation controls.
+      const resetView=()=>{
+        camera.position.copy(initialCamera);
+        controls.target.set(0,1.34,0);
+        controls.update();
+      };
+      document.querySelector('#resetBtn').addEventListener('click',resetView);
+      const spinBtn=document.querySelector('#spinBtn');
+      spinBtn.addEventListener('click',()=>{
+        controls.autoRotate=!controls.autoRotate;
+        spinBtn.textContent=controls.autoRotate?'Tắt tự xoay':'Bật tự xoay';
+      });
+
+      function resize(){
+        const w=window.innerWidth,h=window.innerHeight;
+        camera.aspect=w/h; camera.updateProjectionMatrix();
+        renderer.setSize(w,h); renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+      }
+      window.addEventListener('resize',resize);
+      const clock=new THREE.Clock();
+      function animate(){
+        requestAnimationFrame(animate);
+        controls.update(clock.getDelta());
+        renderer.render(scene,camera);
+      }
+      animate();
+      loading.classList.add('hidden');
+      setTimeout(()=>loading.remove(),300);
+    } catch (err) {
+      console.error(err);
+      document.querySelector('#loading')?.remove();
+      document.querySelector('#error').style.display='block';
+    }
+  </script>
+</body>
+</html>

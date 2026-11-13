@@ -1,0 +1,1158 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mô Hình 3D Robot Vịt - Three.js</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f9fa;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+        }
+        /* Tùy chỉnh thanh trượt */
+        input[type=range] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 6px;
+            background: #e2e8f0;
+            border-radius: 999px;
+            outline: none;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #8b5cf6;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(139, 92, 246, 0.4);
+            transition: transform 0.15s ease;
+        }
+        input[type=range]::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+        }
+    </style>
+    <!-- Import Map cho Three.js & Addons -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.163.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.163.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+    <div id="canvas-container">
+        <!-- Màn hình tải -->
+        <div id="loader" class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-white/95 backdrop-blur-sm transition-opacity duration-500">
+            <div class="w-12 h-12 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mb-4"></div>
+            <p class="text-slate-700 font-medium text-sm tracking-wide">Đang khởi tạo vật liệu kim loại & kết cấu 3D...</p>
+        </div>
+
+        <!-- Tiêu đề nổi góc trên bên trái -->
+        <div class="absolute top-4 left-4 z-10 pointer-events-none">
+            <div class="bg-white/80 backdrop-blur-md border border-slate-200/80 shadow-sm rounded-2xl px-4 py-3">
+                <div class="flex items-center gap-2.5">
+                    <span class="w-3 h-3 rounded-full bg-purple-500 inline-block shadow-sm"></span>
+                    <h1 class="text-slate-800 font-bold text-base sm:text-lg tracking-tight">Open Duck Mini 3D</h1>
+                </div>
+                <p class="text-slate-500 text-xs mt-0.5">Kéo chuột để xoay • Cuộn để thu phóng • Chuột phải để di chuyển</p>
+            </div>
+        </div>
+
+        <!-- Nút bật/tắt bảng điều khiển trên thiết bị nhỏ -->
+        <button id="toggle-panel-btn" class="sm:hidden absolute top-4 right-4 z-20 bg-white/90 backdrop-blur-md border border-slate-200 shadow-md rounded-xl p-2.5 text-slate-700 active:scale-95 transition">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+            </svg>
+        </button>
+
+        <!-- Bảng điều khiển tương tác -->
+        <div id="control-panel" class="hidden sm:block absolute bottom-4 right-4 sm:top-4 sm:bottom-auto z-10 w-[calc(100vw-2rem)] sm:w-72 bg-white/85 backdrop-blur-md border border-slate-200/80 shadow-lg rounded-2xl p-4 transition-all">
+            <div class="flex items-center justify-between border-b border-slate-200/70 pb-2.5 mb-3">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-600">Bảng Điều Khiển Robot</span>
+                <button id="reset-btn" class="text-xs font-medium text-purple-600 hover:text-purple-800 bg-purple-50 hover:bg-purple-100 px-2.5 py-1 rounded-lg transition cursor-pointer">
+                    Góc nhìn gốc
+                </button>
+            </div>
+
+            <div class="space-y-3.5 text-xs">
+                <!-- Mở / Đóng Mỏ Vịt -->
+                <div>
+                    <div class="flex justify-between mb-1">
+                        <label for="beak-slider" class="font-medium text-slate-700">Độ mở mỏ vịt</label>
+                        <span id="beak-val" class="text-slate-500 font-mono">18°</span>
+                    </div>
+                    <input type="range" id="beak-slider" min="0" max="42" value="18" step="1">
+                </div>
+
+                <!-- Xoay cổ ngang (Yaw) -->
+                <div>
+                    <div class="flex justify-between mb-1">
+                        <label for="yaw-slider" class="font-medium text-slate-700">Xoay đầu trái / phải</label>
+                        <span id="yaw-val" class="text-slate-500 font-mono">16°</span>
+                    </div>
+                    <input type="range" id="yaw-slider" min="-45" max="45" value="16" step="1">
+                </div>
+
+                <!-- Gật đầu (Pitch) -->
+                <div>
+                    <div class="flex justify-between mb-1">
+                        <label for="pitch-slider" class="font-medium text-slate-700">Ngẩng / cúi đầu</label>
+                        <span id="pitch-val" class="text-slate-500 font-mono">4°</span>
+                    </div>
+                    <input type="range" id="pitch-slider" min="-25" max="25" value="4" step="1">
+                </div>
+
+                <!-- Cường độ ánh sáng & bóng kim loại -->
+                <div>
+                    <div class="flex justify-between mb-1">
+                        <label for="env-slider" class="font-medium text-slate-700">Độ sáng & phản xạ kim loại</label>
+                        <span id="env-val" class="text-slate-500 font-mono">1.15</span>
+                    </div>
+                    <input type="range" id="env-slider" min="0.5" max="2.0" value="1.15" step="0.05">
+                </div>
+
+                <!-- Chế độ chuyển động tự nhiên -->
+                <div class="pt-1 flex items-center justify-between border-t border-slate-200/70">
+                    <span class="font-medium text-slate-700">Chuyển động tự nhiên (Idle)</span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="idle-toggle" class="sr-only peer" checked>
+                        <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600"></div>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+        // --- KHỞI TẠO CÁC BIẾN TOÀN CỤC ---
+        let scene, camera, renderer, controls;
+        let robotRoot, headAssembly, beakPivot, neckPivot, leftEyePupil;
+        let studioEnvTexture, dirLight;
+        let clock = new THREE.Clock();
+
+        // Trạng thái điều khiển từ UI
+        const state = {
+            beakAngle: 18,
+            headYaw: 16,
+            headPitch: 4,
+            envIntensity: 1.15,
+            idleAnimation: true
+        };
+
+        // Góc camera chuẩn giống ảnh mẫu (góc 3/4 từ trái qua phải, hơi nhìn xuống)
+        const DEFAULT_CAM_POS = new THREE.Vector3(-2.65, 2.55, 4.35);
+        const DEFAULT_CAM_TARGET = new THREE.Vector3(0.05, 1.55, 0.05);
+
+        /**
+         * Tạo vân bề mặt kim loại xước nhẹ (Brushed Aluminum) bằng Canvas
+         */
+        function createBrushedMetalTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+
+            ctx.fillStyle = '#d4d6db';
+            ctx.fillRect(0, 0, 256, 256);
+
+            // Vẽ các vệt xước mịn theo chiều ngang
+            for (let i = 0; i < 1800; i++) {
+                const x = Math.random() * 256;
+                const y = Math.random() * 256;
+                const len = 10 + Math.random() * 50;
+                const alpha = 0.04 + Math.random() * 0.08;
+                ctx.strokeStyle = Math.random() > 0.5 ? `rgba(255,255,255,${alpha})` : `rgba(80,85,95,${alpha})`;
+                ctx.lineWidth = 0.8;
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(x + len, y);
+                ctx.stroke();
+            }
+
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.wrapS = THREE.RepeatWrapping;
+            tex.wrapT = THREE.RepeatWrapping;
+            tex.repeat.set(2, 2);
+            return tex;
+        }
+
+        /**
+         * Tạo vân nhựa nhám in 3D / đúc khuôn mịn (Micro-grain plastic)
+         */
+        function createMicroGrainBump() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 128;
+            canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+            const imgData = ctx.createImageData(128, 128);
+            for (let i = 0; i < imgData.data.length; i += 4) {
+                const v = 120 + Math.floor(Math.random() * 16);
+                imgData.data[i] = v;
+                imgData.data[i + 1] = v;
+                imgData.data[i + 2] = v;
+                imgData.data[i + 3] = 255;
+            }
+            ctx.putImageData(imgData, 0, 0);
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.wrapS = THREE.RepeatWrapping;
+            tex.wrapT = THREE.RepeatWrapping;
+            tex.repeat.set(8, 8);
+            return tex;
+        }
+
+        /**
+         * Tạo mặt tiếp xúc bóng đổ mềm (Ambient Contact Shadow) dưới sàn trắng
+         */
+        function createContactShadowTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+
+            ctx.clearRect(0, 0, 512, 512);
+
+            // Bóng tổng thể mềm mại
+            const drawSoftBlob = (x, y, rx, ry, alpha) => {
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.scale(rx, ry);
+                const grad = ctx.createRadialGradient(0, 0, 0.1, 0, 0, 1);
+                grad.addColorStop(0, `rgba(25, 22, 35, ${alpha})`);
+                grad.addColorStop(0.55, `rgba(35, 30, 48, ${alpha * 0.45})`);
+                grad.addColorStop(1, 'rgba(35, 30, 48, 0)');
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.arc(0, 0, 1, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            };
+
+            drawSoftBlob(256, 265, 175, 130, 0.28);
+            drawSoftBlob(175, 290, 75, 55, 0.35); // Bóng chân trái
+            drawSoftBlob(325, 300, 80, 58, 0.38); // Bóng chân phải
+            drawSoftBlob(260, 220, 110, 70, 0.25); // Bóng gầm thân
+
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        /**
+         * Khởi tạo hệ thống vật liệu PBR chuẩn xác theo ảnh mẫu
+         */
+        function createMaterials() {
+            const brushedTex = createBrushedMetalTexture();
+            const plasticBump = createMicroGrainBump();
+
+            return {
+                // Nhựa tím pastel vỏ đầu & thân (satin mịn, phản xạ nhẹ)
+                pastelPurple: new THREE.MeshPhysicalMaterial({
+                    color: 0xc2b0d8,
+                    roughness: 0.42,
+                    metalness: 0.02,
+                    clearcoat: 0.18,
+                    clearcoatRoughness: 0.38,
+                    bumpMap: plasticBump,
+                    bumpScale: 0.0015
+                }),
+                // Nhựa tím đậm hơn một chút cho mu bàn chân & lưỡi trong mỏ
+                richPurple: new THREE.MeshPhysicalMaterial({
+                    color: 0xa283cc,
+                    roughness: 0.40,
+                    metalness: 0.02,
+                    clearcoat: 0.22,
+                    clearcoatRoughness: 0.35,
+                    bumpMap: plasticBump,
+                    bumpScale: 0.0015
+                }),
+                // Nhựa vàng tươi viền mỏ & đế giày
+                brightYellow: new THREE.MeshPhysicalMaterial({
+                    color: 0xf7dc4f,
+                    roughness: 0.34,
+                    metalness: 0.03,
+                    clearcoat: 0.32,
+                    clearcoatRoughness: 0.25,
+                    bumpMap: plasticBump,
+                    bumpScale: 0.0012
+                }),
+                // Vòng mắt màu xanh ngọc pastel (cyan nhạt)
+                cyanEyeRing: new THREE.MeshPhysicalMaterial({
+                    color: 0xa7dde6,
+                    roughness: 0.30,
+                    metalness: 0.02,
+                    clearcoat: 0.35,
+                    clearcoatRoughness: 0.22
+                }),
+                // Mặt nạ trước màu xám khói bán kim loại
+                smokyFaceplate: new THREE.MeshPhysicalMaterial({
+                    color: 0x878580,
+                    roughness: 0.28,
+                    metalness: 0.38,
+                    clearcoat: 0.45,
+                    clearcoatRoughness: 0.2
+                }),
+                // Nhựa động cơ servo màu đen nhám kỹ thuật
+                servoBlack: new THREE.MeshStandardMaterial({
+                    color: 0x1e2025,
+                    roughness: 0.46,
+                    metalness: 0.18,
+                    bumpMap: plasticBump,
+                    bumpScale: 0.002
+                }),
+                // Khung nhôm xước sáng bóng kim loại (Brushed Anodized Aluminum)
+                brushedSilver: new THREE.MeshStandardMaterial({
+                    color: 0xd0d3da,
+                    map: brushedTex,
+                    roughnessMap: brushedTex,
+                    roughness: 0.24,
+                    metalness: 0.92
+                }),
+                // Ốc vít thép tối màu bóng
+                darkChromeScrew: new THREE.MeshStandardMaterial({
+                    color: 0x3b3e45,
+                    roughness: 0.22,
+                    metalness: 0.90
+                }),
+                // Thấu kính camera thủy tinh phản xạ cao
+                cameraGlass: new THREE.MeshPhysicalMaterial({
+                    color: 0x090d16,
+                    roughness: 0.04,
+                    metalness: 0.1,
+                    transmission: 0.45,
+                    ior: 1.52,
+                    reflectivity: 1.0,
+                    clearcoat: 1.0,
+                    clearcoatRoughness: 0.03
+                }),
+                // Jack cắm Molex trắng trên servo
+                connectorWhite: new THREE.MeshStandardMaterial({
+                    color: 0xf1f2f4,
+                    roughness: 0.5,
+                    metalness: 0.05
+                }),
+                // Dây điện đen bóng nhẹ
+                wireRubber: new THREE.MeshStandardMaterial({
+                    color: 0x151619,
+                    roughness: 0.35,
+                    metalness: 0.08
+                })
+            };
+        }
+
+        /**
+         * Hàm tiện ích tạo hình hộp bo góc mượt mà bằng ExtrudeGeometry
+         */
+        function createRoundedBoxGeometry(width, height, depth, radius, bevelSize = 0.03) {
+            const shape = new THREE.Shape();
+            const w = width - bevelSize * 2;
+            const h = height - bevelSize * 2;
+            const r = Math.min(radius, w / 2, h / 2);
+            const x = -w / 2;
+            const y = -h / 2;
+
+            shape.moveTo(x + r, y);
+            shape.lineTo(x + w - r, y);
+            shape.quadraticCurveTo(x + w, y, x + w, y + r);
+            shape.lineTo(x + w, y + h - r);
+            shape.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+            shape.lineTo(x + r, y + h);
+            shape.quadraticCurveTo(x, y + h, x, y + h - r);
+            shape.lineTo(x, y + r);
+            shape.quadraticCurveTo(x, y, x + r, y);
+
+            const extrudeSettings = {
+                depth: depth - bevelSize * 2,
+                bevelEnabled: true,
+                bevelSegments: 5,
+                steps: 1,
+                bevelSize: bevelSize,
+                bevelThickness: bevelSize,
+                curveSegments: 16
+            };
+
+            const geo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+            geo.center();
+            return geo;
+        }
+
+        /**
+         * Hàm tạo đầu ốc vít kim loại có rãnh lục giác
+         */
+        function createScrew(mats, scale = 1) {
+            const group = new THREE.Group();
+            const headGeo = new THREE.CylinderGeometry(0.022 * scale, 0.022 * scale, 0.014 * scale, 16);
+            headGeo.rotateX(Math.PI / 2);
+            const head = new THREE.Mesh(headGeo, mats.darkChromeScrew);
+            head.castShadow = true;
+
+            const socketGeo = new THREE.CylinderGeometry(0.011 * scale, 0.011 * scale, 0.016 * scale, 6);
+            socketGeo.rotateX(Math.PI / 2);
+            const socket = new THREE.Mesh(socketGeo, mats.servoBlack);
+
+            group.add(head, socket);
+            return group;
+        }
+
+        /**
+         * Tạo cụm động cơ Servo tiêu chuẩn (Dynamixel / STS3215 style) kèm khung nhôm U-bracket
+         */
+        function createServoModule(mats, withBracket = true) {
+            const group = new THREE.Group();
+
+            // Thân động cơ chính
+            const bodyGeo = createRoundedBoxGeometry(0.36, 0.48, 0.34, 0.03, 0.015);
+            const body = new THREE.Mesh(bodyGeo, mats.servoBlack);
+            body.castShadow = true;
+            body.receiveShadow = true;
+            group.add(body);
+
+            // Gờ bích bắt ốc ở giữa thân servo
+            const flangeGeo = createRoundedBoxGeometry(0.41, 0.06, 0.38, 0.01, 0.005);
+            const flange = new THREE.Mesh(flangeGeo, mats.servoBlack);
+            flange.position.y = 0.08;
+            flange.castShadow = true;
+            group.add(flange);
+
+            // Cổng cắm dây trắng (Molex 3-pin) ở mặt trước/bên
+            const portGeo = new THREE.BoxGeometry(0.08, 0.11, 0.03);
+            const port = new THREE.Mesh(portGeo, mats.connectorWhite);
+            port.position.set(-0.07, -0.1, 0.175);
+            group.add(port);
+
+            // Nhãn thông số kỹ thuật nhỏ màu xám bạc trên thân servo
+            const labelGeo = new THREE.PlaneGeometry(0.14, 0.08);
+            const labelMat = new THREE.MeshStandardMaterial({ color: 0x9aa0a8, roughness: 0.6 });
+            const label = new THREE.Mesh(labelGeo, labelMat);
+            label.position.set(0.07, -0.09, 0.172);
+            group.add(label);
+
+            // Đĩa trục xoay kim loại tròn (Servo Horn) ở mặt bên
+            const hornGeo = new THREE.CylinderGeometry(0.125, 0.125, 0.03, 24);
+            hornGeo.rotateZ(Math.PI / 2);
+            const horn = new THREE.Mesh(hornGeo, mats.brushedSilver);
+            horn.position.set(0.18, 0.12, 0);
+            horn.castShadow = true;
+            group.add(horn);
+
+            // Ốc tâm và 4 ốc xung quanh đĩa horn
+            const centerScrew = createScrew(mats, 1.3);
+            centerScrew.rotation.y = Math.PI / 2;
+            centerScrew.position.set(0.195, 0.12, 0);
+            group.add(centerScrew);
+
+            for (let i = 0; i < 4; i++) {
+                const ang = (i * Math.PI) / 2 + Math.PI / 4;
+                const s = createScrew(mats, 0.75);
+                s.rotation.y = Math.PI / 2;
+                s.position.set(0.195, 0.12 + Math.sin(ang) * 0.075, Math.cos(ang) * 0.075);
+                group.add(s);
+            }
+
+            // Khung chữ U bằng nhôm xước sáng bóng bọc quanh
+            if (withBracket) {
+                const bracketMat = mats.brushedSilver;
+                const sideGeo = createRoundedBoxGeometry(0.025, 0.34, 0.24, 0.04, 0.005);
+
+                const leftPlate = new THREE.Mesh(sideGeo, bracketMat);
+                leftPlate.position.set(-0.20, 0.15, 0);
+                leftPlate.castShadow = true;
+
+                const rightPlate = new THREE.Mesh(sideGeo, bracketMat);
+                rightPlate.position.set(0.20, 0.15, 0);
+                rightPlate.castShadow = true;
+
+                const topBridgeGeo = createRoundedBoxGeometry(0.425, 0.025, 0.24, 0.02, 0.005);
+                const topBridge = new THREE.Mesh(topBridgeGeo, bracketMat);
+                topBridge.position.set(0, 0.31, 0);
+                topBridge.castShadow = true;
+
+                group.add(leftPlate, rightPlate, topBridge);
+            }
+
+            return group;
+        }
+
+        /**
+         * Xây dựng phần Đầu Vịt & Mắt Camera (Head & Beak Assembly)
+         */
+        function buildHead(mats) {
+            const headGroup = new THREE.Group();
+
+            // 1. Vỏ vòm đầu trên màu tím pastel (Hình dạng mái vòm cong phía trên, phẳng ở đáy)
+            const archWidth = 1.18;
+            const archHeight = 0.78;
+            const archDepth = 0.88;
+
+            const archShape = new THREE.Shape();
+            const hw = archWidth / 2;
+            archShape.moveTo(-hw, 0);
+            archShape.lineTo(hw, 0);
+            // Bo góc phải dưới
+            archShape.quadraticCurveTo(hw + 0.04, 0.32, hw - 0.12, 0.56);
+            // Đỉnh vòm tròn mềm mại
+            archShape.bezierCurveTo(hw - 0.25, archHeight + 0.08, -hw + 0.25, archHeight + 0.08, -hw + 0.12, 0.56);
+            // Bo góc trái dưới
+            archShape.quadraticCurveTo(-hw - 0.04, 0.32, -hw, 0);
+
+            const archGeo = new THREE.ExtrudeGeometry(archShape, {
+                depth: archDepth,
+                bevelEnabled: true,
+                bevelSegments: 8,
+                steps: 1,
+                bevelSize: 0.045,
+                bevelThickness: 0.055,
+                curveSegments: 28
+            });
+            archGeo.translate(0, 0, -archDepth / 2);
+
+            const upperShell = new THREE.Mesh(archGeo, mats.pastelPurple);
+            upperShell.castShadow = true;
+            upperShell.receiveShadow = true;
+            headGroup.add(upperShell);
+
+            // 2. Mặt nạ trước màu xám khói thụt nhẹ vào trong và hơi ngả ra sau một chút
+            const faceShape = new THREE.Shape();
+            const fhw = hw - 0.045;
+            faceShape.moveTo(-fhw, 0.01);
+            faceShape.lineTo(fhw, 0.01);
+            faceShape.quadraticCurveTo(fhw + 0.03, 0.30, fhw - 0.11, 0.52);
+            faceShape.bezierCurveTo(fhw - 0.22, archHeight + 0.02, -fhw + 0.22, archHeight + 0.02, -fhw + 0.11, 0.52);
+            faceShape.quadraticCurveTo(-fhw - 0.03, 0.30, -fhw, 0.01);
+
+            const faceGeo = new THREE.ShapeGeometry(faceShape, 28);
+            const faceplate = new THREE.Mesh(faceGeo, mats.smokyFaceplate);
+            faceplate.position.set(0, 0.01, archDepth / 2 + 0.018);
+            faceplate.rotation.x = -0.06; // Nghiêng nhẹ tạo chiều sâu hốc mắt như ảnh
+            faceplate.receiveShadow = true;
+            headGroup.add(faceplate);
+
+            // 3. Viền môi trên màu vàng tươi (Yellow Upper Lip Rim)
+            const upperRimGeo = createRoundedBoxGeometry(archWidth + 0.09, 0.065, archDepth + 0.12, 0.02, 0.012);
+            const upperRim = new THREE.Mesh(upperRimGeo, mats.brightYellow);
+            upperRim.position.set(0, -0.015, 0.01);
+            upperRim.castShadow = true;
+            upperRim.receiveShadow = true;
+            headGroup.add(upperRim);
+
+            // 4. Cụm Mắt Camera Cyclops ở chính giữa mặt nạ
+            const eyeGroup = new THREE.Group();
+            eyeGroup.position.set(-0.02, 0.36, archDepth / 2 + 0.032);
+            eyeGroup.rotation.x = -0.06;
+
+            // Vòng nhựa xanh ngọc pastel dày dặn
+            const outerRingGeo = new THREE.TorusGeometry(0.175, 0.058, 24, 48);
+            const outerRing = new THREE.Mesh(outerRingGeo, mats.cyanEyeRing);
+            outerRing.scale.set(1, 1, 0.72);
+            outerRing.castShadow = true;
+            outerRing.receiveShadow = true;
+            eyeGroup.add(outerRing);
+
+            // Nền đĩa trong vòng mắt
+            const ringBackGeo = new THREE.CylinderGeometry(0.18, 0.18, 0.035, 36);
+            ringBackGeo.rotateX(Math.PI / 2);
+            const ringBack = new THREE.Mesh(ringBackGeo, mats.cyanEyeRing);
+            ringBack.position.z = -0.005;
+            eyeGroup.add(ringBack);
+
+            // Thân ống kính camera màu đen bóng
+            const barrelGeo = new THREE.CylinderGeometry(0.112, 0.118, 0.055, 36);
+            barrelGeo.rotateX(Math.PI / 2);
+            const barrel = new THREE.Mesh(barrelGeo, mats.servoBlack);
+            barrel.position.z = 0.015;
+            eyeGroup.add(barrel);
+
+            // Vòng khẩu độ kim loại bên trong ống kính
+            const innerRingGeo = new THREE.TorusGeometry(0.082, 0.01, 16, 36);
+            const innerRing = new THREE.Mesh(innerRingGeo, mats.darkChromeScrew);
+            innerRing.position.z = 0.038;
+            eyeGroup.add(innerRing);
+
+            // Đồng tử / Thấu kính thủy tinh cầu lồi phản chiếu ánh sáng
+            const lensGeo = new THREE.SphereGeometry(0.074, 32, 24, 0, Math.PI * 2, 0, Math.PI * 0.45);
+            lensGeo.rotateX(Math.PI / 2);
+            const lens = new THREE.Mesh(lensGeo, mats.cameraGlass);
+            lens.position.z = 0.012;
+            eyeGroup.add(lens);
+            leftEyePupil = lens;
+
+            headGroup.add(eyeGroup);
+
+            // 5. Cảm biến hồng ngoại (IR Proximity Sensor) hình viên thuốc bên phải mắt
+            const sensorGroup = new THREE.Group();
+            sensorGroup.position.set(0.28, 0.25, archDepth / 2 + 0.025);
+            sensorGroup.rotation.set(-0.06, 0, -0.15);
+
+            const pillShape = new THREE.Shape();
+            const pw = 0.055, ph = 0.026;
+            pillShape.absarc(-pw / 2, 0, ph, Math.PI / 2, -Math.PI / 2, false);
+            pillShape.absarc(pw / 2, 0, ph, -Math.PI / 2, Math.PI / 2, false);
+            const pillGeo = new THREE.ExtrudeGeometry(pillShape, {
+                depth: 0.018,
+                bevelEnabled: true,
+                bevelSize: 0.004,
+                bevelThickness: 0.004,
+                curveSegments: 16
+            });
+            const pillMesh = new THREE.Mesh(pillGeo, mats.cameraGlass);
+            sensorGroup.add(pillMesh);
+            headGroup.add(sensorGroup);
+
+            // 6. Hàm dưới / Mỏ vịt có bản lề đóng mở (Articulated Lower Beak)
+            beakPivot = new THREE.Group();
+            // Trục bản lề nằm ở phía sau cạnh dưới của đầu
+            beakPivot.position.set(0, -0.055, -0.24);
+
+            // Khay mỏ dưới màu vàng tươi
+            const jawLength = archDepth + 0.14;
+            const jawWidth = archWidth + 0.07;
+            const jawBaseGeo = createRoundedBoxGeometry(jawWidth, 0.075, jawLength, 0.03, 0.014);
+            const jawBase = new THREE.Mesh(jawBaseGeo, mats.brightYellow);
+            jawBase.position.set(0, -0.02, jawLength / 2 - 0.18);
+            jawBase.castShadow = true;
+            jawBase.receiveShadow = true;
+            beakPivot.add(jawBase);
+
+            // Tấm đệm lưỡi màu tím nằm gọn bên trong lòng mỏ vàng
+            const tongueGeo = createRoundedBoxGeometry(jawWidth - 0.11, 0.04, jawLength - 0.10, 0.02, 0.008);
+            const tongue = new THREE.Mesh(tongueGeo, mats.richPurple);
+            tongue.position.set(0, 0.015, jawLength / 2 - 0.18);
+            tongue.receiveShadow = true;
+            beakPivot.add(tongue);
+
+            // Bản lề chữ L màu vàng hai bên hông mỏ kèm ốc vít
+            [-1, 1].forEach(side => {
+                const hingeArmGeo = createRoundedBoxGeometry(0.035, 0.15, 0.12, 0.015, 0.005);
+                const hingeArm = new THREE.Mesh(hingeArmGeo, mats.brightYellow);
+                hingeArm.position.set(side * (jawWidth / 2 + 0.01), 0.03, 0.01);
+                hingeArm.castShadow = true;
+                beakPivot.add(hingeArm);
+
+                const s1 = createScrew(mats, 0.9);
+                s1.rotation.y = (side * Math.PI) / 2;
+                s1.position.set(side * (jawWidth / 2 + 0.028), 0.055, 0.02);
+                beakPivot.add(s1);
+
+                const s2 = createScrew(mats, 0.9);
+                s2.rotation.y = (side * Math.PI) / 2;
+                s2.position.set(side * (jawWidth / 2 + 0.028), -0.01, -0.01);
+                beakPivot.add(s2);
+            });
+
+            // Góc mở mỏ mặc định ~18 độ giống hệt ảnh mẫu
+            beakPivot.rotation.x = THREE.MathUtils.degToRad(state.beakAngle);
+            headGroup.add(beakPivot);
+
+            return headGroup;
+        }
+
+        /**
+         * Xây dựng toàn bộ Robot Vịt hoàn chỉnh
+         */
+        function buildDuckRobot(mats) {
+            robotRoot = new THREE.Group();
+
+            // ==========================================
+            // 1. THÂN TRÊN (TORSO / BODY SHELL)
+            // ==========================================
+            const torsoGroup = new THREE.Group();
+            torsoGroup.position.set(0, 1.15, -0.08);
+
+            // Khối vỏ thân chính bo tròn mềm mại màu tím pastel
+            const torsoGeo = createRoundedBoxGeometry(1.16, 0.56, 0.88, 0.16, 0.045);
+            const torsoMesh = new THREE.Mesh(torsoGeo, mats.pastelPurple);
+            torsoMesh.castShadow = true;
+            torsoMesh.receiveShadow = true;
+            torsoGroup.add(torsoMesh);
+
+            // Khe rãnh chia vỏ trên/dưới tinh tế quanh thân
+            const seamGeo = new THREE.BoxGeometry(1.165, 0.012, 0.885);
+            const seamMesh = new THREE.Mesh(seamGeo, mats.servoBlack);
+            seamMesh.position.y = 0.02;
+            torsoGroup.add(seamMesh);
+
+            // Cụm ngàm cổ màu tím nhạt + đĩa nhôm bạc ở đỉnh thân
+            const collarGeo = createRoundedBoxGeometry(0.46, 0.24, 0.44, 0.08, 0.02);
+            const collar = new THREE.Mesh(collarGeo, mats.pastelPurple);
+            collar.position.set(-0.08, 0.26, 0.06);
+            collar.castShadow = true;
+            torsoGroup.add(collar);
+
+            // Mặt bích nhôm xước 4 lỗ ốc trên cổ
+            const neckFlangeGeo = new THREE.CylinderGeometry(0.13, 0.13, 0.04, 24);
+            neckFlangeGeo.rotateZ(Math.PI / 2);
+            const neckFlange = new THREE.Mesh(neckFlangeGeo, mats.brushedSilver);
+            neckFlange.position.set(-0.31, 0.27, 0.06);
+            torsoGroup.add(neckFlange);
+
+            for (let i = 0; i < 4; i++) {
+                const a = (i * Math.PI) / 2;
+                const s = createScrew(mats, 0.75);
+                s.rotation.y = -Math.PI / 2;
+                s.position.set(-0.33, 0.27 + Math.sin(a) * 0.075, 0.06 + Math.cos(a) * 0.075);
+                torsoGroup.add(s);
+            }
+
+            robotRoot.add(torsoGroup);
+
+            // ==========================================
+            // 2. CỔ ĐỘNG CƠ ĐA TRỤC & DÂY ĐIỆN (NECK)
+            // ==========================================
+            neckPivot = new THREE.Group();
+            neckPivot.position.set(-0.05, 1.38, -0.02);
+
+            // Servo cổ dưới
+            const lowerNeckServo = createServoModule(mats, true);
+            lowerNeckServo.position.set(0, 0.22, 0);
+            lowerNeckServo.rotation.set(0.08, 0.15, -0.05);
+            neckPivot.add(lowerNeckServo);
+
+            // Servo cổ trên nối lên đáy đầu
+            const upperNeckServo = createServoModule(mats, true);
+            upperNeckServo.position.set(0.02, 0.64, 0.04);
+            upperNeckServo.rotation.set(-0.06, 0.15, 0.03);
+            neckPivot.add(upperNeckServo);
+
+            // Các bó dây điện đen uốn cong tự nhiên phía sau gáy
+            const createCable = (points, radius = 0.013) => {
+                const curve = new THREE.CatmullRomCurve3(points);
+                const tubeGeo = new THREE.TubeGeometry(curve, 24, radius, 8, false);
+                const tube = new THREE.Mesh(tubeGeo, mats.wireRubber);
+                tube.castShadow = true;
+                return tube;
+            };
+
+            neckPivot.add(createCable([
+                new THREE.Vector3(-0.12, 0.85, -0.15),
+                new THREE.Vector3(-0.34, 0.78, -0.25),
+                new THREE.Vector3(-0.38, 0.55, -0.22),
+                new THREE.Vector3(-0.18, 0.35, -0.14)
+            ], 0.014));
+
+            neckPivot.add(createCable([
+                new THREE.Vector3(-0.08, 0.88, -0.18),
+                new THREE.Vector3(-0.29, 0.83, -0.29),
+                new THREE.Vector3(-0.33, 0.60, -0.26),
+                new THREE.Vector3(-0.15, 0.40, -0.16)
+            ], 0.012));
+
+            neckPivot.add(createCable([
+                new THREE.Vector3(-0.04, 0.82, -0.14),
+                new THREE.Vector3(-0.24, 0.72, -0.22),
+                new THREE.Vector3(-0.26, 0.50, -0.19),
+                new THREE.Vector3(-0.12, 0.28, -0.12)
+            ], 0.011));
+
+            // Gắn Đầu Vịt lên đỉnh cổ
+            headAssembly = buildHead(mats);
+            headAssembly.position.set(0.04, 0.94, 0.16);
+            neckPivot.add(headAssembly);
+
+            robotRoot.add(neckPivot);
+
+            // ==========================================
+            // 3. CỤM HÔNG, CHÂN & BÀN CHÂN (LEGS & FEET)
+            // ==========================================
+            const createLegAndFoot = (isLeft) => {
+                const side = isLeft ? -1 : 1; // -1 là bên trái người xem, +1 là bên phải người xem
+                const legGroup = new THREE.Group();
+
+                // Servo hông lộ cơ khí dưới gầm thân
+                const hipServo = createServoModule(mats, true);
+                hipServo.position.set(side * 0.44, 0.68, -0.05);
+                hipServo.rotation.set(0.25, side * 0.22, side * -0.15);
+                legGroup.add(hipServo);
+
+                // Tấm ốp hông/đùi ngoài hình thang bo góc màu tím pastel (giống ảnh mẫu)
+                const thighShape = new THREE.Shape();
+                thighShape.moveTo(-0.22, 0.24);
+                thighShape.lineTo(0.26, 0.12);
+                thighShape.quadraticCurveTo(0.32, 0.08, 0.28, -0.05);
+                thighShape.lineTo(0.14, -0.32);
+                thighShape.quadraticCurveTo(0.08, -0.38, -0.04, -0.32);
+                thighShape.lineTo(-0.26, 0.08);
+                thighShape.quadraticCurveTo(-0.30, 0.20, -0.22, 0.24);
+
+                const thighGeo = new THREE.ExtrudeGeometry(thighShape, {
+                    depth: 0.09,
+                    bevelEnabled: true,
+                    bevelSegments: 5,
+                    bevelSize: 0.025,
+                    bevelThickness: 0.025,
+                    curveSegments: 16
+                });
+                thighGeo.center();
+                thighGeo.rotateY(Math.PI / 2);
+
+                const thighCover = new THREE.Mesh(thighGeo, mats.pastelPurple);
+                thighCover.position.set(side * 0.78, 0.56, -0.08);
+                thighCover.rotation.y = side * -0.22;
+                thighCover.castShadow = true;
+                thighCover.receiveShadow = true;
+                legGroup.add(thighCover);
+
+                // 3 ốc vít trang trí trên tấm ốp đùi
+                const screwOffsets = [
+                    [0.06, 0.16, -0.12],
+                    [0.06, -0.18, 0.04],
+                    [0.06, 0.02, 0.16]
+                ];
+                screwOffsets.forEach(([sx, sy, sz]) => {
+                    const sc = createScrew(mats, 0.9);
+                    sc.rotation.y = (side * Math.PI) / 2;
+                    sc.position.set(side * sx, sy, sz);
+                    thighCover.add(sc);
+                });
+
+                // Khớp cổ chân & khung nhôm nối bàn chân
+                const ankleBracketGeo = createRoundedBoxGeometry(0.28, 0.24, 0.34, 0.04, 0.01);
+                const ankleBracket = new THREE.Mesh(ankleBracketGeo, mats.servoBlack);
+                ankleBracket.position.set(side * 0.46, 0.36, 0.04);
+                ankleBracket.rotation.y = side * -0.25;
+                ankleBracket.castShadow = true;
+                legGroup.add(ankleBracket);
+
+                // Đĩa nhôm tròn ở mặt trong cổ chân (thấy rõ ở chân trái trong ảnh)
+                const innerAnkleDiscGeo = new THREE.CylinderGeometry(0.11, 0.11, 0.04, 24);
+                innerAnkleDiscGeo.rotateZ(Math.PI / 2);
+                const innerAnkleDisc = new THREE.Mesh(innerAnkleDiscGeo, mats.brushedSilver);
+                innerAnkleDisc.position.set(side * 0.31, 0.38, 0.12);
+                legGroup.add(innerAnkleDisc);
+
+                // --- CỤM BÀN CHÂN / GIÀY KHỐI CHUNKY (FOOT ASSEMBLY) ---
+                const footGroup = new THREE.Group();
+                // Vị trí đứng khuỵu gối hơi mở chữ V tự nhiên
+                footGroup.position.set(
+                    isLeft ? -0.58 : 0.42,
+                    0.34,
+                    isLeft ? 0.22 : 0.36
+                );
+                footGroup.rotation.set(
+                    0.06,
+                    isLeft ? -0.34 : 0.18,
+                    isLeft ? -0.05 : 0.04
+                );
+
+                // 1. Khối mu bàn chân dày bo tròn màu tím đậm (Rich Purple Upper Block)
+                const footTopGeo = createRoundedBoxGeometry(0.46, 0.62, 0.28, 0.11, 0.045);
+                const footTop = new THREE.Mesh(footTopGeo, mats.richPurple);
+                footTop.position.set(0, 0.02, 0.06);
+                footTop.castShadow = true;
+                footTop.receiveShadow = true;
+                footGroup.add(footTop);
+
+                // 2. Đế giày / Khung đỡ màu vàng tươi phía sau & dưới (Yellow Sole Chassis)
+                const footSoleGeo = createRoundedBoxGeometry(0.48, 0.65, 0.16, 0.10, 0.025);
+                const footSole = new THREE.Mesh(footSoleGeo, mats.brightYellow);
+                footSole.position.set(0, 0.01, -0.09);
+                footSole.castShadow = true;
+                footSole.receiveShadow = true;
+                footGroup.add(footSole);
+
+                // Các lỗ bắt vít & đinh tán đen trên cạnh đế vàng (giống chi tiết bên hông giày phải trong ảnh)
+                const holePositions = [
+                    [0.245, 0.20, -0.08],
+                    [0.245, 0.05, -0.11],
+                    [0.245, -0.10, -0.08],
+                    [0.245, -0.22, -0.10],
+                    [-0.245, 0.15, -0.09],
+                    [-0.245, -0.12, -0.09]
+                ];
+                holePositions.forEach(([hx, hy, hz]) => {
+                    const hole = createScrew(mats, 0.85);
+                    hole.rotation.y = hx > 0 ? Math.PI / 2 : -Math.PI / 2;
+                    hole.position.set(hx, hy, hz);
+                    footGroup.add(hole);
+                });
+
+                // Ổ trục tròn màu bạc ở cạnh ngoài đế vàng (thấy rõ ở chân trái ảnh mẫu)
+                const sideBearingGeo = new THREE.CylinderGeometry(0.085, 0.085, 0.04, 24);
+                sideBearingGeo.rotateZ(Math.PI / 2);
+                const sideBearing = new THREE.Mesh(sideBearingGeo, mats.brushedSilver);
+                sideBearing.position.set(side * 0.24, -0.12, -0.08);
+                footGroup.add(sideBearing);
+
+                const bearingCoreGeo = new THREE.CylinderGeometry(0.045, 0.045, 0.045, 20);
+                bearingCoreGeo.rotateZ(Math.PI / 2);
+                const bearingCore = new THREE.Mesh(bearingCoreGeo, mats.servoBlack);
+                bearingCore.position.set(side * 0.245, -0.12, -0.08);
+                footGroup.add(bearingCore);
+
+                legGroup.add(footGroup);
+                return legGroup;
+            };
+
+            robotRoot.add(createLegAndFoot(true));  // Chân bên trái
+            robotRoot.add(createLegAndFoot(false)); // Chân bên phải
+
+            return robotRoot;
+        }
+
+        /**
+         * Khởi tạo toàn bộ Scene, Studio Lighting, Camera và Renderer
+         */
+        function init() {
+            const container = document.getElementById('canvas-container');
+
+            // 1. Scene nền studio trắng tinh khiết
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xfafafa);
+            scene.fog = new THREE.Fog(0xfafafa, 14, 28);
+
+            // 2. Camera góc chuẩn giống ảnh tham chiếu
+            camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.1, 100);
+            camera.position.copy(DEFAULT_CAM_POS);
+
+            // 3. Renderer chất lượng cao với ToneMapping điện ảnh & Bóng đổ mềm
+            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.06;
+            container.appendChild(renderer.domElement);
+
+            // 4. Môi trường phản xạ Studio HDRI (giúp kim loại sáng bóng & thấu kính có chiều sâu)
+            const pmremGenerator = new THREE.PMREMGenerator(renderer);
+            studioEnvTexture = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
+            scene.environment = studioEnvTexture;
+            scene.environmentIntensity = state.envIntensity;
+
+            // 5. Hệ thống đèn Studio 3 điểm (Key, Fill, Rim)
+            const hemiLight = new THREE.HemisphereLight(0xffffff, 0xeae6f2, 0.85);
+            hemiLight.position.set(0, 10, 0);
+            scene.add(hemiLight);
+
+            // Đèn chính tạo bóng đổ mềm mại xuống sàn trắng
+            dirLight = new THREE.DirectionalLight(0xfffdf9, 1.45);
+            dirLight.position.set(3.5, 7.5, 4.5);
+            dirLight.castShadow = true;
+            dirLight.shadow.mapSize.width = 2048;
+            dirLight.shadow.mapSize.height = 2048;
+            dirLight.shadow.camera.near = 1;
+            dirLight.shadow.camera.far = 18;
+            const d = 3.2;
+            dirLight.shadow.camera.left = -d;
+            dirLight.shadow.camera.right = d;
+            dirLight.shadow.camera.top = d;
+            dirLight.shadow.camera.bottom = -d;
+            dirLight.shadow.bias = -0.0004;
+            dirLight.shadow.radius = 4;
+            scene.add(dirLight);
+
+            // Đèn phụ chiếu sáng góc khuất bên trái & tạo viền bóng kim loại
+            const fillLight = new THREE.DirectionalLight(0xf0f4ff, 0.65);
+            fillLight.position.set(-5.0, 3.5, 3.0);
+            scene.add(fillLight);
+
+            const rimLight = new THREE.DirectionalLight(0xffffff, 0.55);
+            rimLight.position.set(0, 4.5, -5.0);
+            scene.add(rimLight);
+
+            // 6. Sàn Studio nhận bóng đổ (ShadowCatcher) + Bóng tiếp xúc (Contact Shadow)
+            const floorGeo = new THREE.PlaneGeometry(40, 40);
+            const floorMat = new THREE.ShadowMaterial({ opacity: 0.14 });
+            const floor = new THREE.Mesh(floorGeo, floorMat);
+            floor.rotation.x = -Math.PI / 2;
+            floor.position.y = 0.015;
+            floor.receiveShadow = true;
+            scene.add(floor);
+
+            const contactShadowTex = createContactShadowTexture();
+            const contactShadowMat = new THREE.MeshBasicMaterial({
+                map: contactShadowTex,
+                transparent: true,
+                depthWrite: false,
+                opacity: 0.85
+            });
+            const contactShadowPlane = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 3.4), contactShadowMat);
+            contactShadowPlane.rotation.x = -Math.PI / 2;
+            contactShadowPlane.position.set(0, 0.018, 0.1);
+            scene.add(contactShadowPlane);
+
+            // 7. Tạo và đưa Robot vào Scene
+            const materials = createMaterials();
+            const duckRobot = buildDuckRobot(materials);
+            scene.add(duckRobot);
+
+            // Áp dụng góc đầu ban đầu giống hệt tư thế nghiêng trong ảnh mẫu
+            neckPivot.rotation.y = THREE.MathUtils.degToRad(state.headYaw);
+            headAssembly.rotation.x = THREE.MathUtils.degToRad(state.headPitch);
+            headAssembly.rotation.z = THREE.MathUtils.degToRad(-2.5);
+
+            // 8. Bộ điều khiển OrbitControls mượt mà
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.target.copy(DEFAULT_CAM_TARGET);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.06;
+            controls.minDistance = 2.0;
+            controls.maxDistance = 12.0;
+            controls.maxPolarAngle = Math.PI / 2 - 0.02; // Không cho camera chui xuống dưới sàn
+            controls.update();
+
+            // Gắn sự kiện giao diện & resize
+            setupUIEvents();
+            window.addEventListener('resize', onWindowResize);
+
+            // Ẩn màn hình tải sau khi render khung hình đầu tiên
+            setTimeout(() => {
+                const loader = document.getElementById('loader');
+                if (loader) {
+                    loader.style.opacity = '0';
+                    setTimeout(() => loader.remove(), 500);
+                }
+            }, 300);
+        }
+
+        /**
+         * Thiết lập tương tác với bảng điều khiển UI
+         */
+        function setupUIEvents() {
+            const beakSlider = document.getElementById('beak-slider');
+            const beakVal = document.getElementById('beak-val');
+            const yawSlider = document.getElementById('yaw-slider');
+            const yawVal = document.getElementById('yaw-val');
+            const pitchSlider = document.getElementById('pitch-slider');
+            const pitchVal = document.getElementById('pitch-val');
+            const envSlider = document.getElementById('env-slider');
+            const envVal = document.getElementById('env-val');
+            const idleToggle = document.getElementById('idle-toggle');
+            const resetBtn = document.getElementById('reset-btn');
+            const togglePanelBtn = document.getElementById('toggle-panel-btn');
+            const controlPanel = document.getElementById('control-panel');
+
+            beakSlider.addEventListener('input', (e) => {
+                state.beakAngle = parseFloat(e.target.value);
+                beakVal.textContent = `${state.beakAngle}°`;
+            });
+
+            yawSlider.addEventListener('input', (e) => {
+                state.headYaw = parseFloat(e.target.value);
+                yawVal.textContent = `${state.headYaw}°`;
+            });
+
+            pitchSlider.addEventListener('input', (e) => {
+                state.headPitch = parseFloat(e.target.value);
+                pitchVal.textContent = `${state.headPitch}°`;
+            });
+
+            envSlider.addEventListener('input', (e) => {
+                state.envIntensity = parseFloat(e.target.value);
+                envVal.textContent = state.envIntensity.toFixed(2);
+                scene.environmentIntensity = state.envIntensity;
+                dirLight.intensity = 1.25 * state.envIntensity;
+            });
+
+            idleToggle.addEventListener('change', (e) => {
+                state.idleAnimation = e.target.checked;
+            });
+
+            resetBtn.addEventListener('click', () => {
+                state.beakAngle = 18;
+                state.headYaw = 16;
+                state.headPitch = 4;
+                state.envIntensity = 1.15;
+
+                beakSlider.value = 18;
+                beakVal.textContent = '18°';
+                yawSlider.value = 16;
+                yawVal.textContent = '16°';
+                pitchSlider.value = 4;
+                pitchVal.textContent = '4°';
+                envSlider.value = 1.15;
+                envVal.textContent = '1.15';
+
+                scene.environmentIntensity = 1.15;
+                dirLight.intensity = 1.45;
+
+                camera.position.copy(DEFAULT_CAM_POS);
+                controls.target.copy(DEFAULT_CAM_TARGET);
+                controls.update();
+            });
+
+            togglePanelBtn.addEventListener('click', () => {
+                controlPanel.classList.toggle('hidden');
+            });
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        /**
+         * Vòng lặp cập nhật chuyển động mượt mà (Animation Loop)
+         */
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const t = clock.getElapsedTime();
+
+            // Hiệu ứng chuyển động tự nhiên nhẹ nhàng (thở & quan sát)
+            let idleYaw = 0;
+            let idlePitch = 0;
+            let idleBeak = 0;
+            let idleBob = 0;
+
+            if (state.idleAnimation) {
+                idleYaw = Math.sin(t * 0.9) * 3.5;
+                idlePitch = Math.cos(t * 1.2) * 1.8;
+                idleBeak = Math.max(0, Math.sin(t * 1.6)) * 2.5;
+                idleBob = Math.sin(t * 1.8) * 0.008;
+            }
+
+            if (neckPivot && headAssembly && beakPivot) {
+                neckPivot.rotation.y = THREE.MathUtils.lerp(
+                    neckPivot.rotation.y,
+                    THREE.MathUtils.degToRad(state.headYaw + idleYaw),
+                    0.1
+                );
+                headAssembly.rotation.x = THREE.MathUtils.lerp(
+                    headAssembly.rotation.x,
+                    THREE.MathUtils.degToRad(state.headPitch + idlePitch),
+                    0.1
+                );
+                beakPivot.rotation.x = THREE.MathUtils.lerp(
+                    beakPivot.rotation.x,
+                    THREE.MathUtils.degToRad(state.beakAngle + idleBeak),
+                    0.12
+                );
+                neckPivot.position.y = 1.38 + idleBob;
+            }
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        window.onload = function () {
+            init();
+            animate();
+        };
+    </script>
+</body>
+</html>
