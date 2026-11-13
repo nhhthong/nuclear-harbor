@@ -107,6 +107,3 @@ export class EnemyRegistry {
     this.enemies.clear();
   }
 }
-
-/** Scratch vector for callers that need one without allocating. Never keep a reference. */
-export const TMP_VEC3 = new Vector3();

@@ -28,7 +28,7 @@ import type { DamageInfo, DamageResult, Damageable } from '@/core/types';
  * owns lighting: T-03 sets `scene.userData.hasWorldLighting = true` in its init, which disables
  * the fallback (checked on `world:ready`).
  */
-export const SANDBOX = {
+const SANDBOX = {
   groundHalfSize: 40,
   pillar: { x: 0, z: -14, halfWidth: 1.5, height: 12 },
   perch: { x: 12, z: -14, halfWidth: 3, topY: 8 },

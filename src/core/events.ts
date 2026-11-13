@@ -123,4 +123,3 @@ export interface GameEvents {
   'ui:toast': { text: string; seconds?: number };
 }
 
-export type GameEventName = keyof GameEvents;

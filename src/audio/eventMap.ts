@@ -3,7 +3,7 @@ import type { BossAttackId } from '@/core/types';
 import type { SoundId } from './catalogue';
 import { AUDIO } from './tunables';
 
-export interface Vec3Like {
+interface Vec3Like {
   x: number;
   y: number;
   z: number;
@@ -21,7 +21,7 @@ export interface SoundRequest {
 
 type Route<K extends keyof GameEvents> = (e: GameEvents[K]) => SoundRequest | SoundRequest[] | null;
 
-export const BOSS_ATTACK_ORDER: readonly BossAttackId[] = [
+const BOSS_ATTACK_ORDER: readonly BossAttackId[] = [
   'heavy-cannon',
   'ground-slam',
   'missile-barrage',

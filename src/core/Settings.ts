@@ -13,7 +13,7 @@ export interface SettingsData {
   bindings: Bindings;
 }
 
-export const DEFAULT_SETTINGS: SettingsData = {
+const DEFAULT_SETTINGS: SettingsData = {
   mouseSensitivity: 1,
   masterVolume: 0.8,
   quality: 'medium',

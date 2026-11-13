@@ -1,6 +1,6 @@
 import { AUDIO } from './tunables';
 
-export interface FilterSpec {
+interface FilterSpec {
   type: BiquadFilterType;
   f0: number;
   /** Exponential sweep target reached at the end of the element. */

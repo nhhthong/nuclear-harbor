@@ -3,7 +3,7 @@ import { ECONOMY } from '@/config/tunables';
 import type { PickupKind } from '@/core/types';
 import { PICKUP } from './tunables';
 
-export type PlacementZone = ZoneId | 'boss';
+type PlacementZone = ZoneId | 'boss';
 
 export interface PickupCandidate {
   readonly kind: PickupKind;
@@ -73,7 +73,7 @@ export const ZONE_PLACEMENTS: readonly PickupCandidate[] = [
 ];
 
 /** Boss supplies: ring just outside the arena, spread over the landward half so every spot is on land. */
-export function buildBossRing(): PickupCandidate[] {
+function buildBossRing(): PickupCandidate[] {
   const radius = BOSS_ARENA.radius + PICKUP.bossRingOffset;
   const total = ECONOMY.ammoCratesInBossArena + ECONOMY.medkitsInBossArena;
   const spanDeg = 200;

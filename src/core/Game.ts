@@ -23,7 +23,7 @@ export interface GameOptions {
   search?: string;
 }
 
-export function parseFlags(search: string): GameFlags {
+function parseFlags(search: string): GameFlags {
   const params = new URLSearchParams(search);
   const on = (name: string): boolean => params.has(name) && params.get(name) !== '0' && params.get(name) !== 'false';
   return { sandbox: on('sandbox'), autostart: on('autostart'), debug: on('debug'), params };

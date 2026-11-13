@@ -5,7 +5,6 @@
 - Origin: supplied by the project owner in-session (file name `v_aug.mdl`, renamed). Texture names (`g36c_*`) show the weapon is a G36C.
 - Author credit: funnky.
 - Permission: the project owner states that the author permits use. No readme or licence text is inside the file, so this statement is the only record. Keep this note and the in-game credit.
-- Replaces: the GDD's DesertTech MDR candidate (not used) and a previously supplied SG552/MSBS model (discarded).
 - Fallback: the procedural placeholder view model (T-02) stays the default and the fallback.
 
 ### Conversion and shipping decision (T-18)
@@ -14,5 +13,5 @@
 - Contents used: 3 body parts (hands, rifle part 1, rifle part 2), 46 bones, one skinned mesh (5954 vertices, 5726 triangles, 1 draw call), attachment 0 (muzzle) and 1 (eject) as nodes `muzzle` and `eject`.
 - Animations recovered from the RLE data and checked in Blender (6 actions) and in three.js: `idle` (112 frames at 30), `reload` (133 at 40.3), `draw` (43 at 32), `shoot1..3` (34 at 40). Mapping: draw on start, idle loop, shoot clips round-robin on fire, reload time-scaled to the weapon reload duration. The bind pose of this model lies sideways, so the rest pose is the first `idle` frame.
 - Units and axes: inches to metres (0.0254); GoldSrc X-forward/Z-up to -Z forward/+Y up.
-- Runtime: `?viewmodel=glb` loads it lazily from the same origin; the procedural model stays the default and the fallback on any load error. Entry point: `createViewModel` in `src/weapon/viewmodel/createViewModel.ts`. Hooking it into `src/weapon/index.ts` is a foundation request (`specs/T-18-weapon-asset-pipeline/foundation-requests.md`).
+- Runtime: `?viewmodel=glb` loads it lazily from the same origin; the procedural model stays the default and the fallback on any load error. Entry point: `createViewModel` in `src/weapon/viewmodel/createViewModel.ts`. `src/weapon/index.ts` calls it (the T-18 foundation request is applied).
 - Credit to keep in the game credits: G36C view model by funnky, used with the author's permission as stated by the project owner.

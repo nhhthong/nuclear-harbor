@@ -13,7 +13,7 @@ export const DEFAULT_ZONE_MULTIPLIERS: ZoneMultipliers = {
   core: 1,
 };
 
-export function zoneMultiplier(zone: HitZone, profile: ZoneMultipliers = DEFAULT_ZONE_MULTIPLIERS): number {
+function zoneMultiplier(zone: HitZone, profile: ZoneMultipliers = DEFAULT_ZONE_MULTIPLIERS): number {
   return profile[zone] ?? 1;
 }
 

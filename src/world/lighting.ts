@@ -37,7 +37,7 @@ export interface Lighting {
 }
 
 /** Direction pointing TOWARDS the sun for azimuth clockwise from north (-Z), +X east. */
-export function sunDirection(elevationDeg: number, azimuthDeg: number, out = new Vector3()): Vector3 {
+function sunDirection(elevationDeg: number, azimuthDeg: number, out = new Vector3()): Vector3 {
   const el = (elevationDeg * Math.PI) / 180;
   const az = (azimuthDeg * Math.PI) / 180;
   return out.set(Math.sin(az) * Math.cos(el), Math.sin(el), -Math.cos(az) * Math.cos(el));

@@ -4,10 +4,10 @@ import type { VfxKind } from '@/core/types';
 export type RecipeId = VfxKind | 'weakpoint-burst';
 
 export type BlendLayer = 'add' | 'alpha';
-export type Rgba = readonly [number, number, number, number];
+type Rgba = readonly [number, number, number, number];
 
 /** One emission of a recipe. Count, speed and size are multiplied by the request scale. */
-export interface ParticleLayer {
+interface ParticleLayer {
   buffer: BlendLayer;
   count: number;
   speedMin: number;
@@ -29,14 +29,14 @@ export interface ParticleLayer {
   spread: number;
 }
 
-export interface FlashLight {
+interface FlashLight {
   color: number;
   intensity: number;
   range: number;
   duration: number;
 }
 
-export interface RingSpec {
+interface RingSpec {
   /** Final radius in metres at scale 1. */
   radius: number;
   duration: number;

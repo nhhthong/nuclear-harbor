@@ -21,7 +21,7 @@ Inputs: [`docs/GDD.md`](GDD.md) (design spec), [`docs/REVIEW.md`](REVIEW.md) (ac
 | Scope | 4 zones, 30 robots, 1 boss, 1 weapon: feasible with primitives. Biggest volume is level content and three enemy types. |
 | Main risks | (1) Grapple feel and "landing on top" of perches; (2) enemy navigation among container rows; (3) Charger edge/obstacle safety; (4) boss weak points at 22 m reachable only via perches; (5) merge conflicts between parallel workers. |
 | Mitigation | (1) perch anchors carry a `landing` point, sandbox has a perch; (2) one nav grid service inside the enemies module, baked on `world:ready`; (3) pure, unit-tested charge planner; (4) perches at 8/14/20 m are part of the level contract; (5) exclusive file ownership + pre-wired module slots. |
-| Assets | None available. Everything procedural. GameBanana and Blender hosts are blocked; the asset pipeline is ticket T-18, blocked on a user upload. |
+| Assets | Everything procedural except the G36C view model, supplied by the owner and converted by the T-18 pipeline (`docs/ASSETS.md`); the procedural view model stays the default and fallback. |
 | Gate | Vertical slice (GDD 15.1) is reachable after wave 2 inside `?sandbox`; T-16 turns it into a scripted end-to-end check before content is scaled to 30 robots. |
 
 ## 2. Architecture decisions
@@ -270,7 +270,7 @@ foundation ──┬─ T-01 ──┬─ T-12 ───────────
              ├─ T-05 ──┬─ T-13 ──────────────┼─ T-16 ── T-17
              │         └─ T-14 ──────────────┤
              ├─ T-06, T-07, T-08, T-09, T-10, T-11 ─┘
-             └─ (T-02) ·· T-18 optional, blocked on user upload
+             └─ (T-02) ·· T-18 optional (done, asset supplied)
 ```
 
 "Soft" dependency = the ticket is developed and tested against the sandbox/contract and only needs

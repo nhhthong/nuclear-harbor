@@ -7,7 +7,7 @@ import { TowerActivation } from './TowerActivation';
 import { createTowerModel, type TowerModel } from './towerModel';
 
 /** Sandbox tower position (ticket T-08). */
-export const SANDBOX_TOWER = { id: 1, position: { x: 8, y: 0, z: 2 } } as const;
+const SANDBOX_TOWER = { id: 1, position: { x: 8, y: 0, z: 2 } } as const;
 
 const PROGRESS_INTERVAL = 0.1;
 const MAX_DY = 2.5;
