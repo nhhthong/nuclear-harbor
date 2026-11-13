@@ -211,7 +211,7 @@ export function otherDucks(corridor: CorridorData): Authored[] {
   const b: XZ = [corridor.minX + 16, z];
   return [
     { type: 'duck', at: a, patrol: line(a, b) },
-    { type: 'duck', at: [64, -32.5], patrol: line([64, -32.5], [6, -32.5]) },
+    { type: 'duck', at: [64, -34], patrol: line([64, -34], [6, -34]) },
   ];
 }
 

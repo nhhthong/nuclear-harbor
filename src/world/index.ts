@@ -19,6 +19,7 @@ import { CONTROL_CENTER_FOOTPRINT, LAND, WAREHOUSE_FOOTPRINT } from '@/config/le
 import { WORLD } from '@/config/tunables';
 import type { GameContext } from '@/core/GameContext';
 import type { GameModule } from '@/core/GameModule';
+import { buildBarriers } from './barriers';
 import { buildControlCenter, buildWarehouse, type BuildingBox, type BuildingBoxKind } from './buildings';
 import { generateContainerLayout } from './containerLayout';
 import { createLighting } from './lighting';
@@ -234,6 +235,28 @@ export function createWorldModule(): GameModule {
       strips.name = 'warehouse-light-strips';
       scope.track(strips);
       scene.add(strips);
+
+      // ---- level-closing walls (perimeter parapet, blast walls, invisible blockers) -----------------
+      const barriers = buildBarriers();
+      for (const b of barriers) {
+        addCollider(ctx.physics.addStaticBox({ center: b.center, halfExtents: b.halfExtents, meta: { kind: 'static' } }));
+      }
+      for (const kind of ['parapet', 'blast'] as const) {
+        const boxes = barriers.filter((b) => b.kind === kind);
+        const mesh = new Mesh(
+          mergeBoxes(boxes.map((b) => ({ ...b, kind: 'wall' as const }))),
+          new MeshStandardMaterial({
+            color: kind === 'parapet' ? WORLD_LOCAL.barriers.parapetColor : WORLD_LOCAL.barriers.blastColor,
+            roughness: 0.85,
+            metalness: 0.05,
+          }),
+        );
+        mesh.name = `barrier-${kind}`;
+        mesh.castShadow = kind === 'blast';
+        mesh.receiveShadow = true;
+        scope.track(mesh);
+        scene.add(mesh);
+      }
 
       // ---- ocean and ship backdrop ----------------------------------------------------------------
       ocean = createOcean(lighting.sunDir, lighting.fogColor);

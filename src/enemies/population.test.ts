@@ -5,6 +5,7 @@ import type { GameContext } from '@/core/GameContext';
 import { buildControlCenter, buildWarehouse } from '@/world/buildings';
 import { generateContainerLayout } from '@/world/containerLayout';
 import { NavGrid } from './nav/NavGrid';
+import { buildBarriers } from '@/world/barriers';
 import { ENEMY_LOCAL } from './tunables';
 import {
   FALLBACK_CORRIDOR,
@@ -33,6 +34,7 @@ function realNav(): NavGrid {
   const boxes = [
     ...layout.boxes.map((b) => ({ c: b.center, h: b.halfExtents })),
     ...[...warehouse.boxes, ...buildControlCenter()].filter((b) => b.kind !== 'roof').map((b) => ({ c: b.center, h: b.halfExtents })),
+    ...buildBarriers().map((b) => ({ c: b.center, h: b.halfExtents })),
   ];
   for (const { c, h } of boxes) {
     if (c.y - h.y >= 2.0 || c.y + h.y <= 0.2) continue;

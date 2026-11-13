@@ -68,6 +68,24 @@ export const WORLD_LOCAL = {
     floorColor: 0x6a6e6e,
   },
   controlCenter: { upperInset: 4, upperHeight: 3 },
+  /** Level-closing walls (see barriers.ts). */
+  barriers: {
+    parapetHeight: 1.2,
+    parapetThickness: 0.6,
+    /** Top of the invisible walls: above anything a double jump from a three-high stack reaches. */
+    blockerHeight: 40,
+    blastHeight: 5,
+    blastThickness: 0.8,
+    /** x spans of the wall on the yard/dock border; the gaps between them are the dock gates. */
+    dockWallSpans: [
+      [-71.4, -46],
+      [-10, 22],
+      [50, 71.4],
+    ] as ReadonlyArray<readonly [number, number]>,
+    parapetColor: 0x8d9296,
+    blastColor: 0x7c8286,
+    stripeColor: 0xe0b020,
+  },
   ocean: { size: 1600, deep: 0x0d3b4f, shallow: 0x2f7f8f, waveSpeed: 0.6 },
   sky: { horizon: 0xcfd9dc, zenith: 0x5b8bb5, radius: 540 },
   sun: { color: 0xffd9a8, intensity: 3.2, distance: 400, frustumHalf: 112 },
