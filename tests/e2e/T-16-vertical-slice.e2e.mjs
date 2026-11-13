@@ -1,6 +1,6 @@
 /**
- * T-16 vertical slice (GDD 15.1) in the sandbox: walk, shoot, grapple, kill the sphere, dodge the
- * Charger into a stun, collect the crate, activate the tower, boss spawns, weak points and core
+ * T-16 vertical slice (GDD 15.1) in the sandbox: walk, shoot, grapple, kill the sphere, survive the
+ * Bomber Duck countdown, collect the crate, activate the tower, boss spawns, weak points and core
  * die, victory is reached and stored. Zero console errors.
  */
 export default async function ({ openGame, setKey, assert }) {
@@ -36,8 +36,8 @@ export default async function ({ openGame, setKey, assert }) {
     ctx.player.invulnerableFor = 1e9; // the slice checks the loop, not survival (death flow is in the full-run test)
     window.__ev = [];
     for (const n of [
-      'combat:hit', 'grapple:attached', 'grapple:released', 'enemy:destroyed', 'charger:windup', 'charger:chargeStarted',
-      'charger:stunned', 'pickup:collected', 'tower:activated', 'objectives:allActivated', 'boss:spawned',
+      'combat:hit', 'grapple:attached', 'grapple:released', 'enemy:destroyed', 'charger:windup', 'duck:beep',
+      'duck:explode', 'pickup:collected', 'tower:activated', 'objectives:allActivated', 'boss:spawned',
       'boss:weakPointDestroyed', 'boss:coreExposed', 'boss:defeated', 'game:checkpoint', 'game:victory', 'game:over',
     ]) {
       ctx.events.on(n, (p) => window.__ev.push({ n, targetKind: p.targetKind, killed: p.killed, anchorId: p.anchorId, reason: p.reason, type: p.type, id: p.id, kind: p.kind }));
@@ -104,16 +104,15 @@ export default async function ({ openGame, setKey, assert }) {
   await page.evaluate((id) => window.__NH__.game.ctx.enemies.all().find((e) => e.id === id)?.applyDamage({ amount: 1000, zone: 'body', source: 'player' }), sphereId);
   assert.ok((await ev()).some((e) => e.n === 'enemy:destroyed' && e.type === 'sphere'), 'sphere destroyed');
 
-  // 5. Charger: stand ~10 m away, wait for wind-up and charge, leave the line: it hits the wall and is stunned
+  // 5. Bomber Duck: stand ~10 m away, it hops over, arms, counts 3-2-1 and detonates
   await page.evaluate(() => {
     const ctx = window.__NH__.game.ctx;
     const c = ctx.enemies.all().find((e) => e.type === 'charger');
     ctx.player.teleport({ x: c.position.x + 8, y: 0, z: c.position.z - 6 });
   });
-  await page.waitForFunction(() => window.__ev.some((e) => e.n === 'charger:chargeStarted'), null, { timeout: 40_000 });
-  await place(-20, 0, 10);
-  await page.waitForFunction(() => window.__ev.some((e) => e.n === 'charger:stunned'), null, { timeout: 30_000 });
+  await page.waitForFunction(() => window.__ev.some((e) => e.n === 'duck:explode'), null, { timeout: 60_000 });
   assert.ok((await ev()).some((e) => e.n === 'charger:windup'), 'telegraphed');
+  assert.ok((await ev()).filter((e) => e.n === 'duck:beep').length === 3, 'three beeps');
 
   // 6. ammo crate
   await place(0, 0, 12);

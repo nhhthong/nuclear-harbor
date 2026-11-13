@@ -1,6 +1,8 @@
 import { Vector3 } from 'three';
 import { describe, expect, it } from 'vitest';
-import { CHARGER_ROBOT, SPHERE_ROBOT, SPIDER_ROBOT, WEAPON } from '@/config/tunables';
+import { SPHERE_ROBOT, WEAPON } from '@/config/tunables';
+import { DUCK } from './duck/tunables';
+import { SPOT } from './spot/tunables';
 import { QueryGroups } from '@/physics/groups';
 import type { SphereRobot } from './SphereRobot';
 import { EnemyManager } from './EnemyManager';
@@ -198,14 +200,14 @@ describe('EnemyManager (headless physics)', () => {
     expect(e.state).toBe('patrol');
   });
 
-  it('spider and charger placeholders keep their type and HP (AC8)', async () => {
+  it('Spot (spider id) and Bomber Duck (charger id) keep their type and use their own HP (AC8)', async () => {
     const { m } = await setup();
     const s = m.spawn({ type: 'spider', position: new Vector3(5, 0, 5), patrol: [] });
     const c = m.spawn({ type: 'charger', position: new Vector3(-5, 0, 5), patrol: [] });
     expect(s?.type).toBe('spider');
-    expect(s?.maxHp).toBe(SPIDER_ROBOT.hp);
+    expect(s?.maxHp).toBe(SPOT.hp);
     expect(c?.type).toBe('charger');
-    expect(c?.maxHp).toBe(CHARGER_ROBOT.hp);
+    expect(c?.maxHp).toBe(DUCK.hp);
   });
 
   it('sandbox ?enemies= spawns on world ready (AC1, AC8)', async () => {
