@@ -31,4 +31,4 @@
 ## Phase 6: Verification
 
 - [x] T012 Update tests/e2e/T-15-boss-titan04.e2e.mjs, add tests/e2e/T-22-final-boss.e2e.mjs, adjust T-16 full-run wait
-- [x] T013 Run typecheck, test, build, smoke and every e2e file; capture and review screenshots
+- [x] T013 Run typecheck and unit tests (done); T-22 and T-15 e2e and one screenshot round were run earlier and passed; T-16 full-run, smoke repeat and further e2e or screenshots: skipped per owner (CPU overload, T-16 full-run failed at tower-1 under load before any boss code)
