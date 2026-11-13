@@ -40,7 +40,7 @@ function modelFor(shared: SharedAssets): DuckModel {
 }
 
 /**
- * Bomber Duck (internal type `charger`): patrol -> hop at the player -> stop at about 2.5 m and arm a
+ * Bomber Duck (enemy type `duck`): patrol -> hop at the player -> stop at about 2.5 m and arm a
  * 3-2-1 countdown -> detonate for a fixed 15 damage inside the blast radius. Shot dead first = small pop only.
  */
 export class Duck extends BaseEnemy {
@@ -67,7 +67,7 @@ export class Duck extends BaseEnemy {
       deps,
       spawn,
       {
-        type: 'charger',
+        type: 'duck',
         maxHp: DUCK.hp,
         centerHeight: DUCK.centerHeight,
         radius: DUCK.radius,
@@ -238,7 +238,7 @@ export class Duck extends BaseEnemy {
       this.lastBeep = -1;
       this.ring.visible = true;
       facing.set(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
-      ctx.events.emit('charger:windup', {
+      ctx.events.emit('duck:windup', {
         id: this.id,
         position: this.position,
         direction: facing,
@@ -278,7 +278,7 @@ export class Duck extends BaseEnemy {
       pl.applyDamage({ amount: damage, zone: 'body', source: 'enemy', point: this.position, direction: blastDir });
       impulse.copy(blastDir).multiplyScalar(DUCK.blastKnockback).setY(DUCK.blastKnockbackUp);
       pl.addImpulse(impulse);
-      ctx.events.emit('charger:hitPlayer', { id: this.id, position: this.position });
+      ctx.events.emit('duck:hitPlayer', { id: this.id, position: this.position });
       ctx.events.emit('enemy:attacked', { id: this.id, type: this.type, position: this.position });
     }
     ctx.events.emit('duck:explode', { id: this.id, position: this.position, radius: DUCK.blastRadius, hitPlayer: hit });

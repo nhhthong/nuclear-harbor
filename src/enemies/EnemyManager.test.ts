@@ -29,7 +29,7 @@ function run(w: TestWorld, m: EnemyManager, seconds: number): void {
 }
 
 function spawnMech(m: EnemyManager, x: number, z: number, patrol: Vector3[] = []): ArmyRobot {
-  const e = m.spawn({ type: 'sphere', position: new Vector3(x, 0, z), patrol });
+  const e = m.spawn({ type: 'army', position: new Vector3(x, 0, z), patrol });
   if (!e) throw new Error('spawn failed');
   return e as ArmyRobot;
 }
@@ -226,22 +226,22 @@ describe('EnemyManager (headless physics)', () => {
     expect(m.projectiles.liveRockets).toBe(0);
   });
 
-  it('Spot (spider id) and Bomber Duck (charger id) keep their type and use their own HP (AC8)', async () => {
+  it('Spot (spot id) and Bomber Duck (duck id) keep their type and use their own HP (AC8)', async () => {
     const { m } = await setup();
-    const s = m.spawn({ type: 'spider', position: new Vector3(5, 0, 5), patrol: [] });
-    const c = m.spawn({ type: 'charger', position: new Vector3(-5, 0, 5), patrol: [] });
-    expect(s?.type).toBe('spider');
+    const s = m.spawn({ type: 'spot', position: new Vector3(5, 0, 5), patrol: [] });
+    const c = m.spawn({ type: 'duck', position: new Vector3(-5, 0, 5), patrol: [] });
+    expect(s?.type).toBe('spot');
     expect(s?.maxHp).toBe(SPOT.hp);
-    expect(c?.type).toBe('charger');
+    expect(c?.type).toBe('duck');
     expect(c?.maxHp).toBe(DUCK.hp);
   });
 
   it('sandbox ?enemies= spawns on world ready (AC1, AC8)', async () => {
-    const w = await makeTestWorld({ sandbox: true, params: 'enemies=spider,charger,sphere' });
+    const w = await makeTestWorld({ sandbox: true, params: 'enemies=spot,duck,army' });
     addGround(w.physics);
     const m = new EnemyManager(w.ctx, w.ctx.resources.scope('enemies'));
     m.start();
-    expect(w.ctx.enemies.all().map((e) => e.type).sort()).toEqual(['charger', 'sphere', 'spider']);
+    expect(w.ctx.enemies.all().map((e) => e.type).sort()).toEqual(['army', 'duck', 'spot']);
   });
 
   it('shares geometry and materials between robots of one type (AC9)', async () => {

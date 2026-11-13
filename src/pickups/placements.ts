@@ -34,7 +34,7 @@ const m = (zone: ZoneId, x: number, z: number, elevated = false, castFromY?: num
 });
 
 /**
- * Final zone placement (T-16): 14 crates and 10 medkits next to towers and Charger lanes, with six
+ * Final zone placement (T-16): 14 crates and 10 medkits next to towers and Duck lanes, with six
  * "grapple" spots on container tops (7.8 m three-high stacks, 5.2 m two-high stacks) and the
  * tower-3 gantry. Container tops come from the world generator (seeded, `world/tunables.ts`);
  * `placements.test.ts` checks every position against that layout, so a layout change that moves a
@@ -42,11 +42,11 @@ const m = (zone: ZoneId, x: number, z: number, elevated = false, castFromY?: num
  * Indoor tower-1 spots cast from below the 10 m warehouse roof.
  */
 export const ZONE_PLACEMENTS: readonly PickupCandidate[] = [
-  // A Container Yard (Charger country, tower 2): 5 crates, 3 medkits
+  // A Container Yard (Duck country, tower 2): 5 crates, 3 medkits
   c('A', -67, -8), // tower 2
   c('A', -69.5, -23.1, true), // three-high stack beside the E-W aisles
   c('A', -38.4, -8.6, true), // three-high stack, east block
-  c('A', -25.9, -48), // north end of the N-S lane (Charger start)
+  c('A', -25.9, -48), // north end of the N-S lane (Duck start)
   c('A', -88.2, 30), // south end of the western lane
   m('A', -77, -16), // tower 2
   m('A', -25.9, -21), // lane junction

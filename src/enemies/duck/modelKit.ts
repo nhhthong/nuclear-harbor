@@ -9,7 +9,6 @@ import {
   MeshStandardMaterial,
   Quaternion,
   SphereGeometry,
-  TorusGeometry,
   Vector3,
 } from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
@@ -96,10 +95,6 @@ export function cylX(r: number, len: number, seg = 14): BufferGeometry {
   return g;
 }
 
-export function cylY(r: number, len: number, seg = 14): BufferGeometry {
-  return new CylinderGeometry(r, r, len, seg);
-}
-
 export function cylZ(r: number, len: number, seg = 14): BufferGeometry {
   const g = new CylinderGeometry(r, r, len, seg);
   g.rotateX(Math.PI / 2);
@@ -108,12 +103,6 @@ export function cylZ(r: number, len: number, seg = 14): BufferGeometry {
 
 export function sphere(r: number, wSeg = 12, hSeg = 8): BufferGeometry {
   return new SphereGeometry(r, wSeg, hSeg);
-}
-
-export function torusX(major: number, tube: number, seg = 20): BufferGeometry {
-  const g = new TorusGeometry(major, tube, 6, seg);
-  g.rotateY(Math.PI / 2);
-  return g;
 }
 
 const UP = new Vector3(0, 1, 0);

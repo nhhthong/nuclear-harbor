@@ -132,9 +132,9 @@ export const ECONOMY = {
 
 export const ENEMY_COUNTS = {
   /** GDD 6 */
-  sphere: 14,
-  spider: 10,
-  charger: 6,
+  army: 14,
+  spot: 10,
+  duck: 6,
   total: 30,
 } as const;
 
@@ -170,58 +170,6 @@ export const ARMY_ROBOT = {
   telegraphTime: 1.0,
   cooldown: 3,
   loseTargetTime: 4,
-} as const;
-
-/** GDD 6.2 */
-export const SPIDER_ROBOT = {
-  hp: 150,
-  damage: 12,
-  speed: 5,
-  attackRange: 12,
-  detectionRange: 30,
-  legCount: 6,
-  /** proposed */
-  bodyRadius: 0.8,
-  bodyHeight: 0.9,
-  /** proposed; T-17 raised 0.9 -> 1.5 s (defend phase was lethal, docs/PLAYTEST.md). */
-  fireInterval: 1.5,
-  projectileSpeed: 26,
-  flankAngleDeg: 55,
-  flankDistance: 9,
-  hopMaxObstacleHeight: 1.0,
-  loseTargetTime: 5,
-} as const;
-
-/** GDD 6.3 */
-export const CHARGER_ROBOT = {
-  hp: 200,
-  /** contact damage */
-  damage: 20,
-  walkSpeed: 3,
-  /** GDD: 10-12 m/s, faster than the player's sprint. */
-  chargeSpeedMin: 10,
-  chargeSpeedMax: 12,
-  maxChargeDistance: 30,
-  chargeTriggerMin: 8,
-  chargeTriggerMax: 25,
-  detectionRange: 25,
-  cooldown: 6,
-  /** GDD: 90% reduction from the front. */
-  frontDamageMultiplier: 0.1,
-  /** GDD: back and flanks take crit x2. */
-  rearCritMultiplier: 2.0,
-  telegraphDuration: 1.0,
-  wallStunDuration: 2.5,
-  /** proposed: hits within this half-angle of the facing direction count as frontal. */
-  frontArcHalfAngleDeg: 60,
-  /** proposed */
-  knockbackSpeed: 12,
-  knockbackUp: 5,
-  halfExtents: { x: 0.9, y: 0.9, z: 1.3 },
-  /** proposed: forward probe distance for obstacles and the dock edge. */
-  edgeProbeDistance: 2.5,
-  edgeProbeDepth: 1.5,
-  recoverDuration: 1.0,
 } as const;
 
 /** GDD 13.7 */
@@ -260,9 +208,6 @@ export const OBJECTIVES = {
 /** GDD 9 */
 export const BOSS = {
   name: 'TITAN-04',
-  bodyDiameter: 15,
-  totalHeight: 22,
-  legCount: 4,
   coreHp: 4000,
   weakPointCount: 4,
   weakPointHp: 500,
@@ -273,7 +218,6 @@ export const BOSS = {
   perchHeights: [8, 14, 20],
   /** proposed */
   awakeningDuration: 4,
-  weakPointRadius: 1.2,
   attackInterval: 5,
   heavyCannon: { damage: 30, telegraph: 1.2, projectileSpeed: 40, splashRadius: 4, cooldown: 6 },
   groundSlam: { damage: 35, telegraph: 1.5, radius: 14, cooldown: 9 },
@@ -302,8 +246,7 @@ export const WORLD = {
   /** ISO 20 ft container (length, height, width). */
   container: { length: 6.06, height: 2.59, width: 2.44 },
   maxContainerStack: 3,
-  /** GDD 6.3: Charger lanes. */
-  chargerLaneMinLength: 30,
+  /** GDD 6.3: Duck lanes. */
   chargerLaneWidth: 6,
   /** GDD 7.4 */
   craneCountMin: 5,
@@ -330,8 +273,6 @@ export const TUNABLES = {
   ECONOMY,
   ENEMY_COUNTS,
   ARMY_ROBOT,
-  SPIDER_ROBOT,
-  CHARGER_ROBOT,
   AI_SCHEDULING,
   OBJECTIVES,
   BOSS,

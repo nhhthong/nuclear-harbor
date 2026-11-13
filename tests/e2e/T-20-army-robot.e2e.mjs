@@ -1,10 +1,10 @@
 /**
- * T-20: Vanguard army mech (internal type 'sphere') in the sandbox. Slow smooth patrol, detection,
+ * T-20: Vanguard army mech (enemy type 'army') in the sandbox. Slow smooth patrol, detection,
  * advance to the 18-25 m firing band, telegraphed rocket salvos (2-3 rockets, >= 3 s cooldown, 12 damage),
  * retreat when the player is closer than 8 m, and the draw-call cost (<= 6 near, 1 far).
  */
 export default async function ({ openGame, wait, assert }) {
-  const { page, failures, booted } = await openGame('?sandbox&autostart&enemies=sphere');
+  const { page, failures, booted } = await openGame('?sandbox&autostart&enemies=army');
   assert.ok(booted, 'game boots');
   // software WebGL is slow: a tiny viewport keeps the fixed-step simulation close to real time
   await page.setViewportSize({ width: 320, height: 180 });

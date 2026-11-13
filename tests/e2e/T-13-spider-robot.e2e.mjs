@@ -1,15 +1,15 @@
 /**
- * T-13 / T-19: Spot dog (internal type `spider`) in the sandbox. 70 HP, patrols, then chases, crouches
+ * T-13 / T-19: Spot dog (enemy type `spot`) in the sandbox. 70 HP, patrols, then chases, crouches
  * (telegraph) and lunges; each lunge that connects costs exactly 10 HP; the nose takes double damage;
  * applyDamage destroys it once. Two lunges are at least 2.5 s apart. Draw calls stay within budget.
  */
 export default async function ({ openGame, wait, assert }) {
-  const { page, failures, booted } = await openGame('?sandbox&autostart&enemies=spider');
+  const { page, failures, booted } = await openGame('?sandbox&autostart&enemies=spot');
   assert.ok(booted, 'game boots');
 
   await page.waitForFunction(() => window.__NH__.game.ctx.testHooks.enemies?.list().length === 1, null, { timeout: 10_000 });
   const [spot] = await page.evaluate(() => window.__NH__.game.ctx.testHooks.enemies.list());
-  assert.equal(spot.type, 'spider');
+  assert.equal(spot.type, 'spot');
   assert.equal(spot.hp, 70);
   assert.equal(spot.state, 'patrol');
 

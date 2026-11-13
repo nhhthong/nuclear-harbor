@@ -6,17 +6,17 @@ import type { Vector3 } from 'three';
  * internals.
  */
 
-export type EnemyType = 'sphere' | 'spider' | 'charger';
+export type EnemyType = 'army' | 'spot' | 'duck';
 export type DamageSource = 'player' | 'enemy' | 'boss' | 'environment';
 export type DamageableKind = 'player' | 'enemy' | 'boss' | 'prop';
 
 /**
  * Which part of a target a hit landed on. The collider that was hit carries the zone in its
- * ColliderMeta; a target may override it in applyDamage (e.g. the Charger decides front/rear
+ * ColliderMeta; a target may override it in applyDamage (e.g. the boss decides front/rear
  * from the hit direction).
  *  - body:      normal damage (x1)
- *  - critical:  crit spot, x WEAPON.criticalMultiplier (Charger back/flanks, robot sensors)
- *  - armor:     heavily reduced or immune (Charger front shield, boss hull)
+ *  - critical:  crit spot, x WEAPON.criticalMultiplier (robot sensors, head)
+ *  - armor:     heavily reduced or immune (boss hull)
  *  - weakpoint: boss red light
  *  - core:      boss core (only damageable once exposed)
  */
@@ -66,7 +66,7 @@ export interface Enemy extends Damageable {
   simLevel: SimLevel;
   /**
    * Order the enemy to converge on a position (used by the tower defend phase, REVIEW #6).
-   * Enemies in uninterruptible states (Charger wind-up/charge/stun) may defer it.
+   * Enemies in uninterruptible states (Duck wind-up countdown) may defer it.
    */
   commandMoveTo(target: Vector3): void;
 }

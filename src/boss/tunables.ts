@@ -1,5 +1,3 @@
-import { BOSS } from '@/config/tunables';
-
 /**
  * Weak point order: index into every weak point array. T-22: the four weak points are the knee LED
  * rings of the four legs; the name is the ability the leg is tied to (GDD 9.2): 0 front-left leg
@@ -82,12 +80,6 @@ export const BOSS_LOCAL = {
   collapseSink: 1.5,
   /** Leg gait. */
   gait: { stride: 2.2, stepHeight: 1.6, cycleLength: 9 },
-  weakPointProud: 0.2,
   coreRadius: 2.2,
-  /** Fraction of body radius where the core centre sits on the hatch direction. */
-  coreDepth: 0.95,
   flickerHz: 11,
 } as const;
-
-/** Same 2,000 + 4,000 budget the GDD 5.4 check uses. */
-export const BOSS_TOTAL_HP = BOSS.weakPointCount * BOSS.weakPointHp + BOSS.coreHp;

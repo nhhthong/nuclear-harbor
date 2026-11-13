@@ -27,7 +27,7 @@ function modelFor(shared: SharedAssets): SpotModel {
 let sideCounter = 0;
 
 /**
- * Spot dog (internal type `spider`): patrol -> chase -> crouch telegraph -> leaping headbutt along a
+ * Spot dog (enemy type `spot`): patrol -> chase -> crouch telegraph -> leaping headbutt along a
  * locked line (10 damage + knockback) -> retreat and circle while the 2.5 s cooldown runs -> chase.
  */
 export class Spot extends BaseEnemy {
@@ -57,7 +57,7 @@ export class Spot extends BaseEnemy {
       deps,
       spawn,
       {
-        type: 'spider',
+        type: 'spot',
         maxHp: SPOT.hp,
         centerHeight: SPOT.centerHeight,
         radius: SPOT.radius,

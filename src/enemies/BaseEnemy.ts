@@ -36,7 +36,7 @@ export type EnemyFactory = (deps: EnemyDeps, spawn: EnemySpawn) => BaseEnemy;
 export interface BaseEnemyConfig {
   type: EnemyType;
   maxHp: number;
-  /** Centre height above the ground (hover height for the sphere). */
+  /** Centre height above the ground (hover height for hovering robots). */
   centerHeight: number;
   /** Radius used for separation and as the default body radius. */
   radius: number;

@@ -115,7 +115,7 @@ export default async function ({ openGame, setKey, assert }) {
     assert.equal(await t.hook('objectives', 'h.forceActivate(1)'), true);
     const cp = await t.hook('flow', 'h.getCheckpoint()');
     assert.equal(cp.id, 'tower-1');
-    await page.evaluate(() => window.__NH__.game.ctx.enemies.all().find((e) => e.type === 'sphere').applyDamage({ amount: 1000, zone: 'body', source: 'player' }));
+    await page.evaluate(() => window.__NH__.game.ctx.enemies.all().find((e) => e.type === 'army').applyDamage({ amount: 1000, zone: 'body', source: 'player' }));
     const aliveBefore = await page.evaluate(() => window.__NH__.game.ctx.enemies.aliveCount());
     assert.equal(aliveBefore, 29);
     await page.evaluate(() => window.__NH__.game.ctx.player.teleport({ x: 100, y: 0, z: 70 }, 0));

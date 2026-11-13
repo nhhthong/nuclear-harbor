@@ -1,4 +1,4 @@
-/** Bomber Duck numbers (T-19). The duck keeps the internal enemy id `charger`. */
+/** Bomber Duck numbers (T-19). Enemy id `duck`. */
 export const DUCK = {
   hp: 60,
   detectionRange: 28,

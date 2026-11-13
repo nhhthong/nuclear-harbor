@@ -28,7 +28,7 @@ const SALVO_CFG: SalvoConfig = {
 };
 
 /**
- * Vanguard army mech (ROBOT-REFRESH T-20, internal type `sphere`): slow wandering patrol, then
+ * Vanguard army mech (ROBOT-REFRESH T-20, enemy type `army`): slow wandering patrol, then
  * disciplined combat movement (smooth acceleration, limited turn rate) to an 18-25 m firing band,
  * strafing, backing off under 8 m, and telegraphed rocket salvos. Decisions run in `think`
  * (scheduled), motion/firing in `step`, body animation in `animate`.
@@ -67,7 +67,7 @@ export class ArmyRobot extends BaseEnemy {
       deps,
       spawn,
       {
-        type: 'sphere',
+        type: 'army',
         maxHp: ARMY_ROBOT.hp,
         centerHeight: ARMY_LOCAL.centerHeight,
         radius: ARMY_LOCAL.radius,

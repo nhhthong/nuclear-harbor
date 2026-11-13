@@ -19,12 +19,12 @@ async function rig(playerZ: number): Promise<Rig> {
   w.physics.syncQueries();
   const m = new EnemyManager(w.ctx, w.ctx.resources.scope('enemies'));
   m.start();
-  const d = m.spawn({ type: 'charger', position: new Vector3(0, 0, 0), patrol: [] }) as unknown as Duck;
+  const d = m.spawn({ type: 'duck', position: new Vector3(0, 0, 0), patrol: [] }) as unknown as Duck;
   w.ctx.player.teleport({ x: 0, y: 0, z: playerZ });
   const log: string[] = [];
   w.events.on('duck:beep', (e) => log.push(`beep${e.count}@${w.clock.simTime.toFixed(2)}`));
   w.events.on('duck:explode', (e) => log.push(`explode:${e.hitPlayer}@${w.clock.simTime.toFixed(2)}`));
-  w.events.on('charger:windup', (e) => log.push(`windup:${e.duration}`));
+  w.events.on('duck:windup', (e) => log.push(`windup:${e.duration}`));
   w.events.on('enemy:destroyed', () => log.push('destroyed'));
   return { w, m, d, log };
 }
@@ -45,9 +45,9 @@ function runUntilState(r: Rig, state: string, maxSeconds: number): void {
 }
 
 describe('Bomber Duck (headless physics)', () => {
-  it('has 60 HP, the charger id, a head crit volume and a model of at most 4 meshes (6 draw calls with the shadow pass and the arming ring) near, 1 far', async () => {
+  it('has 60 HP, the duck id, a head crit volume and a model of at most 4 meshes (6 draw calls with the shadow pass and the arming ring) near, 1 far', async () => {
     const r = await rig(40);
-    expect(r.d.type).toBe('charger');
+    expect(r.d.type).toBe('duck');
     expect(r.d.maxHp).toBe(60);
     expect(r.d.state).toBe('patrol');
     expect(r.d.hitVolumeCount).toBe(2);
@@ -66,7 +66,7 @@ describe('Bomber Duck (headless physics)', () => {
     };
     expect(count(levels[0]?.object)).toBeLessThanOrEqual(4);
     expect(count(levels[1]?.object)).toBe(1);
-    const second = r.m.spawn({ type: 'charger', position: new Vector3(5, 0, 0), patrol: [] }) as unknown as Duck;
+    const second = r.m.spawn({ type: 'duck', position: new Vector3(5, 0, 0), patrol: [] }) as unknown as Duck;
     const geo = (e: Duck) => (e as unknown as { feet: Mesh }).feet.geometry;
     expect(geo(second)).toBe(geo(r.d));
   });

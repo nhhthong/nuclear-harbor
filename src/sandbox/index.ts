@@ -140,7 +140,7 @@ export function createSandboxModule(): GameModule {
       addBox({ x: -12, y: half.y, z: -18 }, half, materials.containerB);
       addBox({ x: -12, y: half.y * 3, z: -18 }, half, materials.containerA, true);
       addBox({ x: 14, y: half.y, z: 2 }, half, materials.containerB, false, Math.PI / 2);
-      // wall (Charger stun tests) and a low step (auto-step tests)
+      // wall (wall-collision tests) and a low step (auto-step tests)
       addBox({ x: 0, y: 2, z: -34 }, { x: 20, y: 2, z: 0.5 }, materials.wall);
       addBox({ x: 6, y: 0.15, z: 6 }, { x: 2, y: 0.15, z: 2 }, materials.wall);
 

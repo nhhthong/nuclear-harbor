@@ -1,21 +1,21 @@
 /**
- * T-14 / T-19: Bomber Duck (internal type `charger`) in the sandbox. It hops to the player, arms at
+ * T-14 / T-19: Bomber Duck (enemy type `duck`) in the sandbox. It hops to the player, arms at
  * about 2.5 m, beeps 3-2-1 one second apart and detonates about 3 s after arming for exactly 15 HP
  * inside the blast radius. A duck shot dead before zero deals no damage; a player outside the radius
  * takes none. 60 HP, head crit x2.
  */
 export default async function ({ openGame, assert }) {
-  const { page, failures, booted } = await openGame('?sandbox&autostart&enemies=charger');
+  const { page, failures, booted } = await openGame('?sandbox&autostart&enemies=duck');
   assert.ok(booted, 'game boots');
   await page.waitForFunction(() => window.__NH__.game.ctx.testHooks.enemies?.list().length === 1, null, { timeout: 10_000 });
   const [duck] = await page.evaluate(() => window.__NH__.game.ctx.testHooks.enemies.list());
-  assert.equal(duck.type, 'charger');
+  assert.equal(duck.type, 'duck');
   assert.equal(duck.hp, 60);
 
   await page.evaluate(() => {
     const ctx = window.__NH__.game.ctx;
     const log = (window.__t14 = { events: [], states: [], hp: ctx.player.hp, maxHop: 0 });
-    for (const name of ['charger:windup', 'duck:beep', 'duck:explode', 'charger:hitPlayer', 'enemy:destroyed']) {
+    for (const name of ['duck:windup', 'duck:beep', 'duck:explode', 'duck:hitPlayer', 'enemy:destroyed']) {
       ctx.events.on(name, (e) => log.events.push({ name, t: ctx.clock.simTime, count: e.count, hit: e.hitPlayer }));
     }
     const c = ctx.enemies.all()[0];
@@ -53,7 +53,7 @@ export default async function ({ openGame, assert }) {
   const at = (n, i = 0) => r.events.filter((e) => e.name === n)[i];
   const beeps = r.events.filter((e) => e.name === 'duck:beep');
   assert.deepEqual(beeps.map((b) => b.count), [3, 2, 1], 'beeps 3-2-1');
-  const fuse = at('duck:explode').t - at('charger:windup').t;
+  const fuse = at('duck:explode').t - at('duck:windup').t;
   assert.ok(fuse > 2.9 && fuse < 3.2, `explodes 3 s after arming (${fuse.toFixed(2)})`);
   assert.ok(beeps[1].t - beeps[0].t > 0.9 && beeps[1].t - beeps[0].t < 1.1, 'one second per count');
   assert.equal(at('duck:explode').hit, true, 'player inside the blast radius');
@@ -70,7 +70,7 @@ export default async function ({ openGame, assert }) {
     ctx.events.on('duck:beep', (e) => {
       if (e.count === 2) ctx.enemies.all()[0]?.applyDamage({ amount: 1000, zone: 'body', source: 'player' });
     });
-    ctx.testHooks.enemies.spawn('charger', { x: 20, z: -20 });
+    ctx.testHooks.enemies.spawn('duck', { x: 20, z: -20 });
     ctx.player.teleport({ x: 20, y: 0, z: -10 });
   });
   await page.waitForFunction(() => window.__NH__.game.ctx.enemies.all().length === 0, null, { timeout: 40_000 });
@@ -82,7 +82,7 @@ export default async function ({ openGame, assert }) {
   // head takes double damage
   const crit = await page.evaluate(() => {
     const ctx = window.__NH__.game.ctx;
-    ctx.testHooks.enemies.spawn('charger', { x: -20, z: -20 });
+    ctx.testHooks.enemies.spawn('duck', { x: -20, z: -20 });
     const e = ctx.enemies.all()[0];
     const body = e.applyDamage({ amount: 5, zone: 'body', source: 'player' });
     const head = e.applyDamage({ amount: 5, zone: 'critical', source: 'player' });

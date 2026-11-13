@@ -7,11 +7,11 @@ import { navFor } from './nav/bakeNav';
 import type { NavGrid, PathPoint } from './nav/NavGrid';
 import { ENEMY_LOCAL } from './tunables';
 
-const TYPES: readonly EnemyType[] = ['sphere', 'spider', 'charger'];
+const TYPES: readonly EnemyType[] = ['army', 'spot', 'duck'];
 
-/** Parses `?enemies=sphere,spider|none`; the default is a single sphere robot. */
+/** Parses `?enemies=army,spot|none`; the default is a single army robot. */
 export function parseEnemyParam(value: string | null): EnemyType[] {
-  if (value === null || value.trim() === '') return ['sphere'];
+  if (value === null || value.trim() === '') return ['army'];
   const out: EnemyType[] = [];
   for (const raw of value.split(',')) {
     const token = raw.trim().toLowerCase();
@@ -86,11 +86,11 @@ export const FALLBACK_LANES: readonly LaneData[] = [
 
 export const FALLBACK_CORRIDOR: CorridorData = { minX: -48, maxX: 48, minZ: 73, maxZ: 79 };
 
-/** Distance kept from lane / corridor ends when placing a Charger (m). */
+/** Distance kept from lane / corridor ends when placing a Duck (m). */
 const LANE_INSET = 6;
-/** Chargers on yard lanes (zone A); the remaining two stand in the warehouse corridor and on the open dock. */
-const YARD_NS_CHARGERS = 3;
-/** Spiders hug container walls: offset from the lane centre line (lane half-width is 3.3 m, cells are 1.5 m). */
+/** Ducks on yard lanes (zone A); the remaining two stand in the warehouse corridor and on the open dock. */
+const YARD_NS_DUCKS = 3;
+/** Spots hug container walls: offset from the lane centre line (lane half-width is 3.3 m, cells are 1.5 m). */
 const COVER_OFFSET = 1.6;
 /** Arm length of the plus-shaped patrol at lane intersections (m). */
 const ARM = 8;
@@ -152,39 +152,39 @@ const cross = (cx: number, cz: number): XZ[] => [
   [cx, cz + ARM],
   [cx - ARM, cz],
 ];
-const sphere = (patrol: XZ[], at: XZ = patrol[0] ?? [0, 0]): Authored => ({ type: 'sphere', at, patrol });
-const spider = (patrol: XZ[]): Authored => ({ type: 'spider', at: patrol[0] ?? [0, 0], patrol });
+const army = (patrol: XZ[], at: XZ = patrol[0] ?? [0, 0]): Authored => ({ type: 'army', at, patrol });
+const spot = (patrol: XZ[]): Authored => ({ type: 'spot', at: patrol[0] ?? [0, 0], patrol });
 
-/** Sphere loops (towers, intersections) and spider cover spots; Chargers come from lane data. */
-const SPHERES_SPIDERS: readonly Authored[] = [
-  // A Container Yard (5 sphere, 3 spider)
-  sphere(ring(-72, -12, 6)), // tower 2
-  sphere(cross(-57.02, -4.11), [-57.02, -4.11]),
-  sphere(cross(-25.88, -27.67), [-25.88, -27.67]),
-  sphere(cross(-25.88, 19.45), [-25.88, 19.45]),
-  sphere(cross(-88.16, 7.67), [-88.16, 7.67]),
-  spider(line([-88.16 + COVER_OFFSET, -30], [-88.16 + COVER_OFFSET, -12])),
-  spider(line([-57.02, 31], [-57.02, 23])),
-  spider(line([-25.88 + COVER_OFFSET, -46], [-25.88 + COVER_OFFSET, -34])),
-  // B Crane Zone (4 sphere, 3 spider)
-  sphere(ring(72, -12, 6)), // tower 3 (platform base)
-  sphere(ring(20, -8, 5)),
-  sphere(ring(10, -44, 5)),
-  sphere(ring(105, 14, 5)),
-  spider(line([40, -5.5], [52, -5.5])),
-  spider(line([60, -36.5], [72, -36.5])),
-  spider(line([94, 5], [94, 17])),
-  // C Warehouse (3 sphere, 2 spider); tower 1 is lightly guarded by a single sphere
-  sphere(line([30, 58], [12, 58])), // tower 1 aisle
-  sphere(ring(-70, 68, 6)),
-  sphere(ring(70, 68, 6)),
-  spider(line([-84, 50], [-84, 62])),
-  spider(line([84, 50], [84, 62])),
-  // D Dock (2 sphere, 2 spider); everything stands within reach of tower 4
-  sphere(ring(60, -96, 6)), // tower 4 (heaviest guard)
-  sphere(ring(46, -80, 4)),
-  spider(line([47, -108], [57, -108])),
-  spider(line([58, -76], [70, -76])),
+/** Army loops (towers, intersections) and spot cover spots; Ducks come from lane data. */
+const ARMY_SPOT_POSTS: readonly Authored[] = [
+  // A Container Yard (5 army, 3 spot)
+  army(ring(-72, -12, 6)), // tower 2
+  army(cross(-57.02, -4.11), [-57.02, -4.11]),
+  army(cross(-25.88, -27.67), [-25.88, -27.67]),
+  army(cross(-25.88, 19.45), [-25.88, 19.45]),
+  army(cross(-88.16, 7.67), [-88.16, 7.67]),
+  spot(line([-88.16 + COVER_OFFSET, -30], [-88.16 + COVER_OFFSET, -12])),
+  spot(line([-57.02, 31], [-57.02, 23])),
+  spot(line([-25.88 + COVER_OFFSET, -46], [-25.88 + COVER_OFFSET, -34])),
+  // B Crane Zone (4 army, 3 spot)
+  army(ring(72, -12, 6)), // tower 3 (platform base)
+  army(ring(20, -8, 5)),
+  army(ring(10, -44, 5)),
+  army(ring(105, 14, 5)),
+  spot(line([40, -5.5], [52, -5.5])),
+  spot(line([60, -36.5], [72, -36.5])),
+  spot(line([94, 5], [94, 17])),
+  // C Warehouse (3 army, 2 spot); tower 1 is lightly guarded by a single army
+  army(line([30, 58], [12, 58])), // tower 1 aisle
+  army(ring(-70, 68, 6)),
+  army(ring(70, 68, 6)),
+  spot(line([-84, 50], [-84, 62])),
+  spot(line([84, 50], [84, 62])),
+  // D Dock (2 army, 2 spot); everything stands within reach of tower 4
+  army(ring(60, -96, 6)), // tower 4 (heaviest guard)
+  army(ring(46, -80, 4)),
+  spot(line([47, -108], [57, -108])),
+  spot(line([58, -76], [70, -76])),
 ];
 
 function laneAlong(lane: LaneData, d: number): XZ {
@@ -192,45 +192,45 @@ function laneAlong(lane: LaneData, d: number): XZ {
   return lane.axis === 'z' ? [lane.start.x, lane.start.z + t] : [lane.start.x + t, lane.start.z];
 }
 
-/** Yard Chargers: the longest N-S lanes (alternating the end they start from) and one long aisle. */
-export function yardChargers(lanes: readonly LaneData[]): Authored[] {
+/** Yard Ducks: the longest N-S lanes (alternating the end they start from) and one long aisle. */
+export function yardDucks(lanes: readonly LaneData[]): Authored[] {
   const yard = lanes.filter((l) => l.id.startsWith('yard'));
   const ns = yard.filter((l) => l.axis === 'z').sort((a, b) => b.length - a.length || a.start.x - b.start.x);
   const ew = yard
     .filter((l) => l.axis === 'x')
     .sort((a, b) => b.length - a.length || Math.abs(a.start.z + 10) - Math.abs(b.start.z + 10));
   const out: Authored[] = [];
-  ns.slice(0, YARD_NS_CHARGERS)
+  ns.slice(0, YARD_NS_DUCKS)
     .sort((a, b) => a.start.x - b.start.x)
     .forEach((lane, i) => {
       const a = laneAlong(lane, 0);
       const b = laneAlong(lane, lane.length);
       const patrol = i % 2 === 0 ? line(a, b) : line(b, a);
-      out.push({ type: 'charger', at: patrol[0] ?? a, patrol });
+      out.push({ type: 'duck', at: patrol[0] ?? a, patrol });
     });
   const aisle = ew[0];
   if (aisle) {
     const a = laneAlong(aisle, 0);
     const b = laneAlong(aisle, aisle.length);
-    out.push({ type: 'charger', at: a, patrol: line(a, b) });
+    out.push({ type: 'duck', at: a, patrol: line(a, b) });
   }
   return out;
 }
 
-/** Warehouse corridor Charger (west to east) and the open-dock Charger (east to west, GDD 6.3). */
-export function otherChargers(corridor: CorridorData): Authored[] {
+/** Warehouse corridor Duck (west to east) and the open-dock Duck (east to west, GDD 6.3). */
+export function otherDucks(corridor: CorridorData): Authored[] {
   const z = (corridor.minZ + corridor.maxZ) / 2;
   const a: XZ = [corridor.minX + 8, z];
   const b: XZ = [corridor.maxX - 8, z];
   return [
-    { type: 'charger', at: a, patrol: line(a, b) },
-    { type: 'charger', at: [80, -64], patrol: line([80, -64], [40, -64]) },
+    { type: 'duck', at: a, patrol: line(a, b) },
+    { type: 'duck', at: [80, -64], patrol: line([80, -64], [40, -64]) },
   ];
 }
 
 /** The unvalidated authored harbor population. Pure and deterministic. */
 export function authoredHarbor(inputs: HarborInputs): Authored[] {
-  return [...SPHERES_SPIDERS, ...yardChargers(inputs.lanes), ...otherChargers(inputs.corridor)];
+  return [...ARMY_SPOT_POSTS, ...yardDucks(inputs.lanes), ...otherDucks(inputs.corridor)];
 }
 
 const scratchPoint: PathPoint = { x: 0, z: 0 };
@@ -268,9 +268,9 @@ export function toSpawns(list: readonly Authored[], nav: NavGrid | null): EnemyS
 
 /**
  * The robots to spawn after `world:ready`. Sandbox: `?enemies=` list around (0, 0, -24). Harbor:
- * authored data honouring ENEMY_DISTRIBUTION (14 sphere / 10 spider / 6 charger): Chargers on the
- * yard lanes reported by the world module, in the warehouse corridor and on the open dock; sphere
- * loops around towers and lane intersections; spiders beside container walls. Every point is
+ * authored data honouring ENEMY_DISTRIBUTION (14 army / 10 spot / 6 duck): Ducks on the
+ * yard lanes reported by the world module, in the warehouse corridor and on the open dock; army
+ * loops around towers and lane intersections; spots beside container walls. Every point is
  * checked against the nav grid (warn and nudge when blocked).
  */
 export function getPopulation(

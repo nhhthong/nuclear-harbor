@@ -1,4 +1,4 @@
-/** Spot dog numbers (T-19). Spot keeps the internal enemy id `spider`. Speeds start from GDD 6.2 (speed 5, detection 30). */
+/** Spot dog numbers (T-19). Enemy id `spot`. Speeds start from GDD 6.2 (speed 5, detection 30). */
 export const SPOT = {
   hp: 70,
   detectionRange: 30,
@@ -39,8 +39,6 @@ export const SPOT = {
   noseUp: 0.25,
   radius: 0.8,
   /** Trot animation. */
-  trotStride: 0.2,
-  trotLift: 0.07,
   trotFrequency: 2.4,
   /** Leg swing amplitude (rad) while trotting, and the stretched gallop pose during the lunge. */
   trotSwing: 0.45,

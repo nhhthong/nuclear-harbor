@@ -44,7 +44,7 @@ interface StackTop {
   zone: ZoneId;
 }
 
-/** A straight, obstacle-free strip for Charger runs (centre line + width). */
+/** A straight, obstacle-free strip for Duck runs (centre line + width). */
 export interface Lane {
   id: string;
   axis: 'x' | 'z';

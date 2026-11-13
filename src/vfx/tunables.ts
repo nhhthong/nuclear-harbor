@@ -40,5 +40,4 @@ export const VFX = {
   bossCoreExposedScale: 1.5,
   weakPointBurstScale: 2.5,
   towerActivatedScale: 2.5,
-  chargerStunScale: 1.2,
 } as const;

@@ -119,13 +119,13 @@ export const SOUNDS: Record<SoundId, SoundFn> = {
   // ---- enemies -----------------------------------------------------------------------
   enemyAlert: (s) => {
     if (s.variant === 1) {
-      // spider: dry skittering ticks
+      // spot: dry skittering ticks
       for (let i = 0; i < 4; i++) s.noise({ at: i * 0.05, dur: 0.025, gain: 0.35, filter: bp(4200, undefined, 3) });
     } else if (s.variant === 2) {
-      // charger: short snort
+      // duck: short snort
       s.osc({ type: 'sawtooth', f0: 130, f1: 90, dur: 0.35, gain: 0.4, filter: lp(500) });
     } else {
-      // sphere: two rising chirps
+      // army: two rising chirps
       s.osc({ type: 'sine', f0: 800, f1: 1600, dur: 0.1, gain: 0.3 });
       s.osc({ at: 0.12, type: 'sine', f0: 1000, f1: 2000, dur: 0.12, gain: 0.3 });
     }
@@ -141,7 +141,7 @@ export const SOUNDS: Record<SoundId, SoundFn> = {
     return s.stopTime;
   },
   /** Rising low growl that lasts the telegraph duration (GDD 11, AC7). */
-  chargerWindup: (s) => {
+  duckWindup: (s) => {
     const dur = s.duration > 0 ? s.duration : 1.2;
     s.osc({ type: 'sawtooth', f0: 60, f1: 180, dur, gain: 0.35, attack: dur * 0.2, release: 0.08, filter: lp(250, 1100, 1.5) });
     s.osc({ type: 'sawtooth', f0: 63, f1: 190, dur, gain: 0.3, attack: dur * 0.2, release: 0.08, filter: lp(250, 1100, 1.5) });
@@ -149,21 +149,7 @@ export const SOUNDS: Record<SoundId, SoundFn> = {
     s.noise({ dur, gain: 0.25, attack: dur * 0.3, release: 0.08, filter: bp(300, 900, 1.5) });
     return s.stopTime;
   },
-  chargerCharge: (s) => {
-    s.noise({ dur: 1.4, gain: 0.8, attack: 0.1, release: 0.3, filter: lp(180) });
-    s.osc({ type: 'sine', f0: 45, f1: 38, dur: 1.4, gain: 0.7, attack: 0.1, release: 0.3 });
-    s.osc({ type: 'sawtooth', f0: 55, dur: 1.4, gain: 0.2, attack: 0.1, release: 0.3, filter: lp(200) });
-    return s.stopTime;
-  },
-  chargerStunned: (s) => {
-    s.osc({ type: 'square', f0: 180, dur: 0.6, gain: 0.3, filter: bp(500, undefined, 6) });
-    s.osc({ type: 'square', f0: 267, dur: 0.5, gain: 0.2, filter: bp(700, undefined, 6) });
-    s.noise({ dur: 0.15, gain: 0.6, filter: lp(800) });
-    s.osc({ type: 'sine', f0: 90, f1: 40, dur: 0.3, gain: 0.7 });
-    s.osc({ type: 'sine', f0: 300, f1: 150, dur: 0.8, gain: 0.12 });
-    return s.stopTime;
-  },
-  chargerHit: (s) => {
+  duckHit: (s) => {
     s.noise({ dur: 0.25, gain: 0.6, filter: lp(1000) });
     s.osc({ type: 'sine', f0: 100, f1: 40, dur: 0.3, gain: 0.8 });
     return s.stopTime;

@@ -17,7 +17,7 @@ async function rig(spotZ: number, playerZ: number): Promise<Rig> {
   w.physics.syncQueries();
   const m = new EnemyManager(w.ctx, w.ctx.resources.scope('enemies'));
   m.start();
-  const s = m.spawn({ type: 'spider', position: new Vector3(0, 0, spotZ), patrol: [] }) as unknown as Spot;
+  const s = m.spawn({ type: 'spot', position: new Vector3(0, 0, spotZ), patrol: [] }) as unknown as Spot;
   w.ctx.player.teleport({ x: 0, y: 0, z: playerZ });
   return { w, m, s };
 }
@@ -33,9 +33,9 @@ function tick(r: Rig, seconds: number, each?: () => void): void {
 }
 
 describe('Spot dog (headless physics)', () => {
-  it('has 70 HP, the spider id, a nose crit volume and a model of at most 6 draw calls near, 1 far', async () => {
+  it('has 70 HP, the spot id, a nose crit volume and a model of at most 6 draw calls near, 1 far', async () => {
     const r = await rig(0, 60);
-    expect(r.s.type).toBe('spider');
+    expect(r.s.type).toBe('spot');
     expect(r.s.maxHp).toBe(70);
     expect(r.s.state).toBe('patrol');
     expect(r.s.hitVolumeCount).toBe(2);

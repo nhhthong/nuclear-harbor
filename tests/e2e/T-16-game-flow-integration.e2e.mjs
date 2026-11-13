@@ -14,7 +14,7 @@ export default async function ({ openGame, assert }) {
   // robots: 14 / 10 / 6, none within 40 m of the spawn, positions inside the land
   const robots = await page.evaluate(() => window.__NH__.game.ctx.testHooks.enemies.list());
   const n = (t) => robots.filter((r) => r.type === t).length;
-  assert.deepEqual([n('sphere'), n('spider'), n('charger')], [14, 10, 6]);
+  assert.deepEqual([n('army'), n('spot'), n('duck')], [14, 10, 6]);
   const spawn = { x: 0, z: 96 };
   for (const r of robots) {
     assert.ok(Math.hypot(r.x - spawn.x, r.z - spawn.z) > 40, `${r.type} ${r.id} more than 40 m from the spawn`);

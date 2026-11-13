@@ -33,18 +33,18 @@ export default async function ({ openGame, wait, assert }) {
   await emit('weapon:dryFire', {});
   await emit('weapon:reloadStarted', { duration: 1.6 });
   await emit('player:footstep', { sprinting: false });
-  await emit('enemy:alerted', { id: 'e1', type: 'sphere', position: v(10, 1, 10) });
-  await emit('charger:windup', { id: 'c1', position: v(0, 1, -15), direction: v(0, 0, 1), duration: 1.2 });
+  await emit('enemy:alerted', { id: 'e1', type: 'army', position: v(10, 1, 10) });
+  await emit('duck:windup', { id: 'c1', position: v(0, 1, -15), direction: v(0, 0, 1), duration: 1.2 });
   await emit('countdown:tick', { remaining: 60, critical: true });
   await emit('boss:attack', { attack: 'ground-slam', position: v(0, 0, -30), radius: 8 });
   const counts = await page.evaluate(() => {
     const a = window.__NH__.game.ctx.testHooks.audio;
-    return ['rifleShot', 'dryClick', 'reload', 'footstepWalk', 'enemyAlert', 'chargerWindup', 'alarm', 'bossSlam'].map((id) => [id, a.playedCount(id)]);
+    return ['rifleShot', 'dryClick', 'reload', 'footstepWalk', 'enemyAlert', 'duckWindup', 'alarm', 'bossSlam'].map((id) => [id, a.playedCount(id)]);
   });
   for (const [id, n] of counts) assert.ok(n >= 1, `${id} should have played`);
 
   // AC5: a sound beyond max distance is skipped
-  await emit('enemy:destroyed', { id: 'far', type: 'sphere', position: v(5000, 0, 5000), remaining: 1 });
+  await emit('enemy:destroyed', { id: 'far', type: 'army', position: v(5000, 0, 5000), remaining: 1 });
   assert.equal(await page.evaluate(() => window.__NH__.game.ctx.testHooks.audio.playedCount('enemyDestroyed')), 0, 'far sound skipped');
 
   // AC6: 200 rapid emits never exceed the cap

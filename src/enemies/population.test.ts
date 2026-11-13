@@ -46,9 +46,9 @@ const count = (t: string) => authored.filter((p) => p.type === t).length;
 const dist = (a: readonly [number, number], x: number, z: number) => Math.hypot(a[0] - x, a[1] - z);
 
 describe('parseEnemyParam', () => {
-  it('defaults to sphere, supports lists and none', () => {
-    expect(parseEnemyParam(null)).toEqual(['sphere']);
-    expect(parseEnemyParam('spider, charger')).toEqual(['spider', 'charger']);
+  it('defaults to army, supports lists and none', () => {
+    expect(parseEnemyParam(null)).toEqual(['army']);
+    expect(parseEnemyParam('spot, duck')).toEqual(['spot', 'duck']);
     expect(parseEnemyParam('none')).toEqual([]);
     expect(parseEnemyParam('bogus')).toEqual([]);
   });
@@ -56,8 +56,8 @@ describe('parseEnemyParam', () => {
 
 describe('sandbox population', () => {
   it('spawns the requested types around (0, -24)', () => {
-    const pop = getPopulation(ctx(true, 'enemies=sphere,spider'));
-    expect(pop.map((p) => p.type)).toEqual(['sphere', 'spider']);
+    const pop = getPopulation(ctx(true, 'enemies=army,spot'));
+    expect(pop.map((p) => p.type)).toEqual(['army', 'spot']);
     for (const p of pop) {
       expect(Math.hypot(p.position.x, p.position.z + 24)).toBeLessThan(5);
       expect(p.patrol.length).toBeGreaterThanOrEqual(3);
@@ -68,15 +68,15 @@ describe('sandbox population', () => {
 });
 
 describe('authored harbor population (AC4)', () => {
-  it('has exactly 14 sphere / 10 spider / 6 charger', () => {
-    expect(count('sphere')).toBe(ENEMY_COUNTS.sphere);
-    expect(count('spider')).toBe(ENEMY_COUNTS.spider);
-    expect(count('charger')).toBe(ENEMY_COUNTS.charger);
+  it('has exactly 14 army / 10 spot / 6 duck', () => {
+    expect(count('army')).toBe(ENEMY_COUNTS.army);
+    expect(count('spot')).toBe(ENEMY_COUNTS.spot);
+    expect(count('duck')).toBe(ENEMY_COUNTS.duck);
   });
 
   it('honours ENEMY_DISTRIBUTION per zone', () => {
     for (const zone of Object.keys(ZONES) as ZoneId[]) {
-      for (const type of ['sphere', 'spider', 'charger'] as const) {
+      for (const type of ['army', 'spot', 'duck'] as const) {
         const n = authored.filter((p) => p.type === type && zoneAt(p.at[0], p.at[1]) === zone).length;
         expect(n, `${type} in ${zone}`).toBe(ENEMY_DISTRIBUTION[zone][type]);
       }
@@ -109,9 +109,9 @@ describe('authored harbor population (AC4)', () => {
     }
   });
 
-  it('puts most Chargers on straight yard lanes', () => {
+  it('puts most Ducks on straight yard lanes', () => {
     const onLane = authored
-      .filter((p) => p.type === 'charger')
+      .filter((p) => p.type === 'duck')
       .filter((p) =>
         layout.lanes.some((l) => {
           const half = l.width / 2;
@@ -123,11 +123,11 @@ describe('authored harbor population (AC4)', () => {
     expect(onLane.length).toBeGreaterThanOrEqual(4);
   });
 
-  it('runs one Charger through the warehouse corridor and one over the open dock', () => {
-    const chargers = authored.filter((p) => p.type === 'charger');
+  it('runs one Duck through the warehouse corridor and one over the open dock', () => {
+    const ducks = authored.filter((p) => p.type === 'duck');
     const c = warehouse.corridor;
-    expect(chargers.some((p) => p.at[1] > c.minZ && p.at[1] < c.maxZ && p.at[0] >= c.minX && p.at[0] <= c.maxX)).toBe(true);
-    expect(chargers.some((p) => zoneAt(p.at[0], p.at[1]) === 'D')).toBe(true);
+    expect(ducks.some((p) => p.at[1] > c.minZ && p.at[1] < c.maxZ && p.at[0] >= c.minX && p.at[0] <= c.maxX)).toBe(true);
+    expect(ducks.some((p) => zoneAt(p.at[0], p.at[1]) === 'D')).toBe(true);
   });
 
   it('keeps robots out of crane discs and the boss arena', () => {
@@ -192,7 +192,7 @@ describe('getPopulation on the harbor', () => {
     expect(warn).not.toHaveBeenCalled();
     warn.mockRestore();
     const n = (t: string) => pop.filter((p) => p.type === t).length;
-    expect([n('sphere'), n('spider'), n('charger')]).toEqual([14, 10, 6]);
+    expect([n('army'), n('spot'), n('duck')]).toEqual([14, 10, 6]);
     for (const p of pop) expect(nav.isWalkable(p.position.x, p.position.z)).toBe(true);
   });
 

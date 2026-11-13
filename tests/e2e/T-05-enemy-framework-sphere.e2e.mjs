@@ -1,16 +1,16 @@
 /**
- * T-05 (updated by T-20): the army mech (internal type 'sphere') in the sandbox. It spawns, detects the player
+ * T-05 (updated by T-20): the army mech (enemy type 'army') in the sandbox. It spawns, detects the player
  * teleported within range with line of sight, fires rockets and reduces player HP; killing it through applyDamage emits
- * enemy:destroyed and empties the registry. `?enemies=spider,charger` spawns the placeholders.
+ * enemy:destroyed and empties the registry. `?enemies=spot,duck` spawns the Spot dog and the Bomber Duck.
  */
 export default async function ({ openGame, wait, assert }) {
-  const { page, failures, booted } = await openGame('?sandbox&autostart&enemies=sphere');
+  const { page, failures, booted } = await openGame('?sandbox&autostart&enemies=army');
   assert.ok(booted, 'game boots');
 
   const hooks = () => page.evaluate(() => window.__NH__.game.ctx.testHooks.enemies.list());
   await page.waitForFunction(() => window.__NH__.game.ctx.testHooks.enemies?.list().length === 1, null, { timeout: 10_000 });
   const [robot] = await hooks();
-  assert.equal(robot.type, 'sphere');
+  assert.equal(robot.type, 'army');
   assert.equal(robot.hp, 150);
   assert.equal(robot.state, 'patrol');
 
@@ -46,12 +46,12 @@ export default async function ({ openGame, wait, assert }) {
   assert.deepEqual(failures, [], 'no console errors');
   await page.close();
 
-  // placeholders spawn through the same framework
-  const second = await openGame('?sandbox&autostart&enemies=spider,charger');
+  // Spot and the Duck spawn through the same framework
+  const second = await openGame('?sandbox&autostart&enemies=spot,duck');
   await second.page.waitForFunction(() => window.__NH__.game.ctx.testHooks.enemies?.list().length === 2, null, { timeout: 10_000 });
   const types = (await second.page.evaluate(() => window.__NH__.game.ctx.testHooks.enemies.list())).map((e) => e.type).sort();
-  assert.deepEqual(types, ['charger', 'spider']);
-  assert.deepEqual(second.failures, [], 'no console errors (placeholders)');
+  assert.deepEqual(types, ['duck', 'spot']);
+  assert.deepEqual(second.failures, [], 'no console errors (spot, duck)');
   await second.page.close();
 
   // harbor: 14 / 10 / 6 robots (open nav grid when no world module is present yet)
@@ -60,9 +60,9 @@ export default async function ({ openGame, wait, assert }) {
   const counts = await harbor.page.evaluate(() => {
     const list = window.__NH__.game.ctx.testHooks.enemies.list();
     const n = (t) => list.filter((e) => e.type === t).length;
-    return { sphere: n('sphere'), spider: n('spider'), charger: n('charger') };
+    return { army: n('army'), spot: n('spot'), duck: n('duck') };
   });
-  assert.deepEqual(counts, { sphere: 14, spider: 10, charger: 6 });
+  assert.deepEqual(counts, { army: 14, spot: 10, duck: 6 });
   assert.deepEqual(harbor.failures, [], 'no console errors (harbor)');
   await harbor.page.close();
 }
