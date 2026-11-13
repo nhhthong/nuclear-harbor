@@ -68,25 +68,14 @@ export const SOUNDS: Record<SoundId, SoundFn> = {
     s.osc({ type: 'sine', f0: 60, f1: 30, dur: 1.5, gain: 0.6 });
     return s.stopTime;
   },
-  grappleFire: (s) => {
+  airJump: (s) => {
     s.noise({ dur: 0.35, gain: 0.5, attack: 0.05, filter: bp(400, 3500, 2) });
     s.osc({ type: 'triangle', f0: 300, f1: 900, dur: 0.25, gain: 0.15 });
     return s.stopTime;
   },
-  grappleAttach: (s) => {
-    s.osc({ type: 'square', f0: 520, dur: 0.25, gain: 0.2, filter: bp(520, undefined, 4) });
-    s.osc({ type: 'square', f0: 783, dur: 0.2, gain: 0.15, filter: bp(783, undefined, 4) });
-    s.noise({ dur: 0.05, gain: 0.5, filter: hp(2000) });
-    return s.stopTime;
-  },
-  grappleRelease: (s) => {
+  jump: (s) => {
     s.noise({ dur: 0.2, gain: 0.25, filter: bp(1200, 300) });
     s.osc({ type: 'sine', f0: 400, f1: 200, dur: 0.12, gain: 0.15 });
-    return s.stopTime;
-  },
-  grappleFail: (s) => {
-    s.osc({ type: 'square', f0: 160, f1: 90, dur: 0.1, gain: 0.2, filter: lp(400) });
-    s.noise({ dur: 0.06, gain: 0.2, filter: lp(600) });
     return s.stopTime;
   },
   pickupAmmo: (s) => {

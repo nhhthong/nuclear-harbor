@@ -24,10 +24,21 @@ export const SIM = {
 export const PLAYER = {
   /** GDD 4.2 */
   maxHp: 100,
-  /** GDD 4.2 */
-  walkSpeed: 5,
-  /** GDD 4.2 */
-  sprintSpeed: 7.5,
+  /** Owner request (faster than GDD 4.2's 5 / 7.5): quicker traversal now that the grapple is gone. */
+  walkSpeed: 6.5,
+  sprintSpeed: 10,
+  /**
+   * Owner request: double jump replaces the grappling hook. With gravity -24 a ground jump rises
+   * 1.9 m and the air jump adds 1.7 m (3.6 m when chained at the apex): one container (2.59 m) or
+   * the 3 m tower-3 gantry needs both jumps.
+   */
+  jumpSpeed: 9.6,
+  airJumpSpeed: 9.0,
+  airJumps: 1,
+  /** Jump still allowed this long after walking off an edge (s). */
+  coyoteTime: 0.1,
+  /** A jump press is remembered this long before landing (s). */
+  jumpBufferTime: 0.12,
   /** proposed: capsule = radius + 2 * halfHeight (cylinder part) => 1.8 m tall. */
   capsuleRadius: 0.35,
   capsuleHalfHeight: 0.55,
@@ -37,7 +48,7 @@ export const PLAYER = {
   groundAccel: 60,
   groundDecel: 50,
   /** proposed: horizontal control while airborne (0..1 of ground accel). */
-  airControl: 0.25,
+  airControl: 0.55,
   /** proposed: Rapier KCC settings. */
   kccOffset: 0.02,
   maxStepHeight: 0.35,

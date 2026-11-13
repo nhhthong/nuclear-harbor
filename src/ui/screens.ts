@@ -15,7 +15,7 @@ const ACTION_LABELS: Record<Action, string> = {
   moveRight: 'Move right',
   fire: 'Fire',
   reload: 'Reload',
-  grapple: 'Grapple',
+  jump: 'Jump / double jump',
   sprint: 'Sprint',
   interact: 'Interact / hold',
   pause: 'Pause',

@@ -39,8 +39,8 @@ export const UI_CSS = `
 .nh-prompt{position:absolute;left:50%;top:60%;transform:translateX(-50%);text-align:center;font-size:1.3em}
 .nh-prompt .nh-bar{width:20vh;margin:.4em auto 0}
 .nh-prompt .nh-fill{background:#ffd23a;transform:scaleX(0)}
-.nh-grapple{position:absolute;left:calc(50% + 6vh);top:calc(50% + 6vh);width:3.4vh;height:3.4vh;border-radius:50%;border:2px solid #5ab;background:conic-gradient(rgba(80,200,255,.25) calc(var(--p,0)*360deg),transparent 0);font-size:1.4vh;display:flex;align-items:center;justify-content:center}
-.nh-grapple.ready{background:rgba(80,200,255,.6)}
+.nh-jump{position:absolute;left:calc(50% + 6vh);top:calc(50% + 6vh);width:3.4vh;height:3.4vh;border-radius:50%;border:2px solid #5ab;background:conic-gradient(rgba(80,200,255,.25) calc(var(--p,0)*360deg),transparent 0);font-size:1.4vh;display:flex;align-items:center;justify-content:center}
+.nh-jump.ready{background:rgba(80,200,255,.6)}
 .nh-toast{position:absolute;left:50%;top:18vh;transform:translateX(-50%);font-size:1.3em;opacity:0;transition:opacity .25s;white-space:nowrap}
 .nh-toast.on{opacity:1}
 .nh-boss{position:absolute;top:15vh;left:50%;transform:translateX(-50%);width:50vh;text-align:center}

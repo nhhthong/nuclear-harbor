@@ -5,7 +5,6 @@ import { createDebugModule } from '@/debug';
 import { createDinosaurModule } from '@/dinosaur';
 import { createEnemiesModule } from '@/enemies';
 import { createFlowModule } from '@/flow';
-import { createGrappleModule } from '@/grapple';
 import { createObjectivesModule } from '@/objectives';
 import { createPickupsModule } from '@/pickups';
 import { createPlayerModule } from '@/player';
@@ -29,7 +28,6 @@ export function createModules(): GameModule[] {
     createWorldModule(),
     createStructuresModule(),
     createPlayerModule(),
-    createGrappleModule(),
     createWeaponModule(),
     createEnemiesModule(),
     createBossModule(),

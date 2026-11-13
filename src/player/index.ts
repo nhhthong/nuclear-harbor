@@ -5,7 +5,7 @@ import { PlayerController } from './PlayerController';
 
 /**
  * Player module (GDD 4, 4.2, T-01): Rapier kinematic capsule controller, mouse look and camera.
- * There is no jump: Space belongs to the grapple.
+ * Space jumps; one more jump is available in the air (double jump).
  */
 export function createPlayerModule(): GameModule {
   let ctx: GameContext;

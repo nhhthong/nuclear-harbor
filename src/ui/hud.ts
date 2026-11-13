@@ -119,9 +119,10 @@ export function createHud(ctx: GameContext, parent: HTMLElement): Hud {
   const promptBar = el(promptBox, 'div', 'nh-bar nh-hidden');
   const promptFill = el(promptBar, 'div', 'nh-fill');
 
-  // ---- grapple ----
-  const grapple = el(root, 'div', 'nh-grapple ready', 'G');
-  const grappleCell = new Cell(grapple, 'G');
+  // ---- air-jump indicator (lit while the mid-air jump is available) ----
+  const jumpPip = el(root, 'div', 'nh-jump ready', '');
+  const jumpCell = new Cell(jumpPip, '');
+  jumpCell.set('2x');
 
   // ---- toast ----
   const toast = el(root, 'div', 'nh-toast');
@@ -290,16 +291,13 @@ export function createHud(ctx: GameContext, parent: HTMLElement): Hud {
     const zone: HitZone = e.absorbed ? 'armor' : e.zone;
     flash(e.killed && !e.absorbed ? 'kill' : zone === 'core' ? 'weakpoint' : zone);
   });
-  on('grapple:cooldown', ({ remaining, total }) => {
-    const ready = remaining <= 0 || total <= 0;
-    const frac = ready ? 1 : Math.round((1 - remaining / total) * 50) / 50;
-    grapple.classList.toggle('ready', ready);
-    grapple.style.setProperty('--p', frac.toFixed(2));
-    grappleCell.set(ready ? 'G' : remaining.toFixed(1));
+  on('player:jumped', ({ airJumpsLeft }) => {
+    jumpPip.classList.toggle('ready', airJumpsLeft > 0);
+    jumpCell.set(airJumpsLeft > 0 ? '2x' : '');
   });
-  on('grapple:failed', ({ reason }) => {
-    if (reason === 'out-of-range') showToast('Out of grapple range', 1.2);
-    else if (reason === 'no-target' || reason === 'not-grappleable') showToast('No grapple target', 1.2);
+  on('player:landed', () => {
+    jumpPip.classList.add('ready');
+    jumpCell.set('2x');
   });
   on('tower:registered', (e) => {
     if (towers.has(e.towerId)) {
@@ -403,7 +401,7 @@ export function createHud(ctx: GameContext, parent: HTMLElement): Hud {
       compass: compass.classList.contains('nh-hidden') ? '' : compassCell.value,
       prompt: promptBox.classList.contains('nh-hidden') ? '' : promptCell.value,
       toast: toast.classList.contains('on') ? toastCell.value : '',
-      grapple: grappleCell.value,
+      jump: jumpCell.value,
       bossName: boss.classList.contains('nh-hidden') ? '' : bossName.value,
       bossCore: boss.classList.contains('nh-hidden') ? '' : bossCore.value,
       bossWeakPoints: boss.classList.contains('nh-hidden') ? '' : bossWp.value,

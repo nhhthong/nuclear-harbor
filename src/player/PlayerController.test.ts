@@ -74,27 +74,27 @@ afterEach(() => {
 const hSpeed = (p: PlayerState) => Math.hypot(p.velocity.x, p.velocity.z);
 
 describe('PlayerController', () => {
-  it('AC1: walks at 5 m/s, sprints at 7.5 m/s, diagonals are not faster', async () => {
+  it('AC1: walks and sprints at the tunable speeds, diagonals are not faster', async () => {
     const r = await makeRig();
     r.tick(30);
     r.input.handleCode('KeyW', true);
     r.tick(30);
-    expect(hSpeed(r.player)).toBeGreaterThan(5 * 0.97);
-    expect(hSpeed(r.player)).toBeLessThan(5 * 1.03);
+    expect(hSpeed(r.player)).toBeGreaterThan(PLAYER.walkSpeed * 0.97);
+    expect(hSpeed(r.player)).toBeLessThan(PLAYER.walkSpeed * 1.03);
     expect(r.player.grounded).toBe(true);
     expect(r.player.sprinting).toBe(false);
 
     r.input.handleCode('ShiftLeft', true);
     r.tick(30);
     expect(r.player.sprinting).toBe(true);
-    expect(hSpeed(r.player)).toBeGreaterThan(7.5 * 0.97);
-    expect(hSpeed(r.player)).toBeLessThan(7.5 * 1.03);
+    expect(hSpeed(r.player)).toBeGreaterThan(PLAYER.sprintSpeed * 0.97);
+    expect(hSpeed(r.player)).toBeLessThan(PLAYER.sprintSpeed * 1.03);
 
     r.input.handleCode('ShiftLeft', false);
     r.input.handleCode('KeyD', true);
     r.tick(30);
-    expect(hSpeed(r.player)).toBeLessThan(5 * 1.03);
-    expect(hSpeed(r.player)).toBeGreaterThan(5 * 0.97);
+    expect(hSpeed(r.player)).toBeLessThan(PLAYER.walkSpeed * 1.03);
+    expect(hSpeed(r.player)).toBeGreaterThan(PLAYER.walkSpeed * 0.97);
   });
 
   it('sprint requires moving forward', async () => {
@@ -210,13 +210,47 @@ describe('PlayerController', () => {
     expect(r.player.position.z).toBeCloseTo(30, 1);
   });
 
-  it('AC7: Space does not move the player vertically', async () => {
+  it('Space jumps about 1.9 m and a second press in the air reaches a container top', async () => {
+    const press = (r: Rig): void => {
+      r.input.handleCode('Space', true);
+      r.controller.update(DT, 1);
+      r.input.endFrame();
+      r.input.handleCode('Space', false);
+    };
     const r = await makeRig();
     r.tick(10);
-    r.input.handleCode('Space', true);
-    r.tick(30);
-    expect(r.player.position.y).toBeLessThan(0.1);
-    expect(r.player.velocity.y).toBeCloseTo(0);
+    const jumps: boolean[] = [];
+    r.events.on('player:jumped', (e) => jumps.push(e.air));
+    press(r);
+    let apex = 0;
+    for (let i = 0; i < 90; i++) {
+      r.tick(1);
+      apex = Math.max(apex, r.player.position.y);
+    }
+    expect(apex).toBeGreaterThan(1.7);
+    expect(apex).toBeLessThan(2.2);
+    expect(r.player.grounded).toBe(true);
+
+    // double jump: second press near the apex
+    press(r);
+    r.tick(22);
+    press(r);
+    let apex2 = 0;
+    for (let i = 0; i < 120; i++) {
+      r.tick(1);
+      apex2 = Math.max(apex2, r.player.position.y);
+    }
+    expect(apex2).toBeGreaterThan(3.1);
+    expect(apex2).toBeLessThan(4.0);
+    // a third press in the air does nothing; landing restores the air jump
+    expect(jumps).toEqual([false, false, true]);
+    press(r);
+    r.tick(5);
+    press(r);
+    r.tick(5);
+    press(r);
+    r.tick(120);
+    expect(jumps).toEqual([false, false, true, false, true]);
   });
 
   it('AC8: no movement or look while controls are locked or the player is dead', async () => {

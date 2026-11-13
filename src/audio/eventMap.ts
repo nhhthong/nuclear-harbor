@@ -46,10 +46,7 @@ export const EVENT_ROUTES = {
   'player:landed': (e) => ({ id: 'land', intensity: Math.min(1.5, e.impactSpeed / 8) }),
   'player:damaged': () => ({ id: 'hurt' }),
   'player:died': () => ({ id: 'death' }),
-  'grapple:fired': () => ({ id: 'grappleFire' }),
-  'grapple:attached': (e) => ({ id: 'grappleAttach', position: e.point }),
-  'grapple:released': (e) => (e.reason === 'death' ? null : { id: 'grappleRelease' }),
-  'grapple:failed': () => ({ id: 'grappleFail' }),
+  'player:jumped': (e) => ({ id: e.air ? 'airJump' : 'jump' }),
   'pickup:collected': (e) => ({ id: e.kind === 'medkit' ? 'pickupMedkit' : 'pickupAmmo' }),
   'combat:hit': (e) => {
     const armored = e.absorbed || e.zone === 'armor';

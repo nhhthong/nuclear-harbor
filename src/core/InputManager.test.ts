@@ -9,7 +9,7 @@ describe('InputManager', () => {
   it('uses the GDD defaults with R as a reload alias (REVIEW #1)', () => {
     expect(DEFAULT_BINDINGS.fire).toEqual(['Mouse0']);
     expect(DEFAULT_BINDINGS.reload).toEqual(['Mouse2', 'KeyR']);
-    expect(DEFAULT_BINDINGS.grapple).toEqual(['Space']);
+    expect(DEFAULT_BINDINGS.jump).toEqual(['Space']);
     expect(DEFAULT_BINDINGS.interact).toEqual(['KeyE']);
     expect(DEFAULT_BINDINGS.sprint).toContain('ShiftLeft');
   });

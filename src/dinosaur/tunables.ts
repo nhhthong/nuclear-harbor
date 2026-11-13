@@ -9,7 +9,7 @@ export const DINO = {
   /** Collision/avoidance radius of the body (m). */
   bodyRadius: 3.2,
   /** ticket: spawns when the player first comes this close to its tower (horizontal, m). */
-  triggerRadius: 35,
+  triggerRadius: 22,
   /** Number of guarded towers per run. */
   guardCount: 2,
   /** Distance from the tower where the dinosaur appears (m); the spot search rotates around it. */
@@ -17,12 +17,12 @@ export const DINO = {
   /** Free-space probe radius used by the spawn spot search (m). */
   spawnClearRadius: 4.5,
   /** Max distance from its guard spot (m). */
-  leashRadius: 30,
+  leashRadius: 24,
   walkSpeed: 4.2,
   /** Turn rate while walking (rad/s). */
   turnRate: 1.5,
   /** Detect/forget the player (m). */
-  aggroRange: 55,
+  aggroRange: 40,
   /** Pause after any skill before it may act again (s). */
   recover: 0.9,
   spawn: {
