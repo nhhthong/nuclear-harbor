@@ -1,6 +1,5 @@
 import { Color, Mesh, PlaneGeometry, ShaderMaterial, Vector3 } from 'three';
 import { SEA_LEVEL_Y } from '@/config/level';
-import { WORLD } from '@/config/tunables';
 import { WORLD_LOCAL } from './tunables';
 
 const vertex = /* glsl */ `
@@ -20,8 +19,7 @@ uniform vec3 uDeep;
 uniform vec3 uShallow;
 uniform vec3 uSunDir;
 uniform vec3 uFogColor;
-uniform float uFogNear;
-uniform float uFogFar;
+uniform float uFogDensity;
 varying vec3 vWorld;
 void main() {
   vec2 p = vWorld.xz;
@@ -38,9 +36,9 @@ void main() {
   float fres = pow(1.0 - max(dot(n, v), 0.0), 3.0);
   vec3 col = mix(uDeep, uShallow, clamp(fres * 0.9 + 0.12, 0.0, 1.0));
   vec3 h = normalize(uSunDir + v);
-  col += pow(max(dot(n, h), 0.0), 90.0) * vec3(1.0, 0.9, 0.7) * 0.7;
+  col += pow(max(dot(n, h), 0.0), 90.0) * vec3(0.6, 0.7, 0.95) * 0.35;
   float dist = length(cameraPosition - vWorld);
-  col = mix(col, uFogColor, smoothstep(uFogNear, uFogFar, dist));
+  col = mix(col, uFogColor, 1.0 - exp(-uFogDensity * uFogDensity * dist * dist));
   gl_FragColor = vec4(col, 1.0);
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
@@ -65,8 +63,7 @@ export function createOcean(sunDir: Vector3, fogColor: Color): Ocean {
       uShallow: { value: new Color(WORLD_LOCAL.ocean.shallow) },
       uSunDir: { value: sunDir.clone() },
       uFogColor: { value: fogColor.clone() },
-      uFogNear: { value: WORLD.fogNear },
-      uFogFar: { value: WORLD.fogFar },
+      uFogDensity: { value: WORLD_LOCAL.sky.fogDensity },
     },
   });
   const mesh = new Mesh(geometry, material);

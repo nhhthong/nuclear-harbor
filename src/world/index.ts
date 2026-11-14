@@ -1,64 +1,44 @@
-import {
-  BoxGeometry,
-  BufferGeometry,
-  Color,
-  InstancedMesh,
-  Matrix4,
-  Mesh,
-  MeshBasicMaterial,
-  MeshStandardMaterial,
-  Object3D,
-  PlaneGeometry,
-  PointLight,
-  RepeatWrapping,
-  Vector3,
-} from 'three';
+import { BoxGeometry, Color, Group, InstancedMesh, Mesh, MeshBasicMaterial, MeshStandardMaterial, Object3D, type PerspectiveCamera } from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { Collider } from '@dimforge/rapier3d-compat';
-import { CONTROL_CENTER_FOOTPRINT, LAND, WAREHOUSE_FOOTPRINT } from '@/config/level';
-import { WORLD } from '@/config/tunables';
+import { LAND, SHIP_BACKDROP } from '@/config/level';
+import { PERFORMANCE } from '@/config/tunables';
 import type { GameContext } from '@/core/GameContext';
 import type { GameModule } from '@/core/GameModule';
+import { FLOOD_LIGHTS } from '@/structures/layout';
 import { buildBarriers } from './barriers';
-import { buildControlCenter, buildWarehouse, type BuildingBox, type BuildingBoxKind } from './buildings';
+import { applyWeatheredPaint, createContainerMeshes } from './containerModel';
 import { generateContainerLayout } from './containerLayout';
+import { PlanarReflection, createWetGround } from './ground';
 import { createLighting } from './lighting';
 import { createOcean, type Ocean } from './ocean';
+import { createRain, type Rain } from './rain';
 import { createShip } from './ship';
-import { createConcreteTexture, createCorrugatedBump, createGroundRoughness, createWornRoughness } from './textures';
 import { WORLD_LOCAL } from './tunables';
 
 const MODULE_ID = 'world';
 
-function mergeBoxes(boxes: readonly BuildingBox[]): BufferGeometry {
-  const parts = boxes.map((b) => {
-    const g = new BoxGeometry(b.halfExtents.x * 2, b.halfExtents.y * 2, b.halfExtents.z * 2);
-    g.translate(b.center.x, b.center.y, b.center.z);
-    return g;
-  });
-  const merged = mergeGeometries(parts, false);
-  for (const p of parts) p.dispose();
-  return merged;
-}
-
 /**
- * Harbor greybox: ground, containers, warehouse, control center, ocean, ship backdrop and
- * lighting (GDD 7). Builds nothing in `?sandbox`.
+ * The night quay: wet ground with a planar reflection, modelled containers, kerb, ocean, the moored
+ * ship, rain, moonlight, lightning and the reflection probe. Builds nothing in `?sandbox`.
  */
 export function createWorldModule(): GameModule {
   let ocean: Ocean | null = null;
   let dome: Object3D | null = null;
-  let tickSky: ((dt: number) => void) | null = null;
-  let camera: Object3D | null = null;
+  let camera: PerspectiveCamera | null = null;
+  let rain: Rain | null = null;
+  let tickSky: ((dt: number) => number) | null = null;
+  let groundTime: { value: number } | null = null;
   let res: ReturnType<GameContext['resources']['scope']> | null = null;
-  let anchorIds: string[] = [];
   let colliders: Collider[] = [];
+  let ctxRef: GameContext | null = null;
 
   return {
     id: MODULE_ID,
 
     init(ctx) {
       if (ctx.flags.sandbox) return;
+      ctxRef = ctx;
       camera = ctx.camera;
       const scope = ctx.resources.scope(MODULE_ID);
       res = scope;
@@ -67,68 +47,62 @@ export function createWorldModule(): GameModule {
         colliders.push(c);
       };
 
-      // ---- lighting, sky, fog -------------------------------------------------------------
-      const lighting = createLighting(ctx);
+      // ---- lighting, sky, fog, reflection probe ------------------------------------------------
+      const lighting = createLighting(
+        ctx,
+        FLOOD_LIGHTS.map((f) => ({ x: f.x, y: f.height, z: f.z, color: f.color })),
+      );
       scene.userData.hasWorldLighting = true;
-      scope.track(lighting.sun);
+      scope.track(lighting.moon);
       scope.track(lighting.hemi);
       scope.track(lighting.dome);
-      scene.add(lighting.sun, lighting.sun.target, lighting.hemi, lighting.dome);
+      scene.add(lighting.moon, lighting.moon.target, lighting.hemi, lighting.dome);
       dome = lighting.dome;
       tickSky = lighting.update;
       scope.onDispose(() => {
-        lighting.sun.shadow.map?.dispose();
-        lighting.sun.shadow.dispose();
-        lighting.sun.target.removeFromParent();
+        lighting.moon.shadow.map?.dispose();
+        lighting.moon.shadow.dispose();
+        lighting.moon.target.removeFromParent();
         scene.fog = null;
         scene.background = null;
         scene.environment = null;
         lighting.environment?.dispose();
         scene.userData.hasWorldLighting = false;
       });
-      scope.onDispose(
-        ctx.events.on('settings:changed', ({ key }) => {
-          if (key === 'quality') lighting.setQuality(ctx.settings.get('quality'));
-        }),
-      );
 
-      // ---- ground ---------------------------------------------------------------------------
+      // ---- containers ----------------------------------------------------------------------------
+      const layout = generateContainerLayout();
+      const lanesX = layout.lanes.filter((l) => l.axis === 'z').map((l) => l.start.x);
+      const containers = createContainerMeshes(
+        layout.instances.map((c, i) => ({
+          x: c.x,
+          y: c.y,
+          z: c.z,
+          yaw: c.yaw,
+          color: WORLD_LOCAL.containerColors[c.colorIndex] ?? 0x888888,
+          seed: ((i * 2654435761) >>> 0) / 4294967296,
+        })),
+      );
+      for (const m of [containers.body, containers.hardware, containers.liveries]) {
+        scope.track(m);
+        scene.add(m);
+      }
+      for (const b of layout.boxes) {
+        addCollider(ctx.physics.addStaticBox({ center: b.center, halfExtents: b.halfExtents, meta: { kind: 'static' } }));
+      }
+      const containerColliderCount = layout.boxes.length;
+
+      // ---- wet ground with planar reflection -----------------------------------------------------
       const landW = LAND.maxX - LAND.minX;
       const landD = LAND.maxZ - LAND.minZ;
       const landCx = (LAND.minX + LAND.maxX) / 2;
       const landCz = (LAND.minZ + LAND.maxZ) / 2;
-      const concrete = createConcreteTexture();
-      concrete.repeat.set(landW / WORLD_LOCAL.concreteTileMeters, landD / WORLD_LOCAL.concreteTileMeters);
-      const groundRough = createGroundRoughness();
-      // a different period than the colour tile hides the repetition of the puddles
-      groundRough.repeat.set(landW / (WORLD_LOCAL.concreteTileMeters * 1.7), landD / (WORLD_LOCAL.concreteTileMeters * 1.7));
-      concrete.wrapS = RepeatWrapping;
-      concrete.wrapT = RepeatWrapping;
-      const ground = new Mesh(
-        new PlaneGeometry(landW, landD).rotateX(-Math.PI / 2),
-        new MeshStandardMaterial({ map: concrete, roughnessMap: groundRough, roughness: 1, metalness: 0, envMapIntensity: 1.15 }),
-      );
-      ground.name = 'ground';
-      ground.position.set(landCx, 0, landCz);
-      ground.receiveShadow = true;
-      // solid body below the surface so the quay wall is visible down to the water
-      const quayBody = new Mesh(
-        new BoxGeometry(landW, 6, landD),
-        new MeshStandardMaterial({ color: WORLD_LOCAL.colors.quayWall, roughness: 1 }),
-      );
-      quayBody.name = 'quay-body';
-      quayBody.position.set(landCx, -3.02, landCz);
-      // thin painted edge at the dock edge
-      const edge = new Mesh(
-        new BoxGeometry(landW, 0.03, 0.5),
-        new MeshStandardMaterial({ color: WORLD_LOCAL.colors.quay, roughness: 0.8 }),
-      );
-      edge.name = 'quay-edge';
-      edge.position.set(landCx, 0.02, LAND.minZ + 0.45);
-      scope.track(ground);
-      scope.track(quayBody);
-      scope.track(edge);
-      scene.add(ground, quayBody, edge);
+      const reflection = new PlanarReflection(WORLD_LOCAL.ground.reflectionScale);
+      const ground = createWetGround(reflection, lanesX);
+      groundTime = ground.uniforms.uTime;
+      scope.track(ground.mesh);
+      scene.add(ground.mesh);
+      scope.onDispose(() => reflection.dispose());
       addCollider(
         ctx.physics.addStaticBox({
           center: { x: landCx, y: -1, z: landCz },
@@ -136,163 +110,111 @@ export function createWorldModule(): GameModule {
           meta: { kind: 'static' },
         }),
       );
+      // quay wall down to the water, with fenders
+      const quayMat = new MeshStandardMaterial({ color: 0x4c4f50, roughness: 0.7, metalness: 0 });
+      applyWeatheredPaint(quayMat, { bottomY: -3, height: 3, wear: 0.9, key: 'quay' });
+      const quayBody = new Mesh(new BoxGeometry(landW, 6, landD), quayMat);
+      quayBody.name = 'quay-body';
+      quayBody.position.set(landCx, -3.02, landCz);
+      scope.track(quayBody);
+      scene.add(quayBody);
 
-      // ---- containers -------------------------------------------------------------------------
-      const layout = generateContainerLayout();
-      // painted corrugated steel: ribs as a bump map, scuffed paint as roughness, sky reflections
-      const ribs = createCorrugatedBump();
-      const worn = createWornRoughness();
-      const containerMat = new MeshStandardMaterial({
-        color: 0xffffff,
-        roughness: 0.9,
-        roughnessMap: worn,
-        metalness: 0.55,
-        bumpMap: ribs,
-        bumpScale: 2.2,
-      });
-      const containers = new InstancedMesh(
-        new BoxGeometry(WORLD.container.length, WORLD.container.height, WORLD.container.width),
-        containerMat,
-        layout.instances.length,
-      );
-      containers.name = 'containers';
-      const m = new Matrix4();
-      const obj = new Object3D();
-      const color = new Color();
-      layout.instances.forEach((c, i) => {
-        obj.position.set(c.x, c.y, c.z);
-        obj.rotation.set(0, c.yaw, 0);
-        obj.updateMatrix();
-        m.copy(obj.matrix);
-        containers.setMatrixAt(i, m);
-        color.setHex(WORLD_LOCAL.containerColors[c.colorIndex] ?? 0x888888);
-        containers.setColorAt(i, color);
-      });
-      containers.instanceMatrix.needsUpdate = true;
-      if (containers.instanceColor) containers.instanceColor.needsUpdate = true;
-      containers.computeBoundingSphere();
-      containers.castShadow = true;
-      containers.receiveShadow = true;
-      scope.track(containers);
-      scene.add(containers);
-      for (const b of layout.boxes) {
-        addCollider(
-          ctx.physics.addStaticBox({
-            center: b.center,
-            halfExtents: b.halfExtents,
-            meta: b.grappleable ? { kind: 'static', grappleable: true } : { kind: 'static' },
-          }),
-        );
-      }
-      const containerColliderCount = layout.boxes.length;
-      layout.stackTops.forEach((t, i) => {
-        const id = `container-top-${i}`;
-        const position = new Vector3(t.x, t.y, t.z);
-        ctx.grappleAnchors.add({ id, kind: 'container-top', position, landing: position.clone(), zone: t.zone });
-        anchorIds.push(id);
-      });
-
-      // ---- warehouse and control center ---------------------------------------------------------
-      const warehouse = buildWarehouse();
-      const control = buildControlCenter();
-      const allBuilding = [...warehouse.boxes, ...control];
-      for (const b of allBuilding) {
-        addCollider(ctx.physics.addStaticBox({ center: b.center, halfExtents: b.halfExtents, meta: { kind: 'static' } }));
-      }
-      const materials: Record<BuildingBoxKind, number> = {
-        wall: WORLD_LOCAL.colors.wall,
-        roof: WORLD_LOCAL.colors.roof,
-        shelf: WORLD_LOCAL.colors.shelf,
-        control: WORLD_LOCAL.colors.control,
-        controlUpper: WORLD_LOCAL.colors.controlUpper,
-      };
-      (Object.keys(materials) as BuildingBoxKind[]).forEach((kind) => {
-        const boxes = allBuilding.filter((b) => b.kind === kind);
-        if (boxes.length === 0) return;
-        const clad = kind === 'wall' || kind === 'roof' || kind === 'control';
-        const mesh = new Mesh(
-          mergeBoxes(boxes),
-          new MeshStandardMaterial({
-            color: materials[kind],
-            roughness: clad ? 0.62 : 0.8,
-            metalness: clad ? 0.45 : kind === 'controlUpper' ? 0.7 : 0.1,
-            ...(clad ? { bumpMap: ribs, bumpScale: 1.4, roughnessMap: worn } : {}),
-          }),
-        );
-        mesh.name = `building-${kind}`;
-        mesh.castShadow = true;
-        mesh.receiveShadow = true;
-        scope.track(mesh);
-        scene.add(mesh);
-      });
-      // dim interior floor patch (the roof blocks the sun, this reads as a darker hall)
-      const f = WAREHOUSE_FOOTPRINT;
-      const interior = new Mesh(
-        new PlaneGeometry(f.maxX - f.minX - 2, f.maxZ - f.minZ - 2).rotateX(-Math.PI / 2),
-        new MeshStandardMaterial({ color: WORLD_LOCAL.warehouseLights.floorColor, roughness: 1 }),
-      );
-      interior.name = 'warehouse-floor';
-      interior.position.set((f.minX + f.maxX) / 2, 0.02, (f.minZ + f.maxZ) / 2);
-      interior.receiveShadow = true;
-      scope.track(interior);
-      scene.add(interior);
-
-      // interior lighting (T-17): unshadowed point lights + emissive ceiling strips, no new shadow casters
-      const wl = WORLD_LOCAL.warehouseLights;
-      for (const x of wl.xs) {
-        const lamp = new PointLight(wl.color, wl.intensity, wl.distance, wl.decay);
-        lamp.name = 'warehouse-lamp';
-        lamp.position.set(x, wl.y, wl.z);
-        lamp.castShadow = false;
-        scope.track(lamp);
-        scene.add(lamp);
-      }
-      const stripBoxes: BuildingBox[] = [];
-      for (const z of wl.stripZs) {
-        for (const x of wl.stripXs) {
-          stripBoxes.push({
-            center: { x, y: f.height - 0.08, z },
-            halfExtents: { x: wl.stripLength / 2, y: 0.05, z: wl.stripWidth / 2 },
-            kind: 'roof',
-          });
-        }
-      }
-      const strips = new Mesh(mergeBoxes(stripBoxes), new MeshBasicMaterial({ color: wl.stripColor, fog: false }));
-      strips.name = 'warehouse-light-strips';
-      scope.track(strips);
-      scene.add(strips);
-
-      // ---- level-closing walls (perimeter parapet, blast walls, invisible blockers) -----------------
+      // ---- kerb (visible) and invisible blockers -------------------------------------------------
       const barriers = buildBarriers();
       for (const b of barriers) {
         addCollider(ctx.physics.addStaticBox({ center: b.center, halfExtents: b.halfExtents, meta: { kind: 'static' } }));
       }
-      for (const kind of ['parapet', 'blast'] as const) {
-        const boxes = barriers.filter((b) => b.kind === kind);
-        const mesh = new Mesh(
-          mergeBoxes(boxes.map((b) => ({ ...b, kind: 'wall' as const }))),
-          new MeshStandardMaterial({
-            color: kind === 'parapet' ? WORLD_LOCAL.barriers.parapetColor : WORLD_LOCAL.barriers.blastColor,
-            roughness: 0.85,
-            metalness: 0.05,
-          }),
-        );
-        mesh.name = `barrier-${kind}`;
-        mesh.castShadow = kind === 'blast';
-        mesh.receiveShadow = true;
-        scope.track(mesh);
-        scene.add(mesh);
-      }
+      const kerbParts = barriers
+        .filter((b) => b.kind === 'parapet')
+        .map((b) => new BoxGeometry(b.halfExtents.x * 2, b.halfExtents.y * 2, b.halfExtents.z * 2).translate(b.center.x, b.center.y, b.center.z));
+      const kerbMat = new MeshStandardMaterial({ color: WORLD_LOCAL.barriers.parapetColor, roughness: 0.65, metalness: 0 });
+      applyWeatheredPaint(kerbMat, { bottomY: 0, height: WORLD_LOCAL.barriers.parapetHeight, wear: 0.35, key: 'kerb' });
+      const kerb = new Mesh(mergeGeometries(kerbParts, false), kerbMat);
+      for (const p of kerbParts) p.dispose();
+      kerb.name = 'kerb';
+      kerb.castShadow = true;
+      kerb.receiveShadow = true;
+      scope.track(kerb);
+      scene.add(kerb);
 
-      // ---- ocean and ship backdrop ----------------------------------------------------------------
-      ocean = createOcean(lighting.sunDir, lighting.fogColor);
+      // ---- ocean, ship backdrop with lit windows ------------------------------------------------
+      ocean = createOcean(lighting.moonDir, lighting.fogColor);
       scope.track(ocean.mesh);
       scene.add(ocean.mesh);
-      const ship = createShip();
+      const ship = new Group();
+      ship.name = 'ship';
+      ship.position.set(SHIP_BACKDROP.position.x, SHIP_BACKDROP.position.y, SHIP_BACKDROP.position.z);
+      ship.rotation.y = SHIP_BACKDROP.yaw;
+      const hull = createShip();
+      hull.position.set(0, 0, 0);
+      hull.rotation.set(0, 0, 0);
+      ship.add(hull);
+      const sh = WORLD_LOCAL.ship;
+      const deckY = sh.hullBottom + sh.hullDepth;
+      const lightMat = new MeshBasicMaterial({ color: 0xffffff });
+      lightMat.color.setRGB(4.5, 3.6, 2.2);
+      const winGeo = new BoxGeometry(0.9, 0.7, 0.2);
+      const slots: Array<[number, number, number]> = [];
+      for (let row = 0; row < 5; row++) {
+        for (let col = 0; col < 9; col++) {
+          if ((row * 7 + col * 13) % 5 === 0) continue; // dark cabins
+          slots.push([-sh.length / 2 + 8 + col * 2.9, deckY + 4 + row * 3.6, sh.beam / 2 - 3 + 0.05]);
+        }
+      }
+      // deck flood lights along the container bays
+      for (let i = 0; i < 6; i++) slots.push([-sh.length / 2 + 50 + i * 20, deckY + 13, 0]);
+      const windows = new InstancedMesh(winGeo, lightMat, slots.length);
+      const o = new Object3D();
+      slots.forEach(([x, y, z], i) => {
+        o.position.set(x, y, z);
+        o.updateMatrix();
+        windows.setMatrixAt(i, o.matrix);
+      });
+      windows.instanceMatrix.needsUpdate = true;
+      windows.name = 'ship-lights';
+      ship.add(windows);
       scope.track(ship);
       scene.add(ship);
 
-      // ---- bookkeeping ------------------------------------------------------------------------------
+      // ---- rain ----------------------------------------------------------------------------------
+      rain = createRain();
+      for (const obj of rain.objects) {
+        scope.track(obj);
+        scene.add(obj);
+      }
+
+      // ---- planar reflection pass, before the main render ----------------------------------------
+      let hidden: Object3D[] | null = null;
+      const applyQuality = (): void => {
+        const q = PERFORMANCE.quality[ctx.settings.get('quality')];
+        reflection.enabled = q.reflections;
+        ground.uniforms.uReflOn.value = q.reflections ? 1 : 0;
+        lighting.setQuality(ctx.settings.get('quality'));
+      };
+      applyQuality();
+      scope.onDispose(
+        ctx.events.on('settings:changed', ({ key }) => {
+          if (key === 'quality') applyQuality();
+        }),
+      );
+      const preRender = (): void => {
+        if (!reflection.enabled || !camera) return;
+        if (!hidden) {
+          // the ground itself, rain, the first-person rig and anything flagged `noReflect` (light beams)
+          hidden = [ground.mesh, camera, ...(rain?.objects ?? [])];
+          scene.traverse((node) => {
+            if (node.userData.noReflect === true) hidden?.push(node);
+          });
+        }
+        reflection.render(ctx.renderer.webgl, scene, camera, hidden);
+      };
+      ctx.renderer.preRender.push(preRender);
+      scope.onDispose(() => {
+        const i = ctx.renderer.preRender.indexOf(preRender);
+        if (i >= 0) ctx.renderer.preRender.splice(i, 1);
+      });
+
+      // ---- bookkeeping ---------------------------------------------------------------------------
       scope.onDispose(() => {
         for (const c of colliders) {
           try {
@@ -302,8 +224,6 @@ export function createWorldModule(): GameModule {
           }
         }
         colliders = [];
-        for (const id of anchorIds) ctx.grappleAnchors.remove(id);
-        anchorIds = [];
         delete ctx.testHooks[MODULE_ID];
       });
 
@@ -311,17 +231,20 @@ export function createWorldModule(): GameModule {
         containerCount: layout.instances.length,
         colliderCount: colliders.length,
         containerColliderCount,
-        anchorCount: anchorIds.length,
         lanes: layout.lanes,
-        corridor: warehouse.corridor,
-        controlCenter: CONTROL_CENTER_FOOTPRINT,
+        fogColor: new Color(WORLD_LOCAL.sky.fog).getHex(),
       };
     },
 
     update(dt) {
       if (ocean) (ocean.material.uniforms.uTime as { value: number }).value += dt;
       if (dome && camera) dome.position.copy(camera.position);
-      tickSky?.(dt);
+      const flash = tickSky ? tickSky(dt) : 0;
+      if (groundTime) groundTime.value += dt;
+      if (rain && camera && ctxRef) {
+        const h = ctxRef.renderer.webgl.domElement.height;
+        rain.update(dt, camera.position.x, camera.position.y, camera.position.z, flash, h, camera.fov);
+      }
     },
 
     dispose() {
@@ -329,8 +252,11 @@ export function createWorldModule(): GameModule {
       res = null;
       ocean = null;
       dome = null;
-      tickSky = null;
       camera = null;
+      rain = null;
+      tickSky = null;
+      groundTime = null;
+      ctxRef = null;
     },
   };
 }

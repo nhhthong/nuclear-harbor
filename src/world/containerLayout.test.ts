@@ -31,12 +31,9 @@ describe('generateContainerLayout', () => {
     expect(generateContainerLayout({ seed: 8 }).instances).not.toEqual(generateContainerLayout({ seed: 7 }).instances);
   });
 
-  it('places 80-200 containers in zone A and sparse clusters in B and D', () => {
-    expect(layout.zoneCounts.A).toBeGreaterThanOrEqual(80);
-    expect(layout.zoneCounts.A).toBeLessThanOrEqual(200);
-    expect(layout.zoneCounts.B).toBeGreaterThan(0);
-    expect(layout.zoneCounts.D).toBeGreaterThan(0);
-    expect(layout.zoneCounts.B).toBeLessThan(layout.zoneCounts.A / 2);
+  it('places 60-140 containers in the yard', () => {
+    expect(layout.zoneCounts.A).toBeGreaterThanOrEqual(60);
+    expect(layout.zoneCounts.A).toBeLessThanOrEqual(140);
   });
 
   it('keeps stacks within 1..maxContainerStack and flags exactly one top per stack', () => {
@@ -99,7 +96,7 @@ describe('generateContainerLayout', () => {
     }
   });
 
-  it('provides >= 3 straight lanes >= 30 m long and >= 6 m wide, free of colliders', () => {
+  it('provides >= 3 straight lanes >= 24 m long and >= 6 m wide, free of colliders', () => {
     const good = layout.lanes.filter(
       (l) => l.length >= WORLD_LOCAL.lane.minLength && l.width >= WORLD.chargerLaneWidth,
     );

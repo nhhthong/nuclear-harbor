@@ -122,11 +122,11 @@ export const WEAPON = {
 /** GDD 5.4 */
 export const ECONOMY = {
   ammoCrateAmount: 30,
-  ammoCratesInZones: 14,
-  ammoCratesInBossArena: 8,
+  ammoCratesInZones: 6,
+  ammoCratesInBossArena: 6,
   medkitHeal: 40,
-  medkitsInZones: 10,
-  medkitsInBossArena: 3,
+  medkitsInZones: 3,
+  medkitsInBossArena: 2,
   /** GDD 5.4: chance for a destroyed robot to drop ammo. */
   enemyAmmoDropChance: 0.15,
   /** proposed: size of an enemy drop. */
@@ -143,10 +143,10 @@ export const ECONOMY = {
 
 export const ENEMY_COUNTS = {
   /** GDD 6 */
-  army: 14,
-  spot: 10,
-  duck: 6,
-  total: 30,
+  army: 3,
+  spot: 3,
+  duck: 2,
+  total: 8,
 } as const;
 
 /**
@@ -199,10 +199,10 @@ export const AI_SCHEDULING = {
 
 /** GDD 8.1 / 8.2 */
 export const OBJECTIVES = {
-  towerCount: 4,
+  towerCount: 1,
   interactRange: 2,
   activationHoldSeconds: 5,
-  countdownSeconds: 20 * 60,
+  countdownSeconds: 8 * 60,
   /** proposed (REVIEW #6): defend phase pulls existing robots of the zone, no extra spawns. */
   defendPullRadius: 40,
   /**
@@ -244,13 +244,15 @@ export const PERFORMANCE = {
   maxTriangles: 1_500_000,
   jsHeapWarnMb: 512,
   /** Bloom post-process (medium/high presets): only HDR-bright pixels (emissives, muzzle flash, sun glints) glow. */
-  bloom: { strength: 0.3, radius: 0.5, threshold: 1.0, msaaSamples: 4 },
+  bloom: { strength: 0.55, radius: 0.7, threshold: 0.9, msaaSamples: 4 },
+  /** Final grade (display space): vignette, film grain, chromatic aberration, lift/gain tint. */
+  grade: { vignette: 0.4, grain: 0.03, aberration: 0.0005, exposure: 1.3 },
   quality: {
     // T-17: fogFraction = [near, far] as a share of viewDistance; dynamicShadowHz = refresh rate of the
     // otherwise static sun shadow for moving casters (0 = static only).
-    low: { pixelRatioCap: 1, shadowMapSize: 1024, shadows: false, viewDistance: 300, fogFraction: [0.18, 0.95], dynamicShadowHz: 0, bloom: false },
-    medium: { pixelRatioCap: 1.5, shadowMapSize: 2048, shadows: true, viewDistance: 450, fogFraction: [0.18, 0.95], dynamicShadowHz: 6, bloom: true },
-    high: { pixelRatioCap: 2, shadowMapSize: 4096, shadows: true, viewDistance: 600, fogFraction: [0.18, 0.95], dynamicShadowHz: 12, bloom: true },
+    low: { pixelRatioCap: 1, shadowMapSize: 1024, shadows: false, viewDistance: 300, fogFraction: [0.18, 0.95], dynamicShadowHz: 0, bloom: false, reflections: false, ao: false },
+    medium: { pixelRatioCap: 1.5, shadowMapSize: 2048, shadows: true, viewDistance: 450, fogFraction: [0.18, 0.95], dynamicShadowHz: 6, bloom: true, reflections: true, ao: false },
+    high: { pixelRatioCap: 2, shadowMapSize: 4096, shadows: true, viewDistance: 600, fogFraction: [0.18, 0.95], dynamicShadowHz: 12, bloom: true, reflections: true, ao: true },
   },
 } as const;
 
@@ -262,8 +264,8 @@ export const WORLD = {
   /** GDD 6.3: Duck lanes. */
   chargerLaneWidth: 6,
   /** GDD 7.4 */
-  craneCountMin: 5,
-  craneCountMax: 6,
+  craneCountMin: 1,
+  craneCountMax: 1,
   /** GDD 7.2: 07:00 morning sun. */
   sunElevationDeg: 18,
   sunAzimuthDeg: 105,

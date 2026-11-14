@@ -6,7 +6,7 @@ import {
   LoopOnce,
   LoopRepeat,
   Mesh,
-  MeshBasicMaterial,
+  MeshStandardMaterial,
   type Material,
   type Object3D,
   SkinnedMesh,
@@ -93,11 +93,15 @@ export class GlbViewModel implements ViewModel {
     this.syncAttachments();
   }
 
-  /** The converted textures are lit already; render them unlit to keep the look and the cost low. */
+  /**
+   * Lit material so the rifle and hands pick up the scene's lamps, moonlight and muzzle flash. A faint
+   * self-illumination from the same texture keeps them readable in unlit corners.
+   */
   private useUnlitMaterial(mesh: Mesh): void {
-    const old = mesh.material as Material & { map?: MeshBasicMaterial['map'] };
-    const basic = new MeshBasicMaterial({ map: old.map ?? null });
-    mesh.material = basic;
+    const old = mesh.material as Material & { map?: MeshStandardMaterial['map'] };
+    const map = old.map ?? null;
+    const lit = new MeshStandardMaterial({ map, roughness: 0.55, metalness: 0.2, emissiveMap: map, emissive: 0xffffff, emissiveIntensity: 0.06 });
+    mesh.material = lit;
     old.dispose();
   }
 

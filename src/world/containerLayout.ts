@@ -1,5 +1,4 @@
 import {
-  CONTROL_CENTER_FOOTPRINT,
   KEEP_CLEAR,
   ZONES,
   type ZoneId,
@@ -285,8 +284,6 @@ function generateClusters(
   const zone = ZONES[zoneId];
   const cfg = WORLD_LOCAL.clusters;
   const target = cfg[zoneId].count;
-  const cc = CONTROL_CENTER_FOOTPRINT;
-  const ccRect: Rect = { minX: cc.minX, maxX: cc.maxX, minZ: cc.minZ, maxZ: cc.maxZ };
   let placed = 0;
   for (let attempt = 0; attempt < cfg.attempts && placed < target; attempt++) {
     const alongZ = rng() < 0.5;
@@ -318,7 +315,6 @@ function generateClusters(
     if (candidate.some((run) => trimToKeepClear(run).length !== 1 || trimToKeepClear(run)[0]?.cells !== run.cells)) continue;
     if (rectHitsKeepClear((bounds.minX + bounds.maxX) / 2, (bounds.minZ + bounds.maxZ) / 2, (bounds.maxX - bounds.minX) / 2 + 3, (bounds.maxZ - bounds.minZ) / 2 + 3, 0)) continue;
     if (existing.some((e) => rectsOverlap(bounds, e, cfg.margin))) continue;
-    if (rectsOverlap(bounds, ccRect, cfg.margin + 1)) continue;
     existing.push(bounds);
     for (const run of candidate) {
       runs.push(run);
