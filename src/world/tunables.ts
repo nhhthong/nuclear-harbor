@@ -1,4 +1,4 @@
-/** Feature-local numbers for the night quay. Shared numbers live in `@/config/tunables`. */
+/** Feature-local numbers for the quay at sunset. Shared numbers live in `@/config/tunables`. */
 export const WORLD_LOCAL = {
   /** Seed of the deterministic layout generator. */
   seed: 20261112,
@@ -45,33 +45,28 @@ export const WORLD_LOCAL = {
     blockerHeight: 40,
     parapetColor: 0x8d9296,
   },
-  ocean: { size: 1600, deep: 0x02070c, shallow: 0x0d2230, waveSpeed: 0.5 },
-  /** Night, overcast, raining. Colours are sRGB hex. */
+  ocean: { size: 1600, deep: 0x0b2030, shallow: 0x6b5a5c, waveSpeed: 0.5 },
+  /** Sunset after rain: low warm sun, pink-orange horizon, violet zenith, light haze. Colours are sRGB hex. */
   sky: {
-    horizon: 0x161d2b,
-    zenith: 0x04060b,
-    /** Sodium glow of the city behind the port, low on the southern horizon. */
-    cityGlow: 0x5a3414,
-    moonTint: 0x9fb4dc,
+    horizon: 0xf2a268,
+    zenith: 0x2c3a6e,
+    /** Colour of the band opposite the sun (the "anti-twilight" side), so no direction is black. */
+    antiSun: 0x7a6f9a,
+    sunTint: 0xffb070,
     /** Colour below the horizon (reflection probe only). */
-    ground: 0x06080b,
-    fog: 0x0a0f17,
-    fogDensity: 0.011,
+    ground: 0x3a3230,
+    fog: 0xc79a86,
+    fogDensity: 0.0052,
     /** Must stay inside the far plane of every quality preset (low = 300 m) or the dome is clipped. */
     radius: 260,
-    environmentIntensity: 1.0,
+    environmentIntensity: 1.25,
   },
-  /** Moon: the only directional light and the only light whose shadow covers the whole level. */
-  moon: { color: 0x8ea6d6, intensity: 0.5, elevationDeg: 42, azimuthDeg: 300, distance: 220, frustumHalf: 62 },
-  hemi: { sky: 0x2a3650, ground: 0x15120f, intensity: 0.55 },
-  /** Lightning: seconds between strikes (random in the range) and flash strength. */
-  lightning: { minGap: 9, maxGap: 22, strength: 2.6, duration: 0.5 },
+  /** The sun is the only real light in the level (performance): one shadow map, no spot lights. */
+  sun: { color: 0xffa868, intensity: 3.4, elevationDeg: 11, azimuthDeg: 248, distance: 220, frustumHalf: 66 },
+  hemi: { sky: 0x9aa2d0, ground: 0x6a4a38, intensity: 1.35 },
   ground: {
-    asphalt: 0x23252a,
-    /** Planar reflection render target scale relative to the drawing buffer. */
-    reflectionScale: 0.5,
+    asphalt: 0x2a2c30,
   },
-  rain: { streaks: 7000, boxSize: 44, boxHeight: 26, speed: 26, windX: 3.5, windZ: -1.5, length: 0.9, splashes: 1400 },
   /** Ship backdrop. */
   ship: { length: 170, beam: 30, hullDepth: 14, hullBottom: -4 },
   /** Player collision radius used by pure path checks (m). */

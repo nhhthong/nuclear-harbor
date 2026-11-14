@@ -244,15 +244,15 @@ export const PERFORMANCE = {
   maxTriangles: 1_500_000,
   jsHeapWarnMb: 512,
   /** Bloom post-process (medium/high presets): only HDR-bright pixels (emissives, muzzle flash, sun glints) glow. */
-  bloom: { strength: 0.55, radius: 0.7, threshold: 0.9, msaaSamples: 4 },
+  bloom: { strength: 0.4, radius: 0.6, threshold: 1.0, msaaSamples: 4 },
   /** Final grade (display space): vignette, film grain, chromatic aberration, lift/gain tint. */
-  grade: { vignette: 0.4, grain: 0.03, aberration: 0.0005, exposure: 1.3 },
+  grade: { vignette: 0.32, grain: 0.02, aberration: 0.0004, exposure: 1.0 },
   quality: {
     // T-17: fogFraction = [near, far] as a share of viewDistance; dynamicShadowHz = refresh rate of the
     // otherwise static sun shadow for moving casters (0 = static only).
-    low: { pixelRatioCap: 1, shadowMapSize: 1024, shadows: false, viewDistance: 300, fogFraction: [0.18, 0.95], dynamicShadowHz: 0, bloom: false, reflections: false, ao: false },
-    medium: { pixelRatioCap: 1.5, shadowMapSize: 2048, shadows: true, viewDistance: 450, fogFraction: [0.18, 0.95], dynamicShadowHz: 6, bloom: true, reflections: true, ao: false },
-    high: { pixelRatioCap: 2, shadowMapSize: 4096, shadows: true, viewDistance: 600, fogFraction: [0.18, 0.95], dynamicShadowHz: 12, bloom: true, reflections: true, ao: true },
+    low: { pixelRatioCap: 1, shadowMapSize: 1024, shadows: false, viewDistance: 300, fogFraction: [0.18, 0.95], dynamicShadowHz: 0, bloom: false, reflections: false, reflectionScale: 0.3, reflectionEvery: 2, ao: false },
+    medium: { pixelRatioCap: 1.5, shadowMapSize: 2048, shadows: true, viewDistance: 450, fogFraction: [0.18, 0.95], dynamicShadowHz: 6, bloom: true, reflections: true, reflectionScale: 0.33, reflectionEvery: 2, ao: false },
+    high: { pixelRatioCap: 2, shadowMapSize: 4096, shadows: true, viewDistance: 600, fogFraction: [0.18, 0.95], dynamicShadowHz: 12, bloom: true, reflections: true, reflectionScale: 0.5, reflectionEvery: 1, ao: true },
   },
 } as const;
 

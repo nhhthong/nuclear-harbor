@@ -5,40 +5,35 @@ import { LAND, SHIP_BACKDROP } from '@/config/level';
 import { PERFORMANCE } from '@/config/tunables';
 import type { GameContext } from '@/core/GameContext';
 import type { GameModule } from '@/core/GameModule';
-import { FLOOD_LIGHTS } from '@/structures/layout';
 import { buildBarriers } from './barriers';
 import { applyWeatheredPaint, createContainerMeshes } from './containerModel';
 import { generateContainerLayout } from './containerLayout';
 import { PlanarReflection, createWetGround } from './ground';
 import { createLighting } from './lighting';
 import { createOcean, type Ocean } from './ocean';
-import { createRain, type Rain } from './rain';
 import { createShip } from './ship';
 import { WORLD_LOCAL } from './tunables';
 
 const MODULE_ID = 'world';
 
 /**
- * The night quay: wet ground with a planar reflection, modelled containers, kerb, ocean, the moored
- * ship, rain, moonlight, lightning and the reflection probe. Builds nothing in `?sandbox`.
+ * The quay at sunset, still wet from the rain: wet ground with a planar reflection, modelled
+ * containers, kerb, ocean, the moored ship, the low sun and the sky reflection probe. Builds nothing in `?sandbox`.
  */
 export function createWorldModule(): GameModule {
   let ocean: Ocean | null = null;
   let dome: Object3D | null = null;
   let camera: PerspectiveCamera | null = null;
-  let rain: Rain | null = null;
-  let tickSky: ((dt: number) => number) | null = null;
+  let tickSky: ((dt: number) => void) | null = null;
   let groundTime: { value: number } | null = null;
   let res: ReturnType<GameContext['resources']['scope']> | null = null;
   let colliders: Collider[] = [];
-  let ctxRef: GameContext | null = null;
 
   return {
     id: MODULE_ID,
 
     init(ctx) {
       if (ctx.flags.sandbox) return;
-      ctxRef = ctx;
       camera = ctx.camera;
       const scope = ctx.resources.scope(MODULE_ID);
       res = scope;
@@ -48,21 +43,18 @@ export function createWorldModule(): GameModule {
       };
 
       // ---- lighting, sky, fog, reflection probe ------------------------------------------------
-      const lighting = createLighting(
-        ctx,
-        FLOOD_LIGHTS.map((f) => ({ x: f.x, y: f.height, z: f.z, color: f.color })),
-      );
+      const lighting = createLighting(ctx);
       scene.userData.hasWorldLighting = true;
-      scope.track(lighting.moon);
+      scope.track(lighting.sun);
       scope.track(lighting.hemi);
       scope.track(lighting.dome);
-      scene.add(lighting.moon, lighting.moon.target, lighting.hemi, lighting.dome);
+      scene.add(lighting.sun, lighting.sun.target, lighting.hemi, lighting.dome);
       dome = lighting.dome;
       tickSky = lighting.update;
       scope.onDispose(() => {
-        lighting.moon.shadow.map?.dispose();
-        lighting.moon.shadow.dispose();
-        lighting.moon.target.removeFromParent();
+        lighting.sun.shadow.map?.dispose();
+        lighting.sun.shadow.dispose();
+        lighting.sun.target.removeFromParent();
         scene.fog = null;
         scene.background = null;
         scene.environment = null;
@@ -97,7 +89,7 @@ export function createWorldModule(): GameModule {
       const landD = LAND.maxZ - LAND.minZ;
       const landCx = (LAND.minX + LAND.maxX) / 2;
       const landCz = (LAND.minZ + LAND.maxZ) / 2;
-      const reflection = new PlanarReflection(WORLD_LOCAL.ground.reflectionScale);
+      const reflection = new PlanarReflection();
       const ground = createWetGround(reflection, lanesX);
       groundTime = ground.uniforms.uTime;
       scope.track(ground.mesh);
@@ -138,7 +130,7 @@ export function createWorldModule(): GameModule {
       scene.add(kerb);
 
       // ---- ocean, ship backdrop with lit windows ------------------------------------------------
-      ocean = createOcean(lighting.moonDir, lighting.fogColor);
+      ocean = createOcean(lighting.sunDir, lighting.fogColor);
       scope.track(ocean.mesh);
       scene.add(ocean.mesh);
       const ship = new Group();
@@ -176,18 +168,15 @@ export function createWorldModule(): GameModule {
       scope.track(ship);
       scene.add(ship);
 
-      // ---- rain ----------------------------------------------------------------------------------
-      rain = createRain();
-      for (const obj of rain.objects) {
-        scope.track(obj);
-        scene.add(obj);
-      }
-
       // ---- planar reflection pass, before the main render ----------------------------------------
       let hidden: Object3D[] | null = null;
+      let reflectionEvery = 1;
+      let frame = 0;
       const applyQuality = (): void => {
         const q = PERFORMANCE.quality[ctx.settings.get('quality')];
         reflection.enabled = q.reflections;
+        reflection.scale = q.reflectionScale;
+        reflectionEvery = q.reflectionEvery;
         ground.uniforms.uReflOn.value = q.reflections ? 1 : 0;
         lighting.setQuality(ctx.settings.get('quality'));
       };
@@ -199,9 +188,11 @@ export function createWorldModule(): GameModule {
       );
       const preRender = (): void => {
         if (!reflection.enabled || !camera) return;
+        // the mirror pass is a second scene render: lower presets refresh it every other frame
+        if (frame++ % reflectionEvery !== 0) return;
         if (!hidden) {
-          // the ground itself, rain, the first-person rig and anything flagged `noReflect` (light beams)
-          hidden = [ground.mesh, camera, ...(rain?.objects ?? [])];
+          // the ground itself, the first-person rig and anything flagged `noReflect`
+          hidden = [ground.mesh, camera];
           scene.traverse((node) => {
             if (node.userData.noReflect === true) hidden?.push(node);
           });
@@ -239,12 +230,8 @@ export function createWorldModule(): GameModule {
     update(dt) {
       if (ocean) (ocean.material.uniforms.uTime as { value: number }).value += dt;
       if (dome && camera) dome.position.copy(camera.position);
-      const flash = tickSky ? tickSky(dt) : 0;
+      tickSky?.(dt);
       if (groundTime) groundTime.value += dt;
-      if (rain && camera && ctxRef) {
-        const h = ctxRef.renderer.webgl.domElement.height;
-        rain.update(dt, camera.position.x, camera.position.y, camera.position.z, flash, h, camera.fov);
-      }
     },
 
     dispose() {
@@ -253,10 +240,8 @@ export function createWorldModule(): GameModule {
       ocean = null;
       dome = null;
       camera = null;
-      rain = null;
       tickSky = null;
       groundTime = null;
-      ctxRef = null;
     },
   };
 }

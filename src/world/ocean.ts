@@ -36,7 +36,7 @@ void main() {
   float fres = pow(1.0 - max(dot(n, v), 0.0), 3.0);
   vec3 col = mix(uDeep, uShallow, clamp(fres * 0.9 + 0.12, 0.0, 1.0));
   vec3 h = normalize(uSunDir + v);
-  col += pow(max(dot(n, h), 0.0), 90.0) * vec3(0.6, 0.7, 0.95) * 0.35;
+  col += pow(max(dot(n, h), 0.0), 90.0) * vec3(1.0, 0.72, 0.45) * 1.1;
   float dist = length(cameraPosition - vWorld);
   col = mix(col, uFogColor, 1.0 - exp(-uFogDensity * uFogDensity * dist * dist));
   gl_FragColor = vec4(col, 1.0);
