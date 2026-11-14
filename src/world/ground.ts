@@ -32,8 +32,10 @@ export class PlanarReflection {
   private readonly rot = new Matrix4();
   private readonly size = new Vector2();
   enabled = true;
+  /** Render target size relative to the drawing buffer. */
+  scale = 0.5;
 
-  constructor(private readonly scale: number) {
+  constructor() {
     this.target = new WebGLRenderTarget(4, 4, { type: HalfFloatType, minFilter: LinearFilter, magFilter: LinearFilter, depthBuffer: true });
     this.target.texture.name = 'ground-reflection';
   }
@@ -121,24 +123,6 @@ float gCrack(vec2 p) {
   }
   return d2 - d1;
 }
-// expanding rain rings; returns a normal offset in xz
-vec2 gRipples(vec2 p, float scale, float rate, float seed) {
-  vec2 q = p * scale;
-  vec2 cell = floor(q);
-  vec2 acc = vec2(0.0);
-  for (int j = -1; j <= 1; j++) for (int i = -1; i <= 1; i++) {
-    vec2 c = cell + vec2(float(i), float(j));
-    vec2 rnd = gHash2(c + seed);
-    float t = fract(uTime * rate + rnd.x * 7.0);
-    vec2 centre = c + 0.2 + 0.6 * gHash2(c + seed + floor(uTime * rate + rnd.x * 7.0));
-    vec2 dvec = q - centre;
-    float d = length(dvec);
-    float r = t * 0.75;
-    float ring = sin((d - r) * 34.0) * exp(-(d - r) * (d - r) * 90.0) * (1.0 - t) * (1.0 - t);
-    acc += (dvec / max(d, 1e-4)) * ring;
-  }
-  return acc;
-}
 float gLine(float coord, float centre, float halfWidth) {
   float aa = fwidth(coord) * 1.2;
   return 1.0 - smoothstep(halfWidth - aa, halfWidth + aa, abs(coord - centre));
@@ -147,7 +131,7 @@ float gLine(float coord, float centre, float halfWidth) {
 
 /**
  * Wet quay surface as one plane: asphalt in the yard, concrete slabs on the quay, crane rails,
- * worn paint, cracks, puddles with rain ripples and a planar reflection. Everything is evaluated
+ * worn paint, cracks, still puddles and a planar reflection. Everything is evaluated
  * in the fragment shader from the world position, so there are no repeating tiles.
  */
 export function createWetGround(reflection: PlanarReflection, lanesX: readonly number[]): WetGround {
@@ -248,8 +232,8 @@ export function createWetGround(reflection: PlanarReflection, lanesX: readonly n
         float hx = gNoise((gp + vec2(e, 0.0)) * 9.0) - gNoise((gp - vec2(e, 0.0)) * 9.0);
         float hz = gNoise((gp + vec2(0.0, e)) * 9.0) - gNoise((gp - vec2(0.0, e)) * 9.0);
         vec2 bump = vec2(hx, hz) * 0.22 * (1.0 - gPuddle);
-        vec2 rip = gRipples(gp, 1.6, 0.9, 1.0) + 0.6 * gRipples(gp + 3.7, 2.7, 1.3, 9.0);
-        bump += rip * (0.10 + 0.5 * gPuddle);
+        // still water: a faint slow swell so reflections are not a perfect mirror
+        bump += vec2(gNoise(gp * 1.3 + uTime * 0.25) - 0.5, gNoise(gp * 1.3 - uTime * 0.21 + 7.0) - 0.5) * 0.035 * gPuddle;
         vec3 nW = normalize(vec3(-bump.x, 1.0, -bump.y));
         normal = normalize((viewMatrix * vec4(nW, 0.0)).xyz);
         `,
@@ -260,7 +244,7 @@ export function createWetGround(reflection: PlanarReflection, lanesX: readonly n
         #include <lights_fragment_end>
         {
           vec3 V = normalize(cameraPosition - vWPos);
-          float nv = max(dot(nW, V), 0.0);
+          float nv = clamp(dot(nW, V), 0.0, 1.0);
           float fres = 0.03 + 0.97 * pow(1.0 - nv, 5.0);
           vec4 rc = uReflMatrix * vec4(vWPos, 1.0);
           vec2 ruv = rc.xy / max(rc.w, 1e-4) + nW.xz * 0.045;
@@ -272,7 +256,7 @@ export function createWetGround(reflection: PlanarReflection, lanesX: readonly n
         `,
       );
   };
-  material.customProgramCacheKey = () => 'wet-ground-v1';
+  material.customProgramCacheKey = () => 'wet-ground-v2';
   const mesh = new Mesh(geometry, material);
   mesh.name = 'ground';
   mesh.position.set((LAND.minX + LAND.maxX) / 2, 0, (LAND.minZ + LAND.maxZ) / 2);

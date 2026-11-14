@@ -1,8 +1,6 @@
 import {
-  AdditiveBlending,
   CanvasTexture,
   Color,
-  ConeGeometry,
   DoubleSide,
   InstancedMesh,
   Mesh,
@@ -10,9 +8,6 @@ import {
   MeshStandardMaterial,
   Object3D,
   RepeatWrapping,
-  ShaderMaterial,
-  SpotLight,
-  Vector3,
   type BufferGeometry,
   type Material,
 } from 'three';
@@ -27,43 +22,6 @@ import { buildBarrier, buildBollard, buildCabin, buildCone, buildCrane, buildDru
 import { STRUCTURES } from './tunables';
 
 const MODULE_ID = 'structures';
-
-const coneVertex = /* glsl */ `
-varying float vAxis;
-varying vec3 vN;
-varying vec3 vV;
-void main() {
-  vAxis = 1.0 - uv.y;
-  vec4 mv = modelViewMatrix * vec4(position, 1.0);
-  vN = normalize(normalMatrix * normal);
-  vV = normalize(-mv.xyz);
-  gl_Position = projectionMatrix * mv;
-}
-`;
-
-// Fake volumetric beam: brightest near the lamp and where the view grazes through the middle of the
-// cone, fading at the silhouette; slow noise makes the rain haze drift through it.
-const coneFragment = /* glsl */ `
-uniform vec3 uColor;
-uniform float uStrength;
-uniform float uTime;
-varying float vAxis;
-varying vec3 vN;
-varying vec3 vV;
-float hash(vec2 p) { return fract(sin(dot(p, vec2(41.3, 289.1))) * 43758.5453); }
-float noise(vec2 p) { vec2 i = floor(p); vec2 f = fract(p); f = f * f * (3.0 - 2.0 * f);
-  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y); }
-void main() {
-  float facing = abs(dot(normalize(vN), normalize(vV)));
-  float body = pow(facing, 2.2);
-  float along = pow(1.0 - vAxis, 1.7) * smoothstep(0.0, 0.04, vAxis);
-  float haze = 0.75 + 0.5 * noise(vec2(vAxis * 9.0 - uTime * 0.35, gl_FragCoord.x * 0.01 + uTime * 0.05));
-  float a = body * along * haze * uStrength;
-  gl_FragColor = vec4(uColor * a, a);
-  #include <tonemapping_fragment>
-  #include <colorspace_fragment>
-}
-`;
 
 function createChainLinkTexture(): CanvasTexture {
   const size = 128;
@@ -96,13 +54,12 @@ function createChainLinkTexture(): CanvasTexture {
 }
 
 /**
- * Everything that stands on the quay besides containers: the gantry crane, flood-light masts with
- * real spot lights and volumetric beams, the perimeter fence and the hand-placed props.
+ * Everything that stands on the quay besides containers: the gantry crane, flood-light masts (emissive lenses
+ * only: the sun is the single real light), the perimeter fence and the hand-placed props.
  */
 export function createStructuresModule(): GameModule {
   let res: ReturnType<GameContext['resources']['scope']> | null = null;
   let colliders: Collider[] = [];
-  const cones: ShaderMaterial[] = [];
   let beaconMat: MeshBasicMaterial | null = null;
   let time = 0;
 
@@ -125,12 +82,9 @@ export function createStructuresModule(): GameModule {
       applyWeatheredPaint(galvanised, { bottomY: 0, height: 12, wear: 0.55, key: 'galv' });
       const darkSteel = new MeshStandardMaterial({ color: 0x23272b, roughness: 0.5, metalness: 0.8 });
       const lensMat = new MeshBasicMaterial({ color: 0xffffff });
-      lensMat.color.setRGB(7, 5.6, 3.6);
+      lensMat.color.setRGB(2.6, 2.1, 1.4); // lamps just switched on at dusk: glow only, no real light
 
       // ---- flood-light masts ------------------------------------------------------------------
-      const coneGeo = scope.track(new ConeGeometry(1, 1, 28, 1, true).translate(0, -0.5, 0).rotateX(-Math.PI / 2));
-      const head = new Vector3();
-      const aim = new Vector3();
       for (const f of FLOOD_LIGHTS) {
         const mast = buildMast(f.height);
         const yaw = Math.atan2(f.aimX - f.x, f.aimZ - f.z);
@@ -142,50 +96,6 @@ export function createStructuresModule(): GameModule {
         const lens = add(new Mesh(mast.lens, lensMat));
         lens.position.copy(steel.position);
         lens.rotation.y = yaw;
-
-        head.set(f.x + Math.sin(yaw) * mast.headZ, mast.headY - 0.1, f.z + Math.cos(yaw) * mast.headZ);
-        aim.set(f.aimX, 0, f.aimZ);
-        const spot = new SpotLight(f.color, f.intensity * STRUCTURES.floodGain, STRUCTURES.floodRange, STRUCTURES.floodAngle, STRUCTURES.floodPenumbra, 2);
-        spot.name = `flood-${f.id}`;
-        spot.position.copy(head);
-        spot.target.position.copy(aim);
-        spot.castShadow = f.castShadow;
-        if (f.castShadow) {
-          spot.shadow.mapSize.set(STRUCTURES.floodShadowSize, STRUCTURES.floodShadowSize);
-          spot.shadow.camera.near = 1.5;
-          spot.shadow.camera.far = STRUCTURES.floodRange;
-          spot.shadow.bias = -0.0008;
-          spot.shadow.normalBias = 0.06;
-          spot.shadow.radius = 4;
-        }
-        add(spot);
-        scene.add(spot.target);
-        scope.onDispose(() => {
-          spot.target.removeFromParent();
-          spot.shadow.map?.dispose();
-        });
-
-        const dist = head.distanceTo(aim);
-        const coneMat = new ShaderMaterial({
-          vertexShader: coneVertex,
-          fragmentShader: coneFragment,
-          uniforms: { uColor: { value: new Color(f.color) }, uStrength: { value: STRUCTURES.beamStrength }, uTime: { value: 0 } },
-          transparent: true,
-          depthWrite: false,
-          blending: AdditiveBlending,
-          side: DoubleSide,
-          fog: false,
-        });
-        cones.push(coneMat);
-        const cone = add(new Mesh(coneGeo, coneMat));
-        cone.name = `beam-${f.id}`;
-        cone.position.copy(head);
-        const length = dist * 1.05;
-        const radius = Math.tan(STRUCTURES.floodAngle * 0.82) * length;
-        cone.scale.set(radius, radius, length);
-        cone.lookAt(aim);
-        cone.renderOrder = 6;
-        cone.userData.noReflect = true;
       }
 
       // ---- gantry crane -------------------------------------------------------------------------
@@ -209,18 +119,6 @@ export function createStructuresModule(): GameModule {
           m.castShadow = shadow;
           m.receiveShadow = shadow;
           m.name = `${site.id}`;
-        }
-        // two work lights under the portal beam, pointing straight down at the quay
-        for (const sx of [-0.55, 0.55]) {
-          const x = site.position.x + sx * CRANE.legX;
-          const z = site.position.z - CRANE.legZ;
-          const spot = new SpotLight(CRANE.workLight.color, CRANE.workLight.intensity * STRUCTURES.floodGain, 40, 0.75, 0.6, 2);
-          spot.position.set(x, CRANE.workLight.y, z);
-          spot.target.position.set(x - sx * 3, 0, z + 2);
-          spot.castShadow = false;
-          add(spot);
-          scene.add(spot.target);
-          scope.onDispose(() => spot.target.removeFromParent());
         }
       }
 
@@ -313,7 +211,6 @@ export function createStructuresModule(): GameModule {
           }
         }
         colliders = [];
-        cones.length = 0;
         beaconMat = null;
         delete ctx.testHooks[MODULE_ID];
       });
@@ -325,7 +222,6 @@ export function createStructuresModule(): GameModule {
 
     update(dt) {
       time += dt;
-      for (const m of cones) (m.uniforms.uTime as { value: number }).value = time;
       // slow double blink of the red obstruction lights
       if (beaconMat) {
         const t = time % 2.4;

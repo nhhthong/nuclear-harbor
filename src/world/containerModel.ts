@@ -37,8 +37,13 @@ float pFbm(vec3 p) { float v = 0.0; float a = 0.5; for (int i = 0; i < 4; i++) {
  * so lighting, shadows, fog and instancing keep working. `bottomY`/`height` describe the object's
  * local vertical extent (rust bias).
  */
-export function applyWeatheredPaint(material: MeshStandardMaterial, opts: { bottomY: number; height: number; wear?: number; key: string }): void {
+export function applyWeatheredPaint(
+  material: MeshStandardMaterial,
+  opts: { bottomY: number; height: number; wear?: number; key: string; /** Noise in object space (moving robots): the wear pattern travels with the mesh. */ local?: boolean; /** Noise frequency multiplier (small objects need finer detail). */ detail?: number },
+): void {
   const wear = opts.wear ?? 1;
+  const local = opts.local === true;
+  const detail = opts.detail ?? 1;
   material.onBeforeCompile = (shader) => {
     shader.uniforms.uPaint = { value: [opts.bottomY, opts.height, wear] };
     shader.vertexShader = shader.vertexShader
@@ -48,10 +53,10 @@ export function applyWeatheredPaint(material: MeshStandardMaterial, opts: { bott
         /* glsl */ `#include <worldpos_vertex>
         vPaintL = position;
         #ifdef USE_INSTANCING
-          vPaintW = (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).xyz;
+          vPaintW = ${local ? `position * ${detail.toFixed(2)}` : `(modelMatrix * instanceMatrix * vec4(transformed, 1.0)).xyz * ${detail.toFixed(2)}`};
           vPaintN = mat3(modelMatrix) * mat3(instanceMatrix) * normal;
         #else
-          vPaintW = (modelMatrix * vec4(transformed, 1.0)).xyz;
+          vPaintW = ${local ? `position * ${detail.toFixed(2)}` : `(modelMatrix * vec4(transformed, 1.0)).xyz * ${detail.toFixed(2)}`};
           vPaintN = mat3(modelMatrix) * normal;
         #endif`,
       );
@@ -91,7 +96,7 @@ export function applyWeatheredPaint(material: MeshStandardMaterial, opts: { bott
       )
       .replace('#include <metalnessmap_fragment>', 'float metalnessFactor = metalness * (1.0 - pRust);');
   };
-  material.customProgramCacheKey = () => `weathered-${opts.key}`;
+  material.customProgramCacheKey = () => `weathered-${opts.key}-${local ? 'l' : 'w'}-${detail}`;
 }
 
 export interface ContainerGeometry {
