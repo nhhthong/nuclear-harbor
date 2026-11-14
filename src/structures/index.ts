@@ -191,7 +191,7 @@ export function createStructuresModule(): GameModule {
       // ---- gantry crane -------------------------------------------------------------------------
       const crane = buildCrane();
       const cranePaint = new MeshStandardMaterial({ color: CRANE.color, roughness: 0.45, metalness: 0.3 });
-      applyWeatheredPaint(cranePaint, { bottomY: 0, height: CRANE.apexY, wear: 1.15, key: 'crane' });
+      applyWeatheredPaint(cranePaint, { bottomY: 0, height: CRANE.apexY, wear: 0.55, key: 'crane' });
       const beacon = new MeshBasicMaterial({ color: 0xffffff });
       beacon.color.setRGB(6, 0.5, 0.3);
       beaconMat = beacon;

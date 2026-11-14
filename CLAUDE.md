@@ -12,7 +12,7 @@ Browser FPS (Three.js + TypeScript + Vite + Rapier), single player, offline. Des
 ## Commands
 ```bash
 npm install
-npm run dev               # http://localhost:5173/  (?sandbox test scene, ?autostart skips the menu, ?debug overlay, ?seed=N, ?enemies=army,spot,duck|none, ?viewmodel=procedural)
+npm run dev               # http://localhost:5173/  (?sandbox test scene, ?autostart skips the menu, ?debug overlay, ?boss, ?viewmodel=procedural; ?enemies=army,spot,duck|none in the sandbox)
 npx tsc --noEmit && npm test && npm run build
 npm run smoke / npm run e2e -- T-XX    # browser checks, see policy below
 ```
@@ -26,9 +26,9 @@ npm run smoke / npm run e2e -- T-XX    # browser checks, see policy below
 - Everything is procedural (no CDN, no network at runtime) except the G36C GLB; `docs/reference-models/*.html` are visual references only.
 
 ## Status (update this block when it changes)
-- Latest: compact-harbor rework (see the last section of `docs/DEVIATIONS.md`): 144 x 152 m map, barriers, no grapple, double jump, faster movement, visual and VFX upgrade. Verified by `tsc`, 439 unit tests, build and three manual screenshots (sky, materials, shadows render; no console errors). **Not verified**: a full run, enemy behaviour on the new map, the look of tracers/muzzle flash/explosions (too brief to capture), frame rate with bloom on a real GPU.
-- **All `tests/e2e/*.mjs` are stale** (old coordinates, grapple steps): update them before running e2e again. Owner policy at the time: no Spec Kit, no e2e for this rework.
-- Earlier: T-01..T-18 were green (unit, build, smoke, e2e) on the old map; T-19..T-23 (new robots, dinosaur, final boss, cleanup) were merged with typecheck + unit tests + build only.
-- Known unverified from before: dinosaur fight (hits/damage), draw-call total with all robots, Bomber Duck beep audio, real-device benchmarks (`docs/PERFORMANCE.md`); nobody has played it.
-- Known limits: bundle ~5.3 MB (Rapier 82%); shadow refresh rate is lower than frame rate; in-game Restart reloads the page; optional boss attacks not built; `GRAPPLE` tunables and the anchor registry remain only for the lamp-coverage helper.
-- **Next: UI improvements** (scope to be defined by the owner).
+- Latest: **tiny night quay rework** (last section of `docs/DEVIATIONS.md`): one 72 x 86 m level, 1 tower, 8 robots, half-size boss, no dinosaur; night rain look with modelled containers, wet-ground shader + planar reflection, flood lights with shadows and beams, rain, bloom/AO/grade. Verified by `tsc`, 397 unit tests, build and manual screenshots on all three quality presets (no console errors). **Not verified**: a full run, enemy behaviour and balance on the new level, frame rate on a real GPU, the boss fight at half size beyond spawning it.
+- **All `tests/e2e/*.mjs` are stale** (old coordinates, four towers, grapple, dinosaur): rewrite them before running e2e. `scripts/smoke.mjs` was not run after the rework either.
+- Docs that describe older versions: `docs/PLAN.md` (module table), `docs/PLAYTEST.md`, `docs/PERFORMANCE.md`, tickets and `specs/`.
+- Known limits: robots and the tower are visually simpler than the environment; no rain/thunder audio; heavy shaders target a desktop GPU (low preset for integrated graphics); bundle ~5.3 MB (Rapier 82%); in-game Restart reloads the page.
+- CC0 asset sites are blocked from the cloud sandbox (polyhaven, ambientcg); everything is procedural except the G36C GLB.
+- **Next**: owner playtest on a real GPU, then UI improvements (scope to be defined by the owner).

@@ -21,7 +21,7 @@ export interface FloodLight {
   castShadow: boolean;
 }
 
-const SODIUM = 0xffb25e;
+const SODIUM = 0xffc48c;
 const LED = 0xcfe0ff;
 
 export const FLOOD_LIGHTS: readonly FloodLight[] = [
@@ -51,7 +51,7 @@ export const CRANE = {
   boomReach: 34,
   boomGauge: 3.2,
   apexY: 27,
-  color: 0xd9920f,
+  color: 0xf0a81c,
   /** Two work lights under the portal beam. */
   workLight: { color: 0xdbe8ff, intensity: 2600, y: 16.4 },
 } as const;

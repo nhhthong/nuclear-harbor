@@ -2,8 +2,8 @@
 
 # LAST STAND: NUCLEAR HARBOR
 
-**A single-player browser FPS set in an industrial container port taken over by military robots.**
-Activate four emergency towers before the nuclear countdown ends, then bring down TITAN-04.
+**A single-player browser FPS on a rain-soaked container quay at night, taken over by military robots.**
+Fight through the yard, hold the relay tower before the countdown ends, then bring down TITAN-04.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -14,7 +14,7 @@ Activate four emergency towers before the nuclear countdown ends, then bring dow
 [![Platform](https://img.shields.io/badge/Platform-Web%20(offline%20capable)-blue)](#offline-play)
 [![Status](https://img.shields.io/badge/Status-prototype-orange)](#project-status)
 
-<img src="docs/media/gameplay-yard.jpg" alt="First-person view down a lane of the container yard with an orange army mech ahead" width="920">
+<img src="docs/media/night-apron.jpg" alt="Night view of the gate apron: wet asphalt with rain ripples and reflections, weathered containers, a flood light beam and the perimeter fence" width="920">
 
 </div>
 
@@ -40,28 +40,29 @@ Activate four emergency towers before the nuclear countdown ends, then bring dow
 
 ## Overview
 
-You are the only survivor of a container port whose defence robots have been hijacked. The nuclear control
-system is counting down from **20:00**. Four emergency control towers are hidden in different parts of the harbor.
-Find them, hold **E** to activate each one while the robots close in, and then face **TITAN-04**, a four-legged
-spherical war machine that can only be hurt through its lights.
+You are the only survivor of a container quay whose defence robots have been hijacked. It is night, it is
+raining, and the nuclear control system is counting down from **08:00**. Push through the container yard, reach
+the relay tower in the court behind it and hold **E** to activate it while the robots close in. Then **TITAN-04**,
+a four-legged spherical war machine that can only be hurt through its lights, drops onto the quay.
 
 The game runs entirely in the browser on **Three.js + TypeScript**, with **Rapier** physics, a fixed 60 Hz
 simulation, procedural audio and procedurally built models. There is no backend and no network access at runtime.
 
-> **Honest scope note.** This is a prototype built from code-generated geometry and textures, not an art-team
-> production. The look aims for readable, atmospheric and technically solid (PBR materials, sky reflections, bloom,
-> shadows, particle effects), not for photorealism. See [Project status](#project-status).
+> **Honest scope note.** One small level (72 x 86 m), built to look as good as code-generated content can:
+> modelled containers, wet ground with a real planar reflection, flood lights with shadows and light beams,
+> rain, bloom, ambient occlusion and a film grade. There are no scanned or sculpted assets, so it does not match a
+> AAA production; see [Project status](#project-status).
 
 ## Screenshots
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/media/main-menu.jpg" alt="Main menu"><br><sub>Main menu with bindings and settings</sub></td>
-    <td width="50%"><img src="docs/media/gameplay-dock.jpg" alt="Dock side with a crane and an army mech"><br><sub>Dock side: cranes, containers, street lights</sub></td>
+    <td width="50%"><img src="docs/media/night-yard.jpg" alt="Lane through the container yard with an army mech and the gantry crane"><br><sub>Container yard: liveries, corrugated steel, lane paint, reflections</sub></td>
+    <td width="50%"><img src="docs/media/night-quay-crane.jpg" alt="Gantry crane on the concrete quay with flood lights and the moored ship"><br><sub>Quay: gantry crane, concrete slabs, the moored ship</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/media/gameplay-crane-zone.jpg" alt="Crane zone with a Spot dog patrolling"><br><sub>Crane zone, a Spot dog on patrol</sub></td>
-    <td width="50%"><img src="docs/media/boss-titan-04.jpg" alt="TITAN-04 in the boss arena with its weak-point HUD"><br><sub>TITAN-04 and the boss HUD (four weak points, locked core)</sub></td>
+    <td width="50%"><img src="docs/media/night-relay-court.jpg" alt="Relay tower with an army mech next to it under flood light beams"><br><sub>Relay court: the tower and its guard</sub></td>
+    <td width="50%"><img src="docs/media/night-boss-titan-04.jpg" alt="TITAN-04 on the quay in the rain with the boss HUD"><br><sub>TITAN-04 and the boss HUD (four weak points, locked core)</sub></td>
   </tr>
 </table>
 
@@ -78,17 +79,20 @@ simulation, procedural audio and procedurally built models. There is no backend 
 - Rapier kinematic capsule controller: walk, sprint, **jump and double jump**, step-up, coyote time and jump buffering.
 - Level boundaries and blast walls that seal off side passages so every run follows one readable route.
 
-**Enemies** (30 regular robots, all procedural models with LOD)
-- **Vanguard army mech** (14): slow patrols, then smooth, disciplined advance and rocket salvos.
-- **Spot dog** (10): weak and fast, lunges and rams.
-- **Bomber Duck** (6): hops toward you, arms a **3-2-1** countdown and blows up for 15 damage.
-- **Mecha T-Rex semi-boss**: guards randomly chosen towers (seeded), three telegraphed skills: ram, tail spin, leap and stomp.
-- **TITAN-04 final boss**: falls from the sky after the last tower, four knee-light weak points, then an exposed core.
+**Enemies** (8 regular robots, all procedural models with LOD)
+- **Vanguard army mech** (3): slow patrols, then smooth, disciplined advance and rocket salvos.
+- **Spot dog** (3): weak and fast, lunges and rams.
+- **Bomber Duck** (2): hops toward you, arms a **3-2-1** countdown and blows up for 15 damage.
+- **TITAN-04 final boss** (about 9 m tall): falls from the sky after the tower is activated, four knee-light weak points, then an exposed core.
 
 **World and rendering**
-- Compact harbor (about 144 x 152 m): warehouse, container yard, crane zone, dock and boss arena, generated from a seeded layout (instanced containers).
-- Sky dome with drifting clouds, sky reflection probe for metals and wet concrete, corrugated-steel bump maps, emissive lights, bloom, static sun shadow with a low-rate refresh for moving casters.
-- Ocean shader, distant cargo-ship backdrop, fog.
+- One night quay (72 x 86 m): gate apron, container yard, relay court and the quay with a gantry crane, from a seeded layout.
+- **Containers as geometry**, not textured boxes: corrugated walls and roof, frame, doors with locking bars, corner castings, livery decals; one shader adds chipped paint, rust and grime.
+- **Wet ground shader**: asphalt and concrete slabs, cracks, worn paint, crane rails, puddles with rain ripples and a half-resolution **planar reflection** of the whole scene.
+- **Lighting**: moonlight, seven flood-light masts as real spot lights (four cast shadows) with volumetric beams, lightning, exponential fog, a reflection probe that includes the lamps.
+- **Rain** as two GPU-animated draw calls (streaks and splashes).
+- **Post-processing**: MSAA HDR target, ambient occlusion (high preset), bloom, ACES tone mapping, then a grade pass with vignette, film grain and slight chromatic aberration.
+- Detailed gantry crane, chain-link fence, site office, barriers, drums, pallets, bollards; ocean shader and a moored ship with lit windows.
 
 **Engineering**
 - Module registry with explicit init and update order, a typed event bus, a single `tunables` file for gameplay numbers.
@@ -99,20 +103,20 @@ simulation, procedural audio and procedurally built models. There is no backend 
 ## Gameplay
 
 ```
-Spawn -> warehouse (tower 1) -> container yard (tower 2) -> crane zone (tower 3, on a gantry) -> dock (tower 4)
-      -> TITAN-04 drops into the arena -> destroy 4 weak points -> shoot the exposed core -> victory
+Gate apron -> container yard (8 robots) -> relay court: hold the tower
+           -> TITAN-04 drops onto the quay -> destroy 4 weak points -> shoot the exposed core -> victory
 ```
 
 | Element | Details |
 |---|---|
-| Countdown | 20 minutes; reaching zero is a failure |
-| Towers | 4; stand within range and hold `E` (5 s). Leaving range or dying cancels the progress |
-| Death | Respawn at the last activated tower (countdown keeps running) |
-| Regular robots | 30 in total: 14 army mechs, 10 Spot dogs, 6 Bomber Ducks |
-| Semi-boss | Mecha T-Rex at 2 of the 3 outdoor towers (`?seed=` makes the choice reproducible) |
+| Countdown | 8 minutes; reaching zero is a failure |
+| Tower | 1; stand within range and hold `E` (5 s). Leaving range or dying cancels the progress |
+| Death | Respawn at the last checkpoint when one exists (the activated tower, the boss start); the countdown keeps running |
+| Regular robots | 8 in total: 3 army mechs, 3 Spot dogs, 2 Bomber Ducks |
 | Final boss | TITAN-04: 4 weak points x 500 HP, then core 4000 HP; Heavy Cannon, Ground Slam and Missile Barrage |
+| Supplies | 12 ammo crates and 5 medkits; two of them on container tops (double jump) |
 
-Enemy and weapon numbers are starting values from the [GDD](docs/GDD.md) and the tickets and have **not** been balanced by play-testing.
+Enemy and weapon numbers are starting values and have **not** been balanced by play-testing.
 
 ## Controls
 
@@ -175,12 +179,10 @@ Handy for development and testing; none are required to play.
 | `?sandbox` | Small flat test scene instead of the harbor |
 | `?debug` | Debug overlay (FPS, frame time, draw calls, resources) |
 | `?colliders` | Draw physics colliders |
-| `?seed=N` | Seed for the random choices (which towers get a dinosaur) |
 | `?enemies=army,spot,duck` or `none` | Robots in the sandbox |
 | `?countdown=SECONDS` | Override the nuclear countdown |
 | `?towers=N` | Start with N towers already active |
 | `?boss` / `?bossphase=core` | Spawn TITAN-04 shortly after start / jump to the core phase |
-| `?dino` | Enable the dinosaur in the sandbox |
 | `?viewmodel=procedural` | Use the placeholder rifle instead of the G36C model |
 | `?bench=SECONDS` | Run the benchmark and print a `BENCH {json}` line |
 
@@ -191,13 +193,12 @@ src/
   core/        game loop (fixed 60 Hz + interpolated render), renderer, input, event bus, settings, shared types
   config/      level layout (level.ts) and every gameplay number (tunables.ts)
   physics/     Rapier wrapper: character controller, static boxes, ray and shape queries, collision groups
-  world/       ground, containers (InstancedMesh), warehouse, control center, ocean, sky, lighting, barriers
-  structures/  cranes (LOD), tower-3 gantry, lamp posts
+  world/       wet ground + planar reflection, modelled containers, sky, moon, fog, rain, ocean, ship, kerb
+  structures/  gantry crane, flood-light masts (spot lights + beams), fence, props
   player/      first-person controller (walk, sprint, jump, double jump)
   weapon/      rifle logic, recoil, procedural and GLB view models, pooled weapon effects
   combat/      damage and hit resolution
   enemies/     framework, army mech, Spot, Bomber Duck, nav grid, AI scheduler, population
-  dinosaur/    Mecha T-Rex semi-boss
   boss/        TITAN-04: model, attacks, weak points, landing cinematic
   objectives/  towers and nuclear countdown
   pickups/     ammo, medkits and drops
@@ -223,9 +224,11 @@ Design rules (full text in [`.specify/memory/constitution.md`](.specify/memory/c
 | Budget | Value |
 |---|---|
 | Target | 60 FPS desktop, 30 FPS low-end fallback |
-| Draw calls | at most 350 per frame (checked by the smoke test) |
-| Enemies | 30 regular robots plus one semi-boss |
-| Shadows | one directional light, static map refreshed at 6 Hz (medium) or 12 Hz (high) for moving casters |
+| Draw calls | at most 350 per frame; measured 210 to 250 including the reflection pass |
+| Triangles | about 1.1 million per frame with shadow and reflection passes (measured) |
+| Enemies | 8 regular robots plus the boss |
+| Shadows | moon + 4 flood lights, static maps refreshed at 6 Hz (medium) or 12 Hz (high) for moving casters |
+| Presets | low: no shadows, reflection or bloom; medium: shadows, reflection, bloom; high: adds ambient occlusion |
 | Bundle | about 5.3 MB (Rapier's WASM is about 80% of it), split into three chunks |
 
 The numbers above come from the debug overlay and the smoke test on **software rendering**. No benchmark on real
@@ -241,20 +244,23 @@ The service worker is not registered by `npm run dev`.
 
 ## Quality assurance
 
-- `npm run typecheck`, `npm test` (**439 unit tests in 64 files**) and `npm run build` pass on the current branch.
+- `npm run typecheck`, `npm test` (**397 unit tests in 59 files**) and `npm run build` pass on the current branch.
 - `npm run smoke` and `npm run offline` passed on the previous map before the latest rework.
-- **The `tests/e2e/` files are out of date.** They still contain old-map coordinates and steps for the removed grappling hook, so they were not run after the compact-map rework. Update them before relying on them.
-- Nobody has play-tested a full run (four towers, boss, victory) yet, so difficulty and pacing are unverified.
+- **The `tests/e2e/` files are out of date.** They still contain old-map coordinates, four towers and steps for the removed grappling hook, so they were not run after the level rework. Update them before relying on them.
+- Nobody has play-tested a full run (tower, boss, victory) yet, so difficulty and pacing are unverified.
+- The look was checked on still screenshots from software rendering only; frame rate on a real GPU is unmeasured.
 
 ## Project status
 
-**Prototype.** The game is complete end to end in design (start, four towers, boss, victory and failure paths) but unproven in play.
+**Prototype.** The game is complete end to end in design (start, tower, boss, victory and failure paths) but unproven in play.
 
 Known limitations:
 
-- Visuals are procedural; there is no authored art, so realism is limited by design.
+- Visuals are procedural; there is no authored art, so realism is limited by design. Robots and the tower are simpler than the environment.
+- The heavy shaders (planar reflection, 5 shadow maps, bloom, AO) target a desktop GPU; use the low preset on integrated graphics.
+- No rain or thunder audio yet.
 - Gameplay balance (damage, enemy density on the compact map, countdown length) is untested.
-- Dinosaur combat numbers and the boss attacks were checked by unit tests and short scripted runs only.
+- The boss attacks were checked by unit tests and short scripted runs only.
 - The in-game Restart button reloads the page.
 - Optional boss attacks from the GDD (Shockwave, Target Lock, EMP Pulse) are not implemented.
 - Real-device performance numbers are missing.

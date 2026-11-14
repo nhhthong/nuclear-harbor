@@ -40,7 +40,7 @@ uniform vec3 uColor;
 uniform float uFlash;
 varying float vFade;
 void main() {
-  float a = vFade * (0.16 + 0.5 * uFlash);
+  float a = vFade * (0.24 + 0.5 * uFlash);
   gl_FragColor = vec4(uColor * a, a);
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
@@ -64,7 +64,7 @@ void main() {
   vec2 world = uCam.xz + mod(xz - uCam.xz + uBoxSize * 0.5, uBoxSize) - uBoxSize * 0.5;
   vec4 mv = viewMatrix * vec4(world.x, 0.03 + t * 0.09, world.y, 1.0);
   vLife = t;
-  gl_PointSize = uPixel * (0.05 + 0.16 * t) / max(-mv.z, 0.1);
+  gl_PointSize = min(uPixel * (0.03 + 0.09 * t) / max(-mv.z, 0.1), 14.0);
   gl_Position = projectionMatrix * mv;
 }
 `;
@@ -77,7 +77,7 @@ void main() {
   float d = length(c) * 2.0;
   // a thin crown that widens and fades
   float ring = smoothstep(0.55, 0.8, d) * (1.0 - smoothstep(0.85, 1.0, d));
-  float a = ring * (1.0 - vLife) * 0.5;
+  float a = ring * (1.0 - vLife) * 0.22;
   if (a < 0.01) discard;
   gl_FragColor = vec4(uColor * a, a);
   #include <tonemapping_fragment>

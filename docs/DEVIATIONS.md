@@ -40,3 +40,15 @@ Rapier KCC; procedural audio (Web Audio) and procedural models, no asset files e
 - **Look**: sky dome with drifting clouds and a sun-side warm tint; a prefiltered sky reflection probe as `scene.environment`; corrugated-steel bump + worn roughness on containers and cladding; wet-concrete roughness; more metallic cranes; emissive lamp heads and crane beacons; bloom (medium/high presets, `PERFORMANCE.bloom`); hemisphere light lowered.
 - **Effects**: tracers are flying HDR streaks instead of 1 px lines; muzzle flash is brighter and drives one shared point light; impacts add a core flash and dust; explosions add falling embers, more smoke, a stronger light flash and a wider ring.
 - **Stale after this rework**: every `tests/e2e/*.mjs` file still contains old-map coordinates and the grapple steps (T-12 e2e was deleted); they were not updated or run. `docs/PLAYTEST.md` numbers and screenshots describe the old map.
+
+## Tiny night quay rework (latest; overrides everything above where they disagree)
+Owner brief: keep the scope tiny and push the look as far as code-generated content allows.
+- **Level**: one quay, 72 x 86 m (`src/config/level.ts`): gate apron (spawn) -> container yard -> relay court (the only tower, at (0, -14)) -> quay with the boss arena (centre (-8, -35), radius 17) and one gantry crane. The warehouse, control center, three towers, blast walls and five cranes are gone.
+- **Enemies**: 8 regular robots (3 army, 3 Spot, 2 Duck). The dinosaur semi-boss module was removed (see git history before this rework). TITAN-04 is half size in the harbor (`BOSS_LOCAL.harborScale` 0.5, about 9 m tall); HP unchanged (4 x 500, core 4000).
+- **Economy**: countdown 8 min; 6 + 6 ammo crates, 3 + 2 medkits; demand about 273 hits against 570 rounds.
+- **Setting**: night, overcast, rain, lightning. Moon as the only directional light; seven flood-light masts (`src/structures/layout.ts`) as spot lights, four with shadows, each with a volumetric beam mesh; exponential fog.
+- **Rendering**: containers are real geometry (`src/world/containerModel.ts`, about 1.6k triangles, instanced) with a weathered-paint shader shared by the crane, kerb and props; the ground is one procedural wet-surface shader with a planar reflection pass (`src/world/ground.ts`, registered through `Renderer.preRender`); rain is two GPU-animated draw calls; post chain = MSAA HDR -> GTAO (high preset) -> bloom -> ACES -> grade (vignette, grain, aberration). Quality presets gate shadows, reflection, bloom and AO.
+- **Measured** (software GL, medium preset): 210 to 250 draw calls, about 1.1 M triangles per frame including shadow and reflection passes. No GPU frame-rate measurement exists.
+- **Removed code**: `src/dinosaur`, `src/world/buildings.ts`, `src/world/textures.ts`, the old box-based `src/structures` (cranes with LOD, perches, lamp coverage).
+- **Stale**: every `tests/e2e/*.mjs`, `docs/PLAYTEST.md`, `docs/PERFORMANCE.md` numbers, `docs/PLAN.md` module table, tickets and specs describe earlier versions of the level.
+

@@ -69,13 +69,13 @@ export function applyWeatheredPaint(material: MeshStandardMaterial, opts: { bott
         diffuseColor.rgb = mix(diffuseColor.rgb, vec3(dot(diffuseColor.rgb, vec3(0.33))), 0.18 * pMid);
         // grime streaks running down
         float streak = pNoise(vec3(vPaintW.x * 7.0, vPaintW.y * 0.5, vPaintW.z * 7.0));
-        diffuseColor.rgb *= 1.0 - 0.38 * smoothstep(0.55, 0.9, streak) * (0.4 + 0.6 * (1.0 - pY));
+        diffuseColor.rgb *= 1.0 - 0.3 * smoothstep(0.6, 0.92, streak) * (0.4 + 0.6 * (1.0 - pY));
         // rust: more near the bottom edge and where the big noise is high
-        float rustBias = (1.0 - pY) * (1.0 - pY) * 0.34 + smoothstep(0.93, 1.0, pY) * 0.12;
-        float rust = smoothstep(0.6, 0.72, pMid * 0.75 + pBig * 0.3 + rustBias * uPaint.z + (pFine - 0.5) * 0.12);
+        float rustBias = pow(1.0 - pY, 3.0) * 0.3 + smoothstep(0.95, 1.0, pY) * 0.08;
+        float rust = smoothstep(0.74, 0.84, pMid * 0.72 + pBig * 0.28 + rustBias * uPaint.z + (pFine - 0.5) * 0.1);
         vec3 rustCol = mix(vec3(0.16, 0.06, 0.025), vec3(0.34, 0.15, 0.05), pFine);
         // chips: small sharp flakes down to primer / steel
-        float chip = smoothstep(0.80, 0.84, pNoise(vPaintW * 9.0) * 0.7 + pFine * 0.3 + rust * 0.12) * uPaint.z;
+        float chip = smoothstep(0.86, 0.9, pNoise(vPaintW * 9.0) * 0.7 + pFine * 0.3 + rust * 0.12) * uPaint.z;
         diffuseColor.rgb = mix(diffuseColor.rgb, rustCol, rust * 0.92);
         diffuseColor.rgb = mix(diffuseColor.rgb, mix(vec3(0.20, 0.17, 0.15), rustCol, 0.5), chip);
         float pRust = max(rust, chip);

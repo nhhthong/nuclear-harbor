@@ -246,7 +246,7 @@ export const PERFORMANCE = {
   /** Bloom post-process (medium/high presets): only HDR-bright pixels (emissives, muzzle flash, sun glints) glow. */
   bloom: { strength: 0.55, radius: 0.7, threshold: 0.9, msaaSamples: 4 },
   /** Final grade (display space): vignette, film grain, chromatic aberration, lift/gain tint. */
-  grade: { vignette: 0.42, grain: 0.035, aberration: 0.0016, exposure: 1.35 },
+  grade: { vignette: 0.4, grain: 0.03, aberration: 0.0005, exposure: 1.3 },
   quality: {
     // T-17: fogFraction = [near, far] as a share of viewDistance; dynamicShadowHz = refresh rate of the
     // otherwise static sun shadow for moving casters (0 = static only).

@@ -182,8 +182,8 @@ export function createWetGround(reflection: PlanarReflection, lanesX: readonly n
         // --- asphalt (yard, court, apron) ---
         vec3 asphalt = diffuseColor.rgb * (0.62 + 0.55 * nMid) * (0.82 + 0.3 * nFine);
         asphalt += vec3(0.05, 0.05, 0.048) * step(0.9, speck);                          // light aggregate
-        float patch = smoothstep(0.58, 0.6, gNoise(floor(gp / vec2(7.0, 4.0)) * 1.7 + 3.0)) ; // repair patches
-        asphalt *= mix(1.0, 0.72, patch);
+        float repair = smoothstep(0.58, 0.6, gNoise(floor(gp / vec2(7.0, 4.0)) * 1.7 + 3.0)) ; // repair patches
+        asphalt *= mix(1.0, 0.72, repair);
         // --- concrete slabs (quay) ---
         vec2 slabUv = gp / 6.0;
         vec2 slabF = abs(fract(slabUv) - 0.5);
@@ -236,7 +236,7 @@ export function createWetGround(reflection: PlanarReflection, lanesX: readonly n
         roughnessFactor = mix(roughnessFactor, 0.38, gPaint);
         roughnessFactor = mix(roughnessFactor, 0.2, gRail);
         roughnessFactor = mix(roughnessFactor, 0.035, gPuddle);
-        roughnessFactor = clamp(roughnessFactor + (gMicro - 0.5) * 0.12 * (1.0 - gPuddle), 0.02, 1.0);
+        roughnessFactor = clamp(roughnessFactor + (gMicro - 0.5) * 0.06 * (1.0 - gPuddle), 0.02, 1.0);
         `,
       )
       .replace('#include <metalnessmap_fragment>', 'float metalnessFactor = gRail * 0.9;')
@@ -245,9 +245,9 @@ export function createWetGround(reflection: PlanarReflection, lanesX: readonly n
         /* glsl */ `
         // world-space normal: rough micro surface outside puddles, rain rings inside them
         float e = 0.02;
-        float hx = gNoise((gp + vec2(e, 0.0)) * 22.0) - gNoise((gp - vec2(e, 0.0)) * 22.0);
-        float hz = gNoise((gp + vec2(0.0, e)) * 22.0) - gNoise((gp - vec2(0.0, e)) * 22.0);
-        vec2 bump = vec2(hx, hz) * 0.55 * (1.0 - gPuddle);
+        float hx = gNoise((gp + vec2(e, 0.0)) * 9.0) - gNoise((gp - vec2(e, 0.0)) * 9.0);
+        float hz = gNoise((gp + vec2(0.0, e)) * 9.0) - gNoise((gp - vec2(0.0, e)) * 9.0);
+        vec2 bump = vec2(hx, hz) * 0.22 * (1.0 - gPuddle);
         vec2 rip = gRipples(gp, 1.6, 0.9, 1.0) + 0.6 * gRipples(gp + 3.7, 2.7, 1.3, 9.0);
         bump += rip * (0.10 + 0.5 * gPuddle);
         vec3 nW = normalize(vec3(-bump.x, 1.0, -bump.y));
