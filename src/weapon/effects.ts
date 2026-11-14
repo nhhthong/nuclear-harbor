@@ -1,15 +1,13 @@
 import {
   AdditiveBlending,
-  BufferAttribute,
-  BufferGeometry,
+  BoxGeometry,
   CylinderGeometry,
   DoubleSide,
-  Line,
-  LineBasicMaterial,
   Mesh,
   MeshBasicMaterial,
   MeshStandardMaterial,
   type Object3D,
+  PointLight,
   Shape,
   ShapeGeometry,
   type Scene,
@@ -27,10 +25,12 @@ interface Flash {
   life: number;
 }
 interface Tracer {
-  line: Line;
-  positions: BufferAttribute;
-  material: LineBasicMaterial;
-  life: number;
+  mesh: Mesh;
+  from: Vector3;
+  to: Vector3;
+  /** Seconds since the shot and total flight time. */
+  age: number;
+  duration: number;
 }
 interface Casing {
   mesh: Mesh;
@@ -40,7 +40,8 @@ interface Casing {
 }
 
 /**
- * Pooled weapon effects: muzzle flash (emissive star, no light), tracer lines and shell casings
+ * Pooled weapon effects: muzzle flash (HDR star that blooms, plus one shared point light that lights
+ * the surroundings for a few frames), tracer streaks that fly from the muzzle to the hit, and shell casings
  * (simple ballistic arc, no physics bodies). Every pool is capped; an exhausted pool skips the effect.
  */
 export class WeaponEffects {
@@ -50,6 +51,9 @@ export class WeaponEffects {
   private readonly liveFlashes: Flash[] = [];
   private readonly liveTracers: Tracer[] = [];
   private readonly liveCasings: Casing[] = [];
+  /** One light for every flash: always in the scene (intensity 0 when idle) so no shader recompiles. */
+  private readonly flashLight: PointLight;
+  private flashLightLife = 0;
 
   constructor(
     scene: Scene,
@@ -59,7 +63,7 @@ export class WeaponEffects {
     const star = new Shape();
     const points = 8;
     for (let i = 0; i < points * 2; i++) {
-      const r = i % 2 === 0 ? 0.07 : 0.02;
+      const r = i % 2 === 0 ? FX.flashRadius : FX.flashRadius * 0.28;
       const a = (i / (points * 2)) * Math.PI * 2;
       if (i === 0) star.moveTo(Math.cos(a) * r, Math.sin(a) * r);
       else star.lineTo(Math.cos(a) * r, Math.sin(a) * r);
@@ -67,13 +71,23 @@ export class WeaponEffects {
     const flashGeometry = res.track(new ShapeGeometry(star));
     const flashMaterial = res.track(
       new MeshBasicMaterial({
-        color: 0xffc766,
+        color: 0xffffff,
         blending: AdditiveBlending,
         transparent: true,
         depthWrite: false,
         side: DoubleSide,
       }),
     );
+    // HDR colour: brighter than 1 so the bloom pass picks it up
+    flashMaterial.color.setRGB(FX.flashColor[0], FX.flashColor[1], FX.flashColor[2]);
+    this.flashLight = new PointLight(FX.flashLightColor, 0, FX.flashLightRange, 2);
+    this.flashLight.castShadow = false;
+    flashParent.add(res.track(this.flashLight));
+    const tracerGeometry = res.track(new BoxGeometry(1, 1, 1));
+    const tracerMaterial = res.track(
+      new MeshBasicMaterial({ color: 0xffffff, blending: AdditiveBlending, transparent: true, depthWrite: false, fog: false }),
+    );
+    tracerMaterial.color.setRGB(FX.tracerColor[0], FX.tracerColor[1], FX.tracerColor[2]);
     const casingGeometry = res.track(new CylinderGeometry(FX.casingRadius, FX.casingRadius, FX.casingLength, 6));
     const casingMaterial = res.track(new MeshStandardMaterial({ color: 0xc9a227, metalness: 0.8, roughness: 0.35 }));
 
@@ -95,23 +109,14 @@ export class WeaponEffects {
     this.tracers = new ObjectPool<Tracer>({
       capacity: WEAPON.maxTracers,
       create: () => {
-        const geometry = new BufferGeometry();
-        const positions = new BufferAttribute(new Float32Array(6), 3);
-        geometry.setAttribute('position', positions);
-        const material = new LineBasicMaterial({
-          color: FX.tracerColor,
-          transparent: true,
-          blending: AdditiveBlending,
-          depthWrite: false,
-        });
-        const line = new Line(geometry, material);
-        line.visible = false;
-        line.frustumCulled = false;
-        scene.add(res.track(line));
-        return { line, positions, material, life: 0 };
+        const mesh = new Mesh(tracerGeometry, tracerMaterial);
+        mesh.visible = false;
+        mesh.frustumCulled = false;
+        scene.add(res.track(mesh));
+        return { mesh, from: new Vector3(), to: new Vector3(), age: 0, duration: 0 };
       },
       reset: (t) => {
-        t.line.visible = false;
+        t.mesh.visible = false;
       },
     });
 
@@ -138,19 +143,34 @@ export class WeaponEffects {
     f.mesh.rotation.z = Math.random() * Math.PI;
     f.mesh.scale.setScalar(0.8 + Math.random() * 0.6);
     f.mesh.visible = true;
+    this.flashLight.position.copy(localMuzzle);
+    this.flashLight.intensity = FX.flashLightIntensity;
+    this.flashLightLife = FX.flashLightLifetime;
     this.liveFlashes.push(f);
   }
 
   spawnTracer(from: Vector3, to: Vector3): void {
     const t = this.tracers.acquire();
     if (!t) return;
-    t.life = FX.tracerLifetime;
-    t.positions.setXYZ(0, from.x, from.y, from.z);
-    t.positions.setXYZ(1, to.x, to.y, to.z);
-    t.positions.needsUpdate = true;
-    t.material.opacity = 1;
-    t.line.visible = true;
+    t.from.copy(from);
+    t.to.copy(to);
+    t.age = 0;
+    t.duration = Math.min(FX.tracerMaxTime, Math.max(FX.tracerMinTime, from.distanceTo(to) / FX.tracerSpeed));
+    t.mesh.visible = true;
+    this.poseTracer(t);
     this.liveTracers.push(t);
+  }
+
+  /** A bright streak of `tracerLength` metres whose head travels from the muzzle to the hit point. */
+  private poseTracer(t: Tracer): void {
+    const total = t.from.distanceTo(t.to);
+    const head = Math.min(1, t.age / t.duration) * total;
+    const tail = Math.max(0, head - FX.tracerLength);
+    const len = Math.max(0.05, head - tail);
+    const mid = (head + tail) / 2 / Math.max(total, 1e-6);
+    t.mesh.position.lerpVectors(t.from, t.to, mid);
+    t.mesh.lookAt(t.to);
+    t.mesh.scale.set(FX.tracerWidth, FX.tracerWidth, len);
   }
 
   spawnCasing(position: Vector3, velocity: Vector3): void {
@@ -175,14 +195,19 @@ export class WeaponEffects {
         this.liveFlashes.splice(i, 1);
       }
     }
+    if (this.flashLightLife > 0) {
+      this.flashLightLife -= dt;
+      this.flashLight.intensity = this.flashLightLife > 0 ? FX.flashLightIntensity * (this.flashLightLife / FX.flashLightLifetime) : 0;
+    }
     for (let i = this.liveTracers.length - 1; i >= 0; i--) {
       const t = this.liveTracers[i];
       if (!t) continue;
-      t.life -= dt;
-      t.material.opacity = Math.max(0, t.life / FX.tracerLifetime);
-      if (t.life <= 0) {
+      t.age += dt;
+      if (t.age >= t.duration + FX.tracerLength / FX.tracerSpeed) {
         this.tracers.release(t);
         this.liveTracers.splice(i, 1);
+      } else {
+        this.poseTracer(t);
       }
     }
     for (let i = this.liveCasings.length - 1; i >= 0; i--) {
@@ -212,6 +237,8 @@ export class WeaponEffects {
     this.liveFlashes.length = 0;
     this.liveTracers.length = 0;
     this.liveCasings.length = 0;
+    this.flashLight.intensity = 0;
+    this.flashLightLife = 0;
     // pooled meshes/lines are removed from the scene by the ResourceTracker scope
   }
 }

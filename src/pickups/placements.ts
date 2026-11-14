@@ -34,42 +34,42 @@ const m = (zone: ZoneId, x: number, z: number, elevated = false, castFromY?: num
 });
 
 /**
- * Final zone placement (T-16): 14 crates and 10 medkits next to towers and Duck lanes, with six
- * "grapple" spots on container tops (7.8 m three-high stacks, 5.2 m two-high stacks) and the
- * tower-3 gantry. Container tops come from the world generator (seeded, `world/tunables.ts`);
- * `placements.test.ts` checks every position against that layout, so a layout change that moves a
- * stack fails the test instead of silently dropping a crate onto the ground.
- * Indoor tower-1 spots cast from below the 10 m warehouse roof.
+ * Zone placement for the compact harbor: 14 crates and 10 medkits next to towers and lanes, with
+ * five elevated spots that reward the double jump (2.6 m one-high stacks from the ground, 5.2 m
+ * two-high stacks from a neighbouring one-high stack, the 3 m tower-3 gantry). Container tops come
+ * from the world generator (seeded, `world/tunables.ts`); `placements.test.ts` checks every position
+ * against that layout, so a layout change that moves a stack fails the test instead of silently
+ * dropping a crate onto the ground. Indoor tower-1 spots cast from below the 10 m warehouse roof.
  */
 export const ZONE_PLACEMENTS: readonly PickupCandidate[] = [
   // A Container Yard (Duck country, tower 2): 5 crates, 3 medkits
-  c('A', -67, -8), // tower 2
-  c('A', -69.5, -23.1, true), // three-high stack beside the E-W aisles
-  c('A', -38.4, -8.6, true), // three-high stack, east block
-  c('A', -25.9, -48), // north end of the N-S lane (Duck start)
-  c('A', -88.2, 30), // south end of the western lane
-  m('A', -77, -16), // tower 2
-  m('A', -25.9, -21), // lane junction
-  m('A', -57, 30), // south end of the middle lane
+  c('A', -31, -1), // tower 2
+  c('A', -58.8, -19.3, true), // one-high stack, west block
+  c('A', -11.9, -22, true), // two-high stack, reached from the one-high stack south of it
+  c('A', -21.3, -27), // north end of the N-S lane
+  c('A', -46.3, 20), // south apron
+  m('A', -41, -1), // tower 2
+  m('A', -21.3, -3), // lane junction
+  m('A', -11.9, 13.3, true), // two-high stack, reached from the one-high stack south of it
   // B Crane Zone (tower 3 on the gantry): 4 crates, 3 medkits
-  c('B', 77, -12, true), // tower-3 gantry platform
-  c('B', 48.3, -8.5, true), // two-high stack
-  c('B', 60, -50),
-  c('B', 105, 10),
-  m('B', 66, -16),
-  m('B', 100, -50),
-  m('B', 20, 25),
+  c('B', 41, -2, true), // tower-3 gantry platform
+  c('B', 66, 10),
+  c('B', 32, -27),
+  c('B', 8, 21),
+  m('B', 46, -6),
+  m('B', 64, -28),
+  m('B', 28, 21),
   // C Warehouse (tower 1, easy): 2 crates, 2 medkits
-  c('C', 24, 66, false, 8),
-  c('C', -70, 70),
-  m('C', 16, 58, false, 8),
-  m('C', 60, 75),
+  c('C', 22, 47, false, 8),
+  c('C', -52, 40), // west side yard (reached from the north)
+  m('C', 10, 36, false, 8),
+  m('C', 52, 40), // east side yard
   // D Dock (tower 4, boss route): 3 crates, 2 medkits
-  c('D', 56, -90),
-  c('D', -98.2, -99.9, true), // two-high stack at the western dock
-  c('D', -73.6, -77.3, true), // two-high stack on the way to the arena
-  m('D', 64, -100),
-  m('D', 20, -75),
+  c('D', 36, -52),
+  c('D', 56.5, -58.95, true), // one-high stack beside the control center
+  c('D', 4, -44), // on the way to the arena
+  m('D', 38, -62),
+  m('D', 24, -36),
 ];
 
 /** Boss supplies: ring just outside the arena, spread over the landward half so every spot is on land. */

@@ -68,12 +68,9 @@ export interface GameEvents {
   /** A shot hit static geometry. */
   'combat:impact': { point: Vector3; normal: Vector3 };
 
-  // ---- grapple (T-12) ------------------------------------------------------------------
-  'grapple:fired': { origin: Vector3; direction: Vector3 };
-  'grapple:attached': { point: Vector3; distance: number; anchorId?: string };
-  'grapple:released': { reason: 'arrived' | 'manual' | 'stuck' | 'timeout' | 'death' };
-  'grapple:failed': { reason: 'no-target' | 'not-grappleable' | 'out-of-range' | 'cooldown' };
-  'grapple:cooldown': { remaining: number; total: number };
+  // ---- jump (replaces the grapple) ------------------------------------------------------
+  /** `air` = the mid-air (second) jump; `airJumpsLeft` after this jump. */
+  'player:jumped': { air: boolean; airJumpsLeft: number };
 
   // ---- enemies (T-05, T-13, T-14) ------------------------------------------------------
   'enemy:spawned': { id: string; type: EnemyType; position: Vector3 };

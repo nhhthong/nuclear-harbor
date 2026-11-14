@@ -61,6 +61,14 @@ export interface CharacterOptions {
 const DEFAULT_META: ColliderMeta = Object.freeze({ kind: 'static' }) as ColliderMeta;
 
 /**
+ * A character placed exactly on a surface starts inside the controller's skin (`offset`): Rapier
+ * then treats the pose as penetrating, lets downward moves through and the capsule sinks into the
+ * ground (measured: 0.3 m while standing, with stalls at sprint speed). Creating and teleporting
+ * the capsule this far above the requested feet position avoids that; it settles onto the skin.
+ */
+const PLACEMENT_LIFT = 0.04;
+
+/**
  * Kinematic capsule driven by Rapier's KinematicCharacterController (REVIEW #5). Used by the
  * player (T-01) and may be reused for enemies.
  */
@@ -114,7 +122,7 @@ export class CharacterBody {
 
   /** Teleport: feet position. */
   setPosition(feet: Vec3): void {
-    const next = { x: feet.x, y: feet.y + this.centerOffset, z: feet.z };
+    const next = { x: feet.x, y: feet.y + this.centerOffset + PLACEMENT_LIFT, z: feet.z };
     this.body.setTranslation(next, true);
     this.body.setNextKinematicTranslation(next);
   }
@@ -193,7 +201,7 @@ export class PhysicsWorld {
     const body = this.world.createRigidBody(
       RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(
         position.x,
-        position.y + radius + halfHeight,
+        position.y + radius + halfHeight + PLACEMENT_LIFT,
         position.z,
       ),
     );

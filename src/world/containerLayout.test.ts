@@ -31,9 +31,9 @@ describe('generateContainerLayout', () => {
     expect(generateContainerLayout({ seed: 8 }).instances).not.toEqual(generateContainerLayout({ seed: 7 }).instances);
   });
 
-  it('places 250-400 containers in zone A and sparse clusters in B and D', () => {
-    expect(layout.zoneCounts.A).toBeGreaterThanOrEqual(250);
-    expect(layout.zoneCounts.A).toBeLessThanOrEqual(400);
+  it('places 80-200 containers in zone A and sparse clusters in B and D', () => {
+    expect(layout.zoneCounts.A).toBeGreaterThanOrEqual(80);
+    expect(layout.zoneCounts.A).toBeLessThanOrEqual(200);
     expect(layout.zoneCounts.B).toBeGreaterThan(0);
     expect(layout.zoneCounts.D).toBeGreaterThan(0);
     expect(layout.zoneCounts.B).toBeLessThan(layout.zoneCounts.A / 2);

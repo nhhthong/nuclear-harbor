@@ -4,8 +4,8 @@ export const SPOT = {
   detectionRange: 30,
   loseTargetTime: 5,
   patrolSpeed: 2.5,
-  /** Chase speed (m/s): above the player's walk (5), below the sprint (7.5). */
-  chaseSpeed: 6.8,
+  /** Chase speed (m/s): above the player's walk (6.5), below the sprint (10). */
+  chaseSpeed: 8.6,
   /** Start the crouch telegraph within this distance (m) with line of sight. */
   lungeRange: 7,
   /** Crouch before the leap (s), also the glow ramp. */

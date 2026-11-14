@@ -122,8 +122,11 @@ export function createDinosaurModule(): GameModule {
     towers.push({ id: e.towerId, position: e.position.clone() });
     if (towers.length < e.total) return;
     towers.sort((a, b) => a.id - b.id);
-    const idx = pickGuardTowers(seed, towers.length, DINO.guardCount);
-    guardIds = idx.map((i) => (towers[i] as TowerRef).id).sort((a, b) => a - b);
+    // Tower 1 stands inside the 10 m warehouse hall: a 9 m dinosaur does not fit there, so only the
+    // outdoor towers can be guarded (the sandbox has a single tower and keeps it).
+    const outdoor = towers.length > 1 ? towers.filter((t) => t.id !== 1) : towers;
+    const idx = pickGuardTowers(seed, outdoor.length, Math.min(DINO.guardCount, outdoor.length));
+    guardIds = idx.map((i) => (outdoor[i] as TowerRef).id).sort((a, b) => a - b);
   }
 
   function buildBar(c: GameContext): void {

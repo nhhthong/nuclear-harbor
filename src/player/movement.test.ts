@@ -54,6 +54,8 @@ describe('pitch and sprint', () => {
   it('sprints only when grounded, forward and held', () => {
     expect(canSprint(true, 1, true)).toBe(true);
     expect(canSprint(false, 1, true)).toBe(false);
+    expect(canSprint(false, 1, true, true)).toBe(true);
+    expect(canSprint(false, 0, true, true)).toBe(false);
     expect(canSprint(true, 0, true)).toBe(false);
     expect(canSprint(true, -1, true)).toBe(false);
     expect(canSprint(true, 1, false)).toBe(false);

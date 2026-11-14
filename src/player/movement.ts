@@ -59,7 +59,10 @@ export function clampPitch(pitch: number, maxPitchDeg: number): number {
   return Math.max(-max, Math.min(max, pitch));
 }
 
-/** Sprint only while grounded, pushing forward and with the sprint key held. */
-export function canSprint(grounded: boolean, axisY: number, sprintHeld: boolean): boolean {
-  return grounded && axisY > 0 && sprintHeld;
+/**
+ * Sprint while pushing forward with the sprint key held. In the air the sprint only continues when
+ * it was already active at take-off (so a running jump keeps its speed, a standing jump does not gain it).
+ */
+export function canSprint(grounded: boolean, axisY: number, sprintHeld: boolean, wasSprinting = false): boolean {
+  return axisY > 0 && sprintHeld && (grounded || wasSprinting);
 }

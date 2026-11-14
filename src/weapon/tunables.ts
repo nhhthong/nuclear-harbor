@@ -29,10 +29,22 @@ export const WEAPON_LOCAL = {
   },
 
   effects: {
-    flashLifetime: 0.045,
+    flashLifetime: 0.05,
     flashPoolSize: 3,
-    tracerLifetime: 0.07,
-    tracerColor: 0xffd27a,
+    flashRadius: 0.11,
+    /** Linear HDR colour (> 1 so it blooms). */
+    flashColor: [5.5, 3.4, 1.2] as readonly [number, number, number],
+    flashLightColor: 0xffb060,
+    flashLightIntensity: 28,
+    flashLightRange: 16,
+    flashLightLifetime: 0.07,
+    /** Tracer streak: flies at `tracerSpeed`, `tracerLength` metres long, clamped flight time. */
+    tracerSpeed: 420,
+    tracerLength: 11,
+    tracerWidth: 0.045,
+    tracerMinTime: 0.04,
+    tracerMaxTime: 0.22,
+    tracerColor: [4.2, 2.6, 0.9] as readonly [number, number, number],
     casingLifetime: 1.1,
     casingGravity: 9.8,
     casingSpeedMin: 1.6,

@@ -5,8 +5,8 @@ export const DUCK = {
   loseTargetTime: 4,
   /** Walk speed while patrolling (m/s). */
   patrolSpeed: 2,
-  /** Average hop speed (m/s): above the player's walk (5), below the sprint (7.5). */
-  hopSpeed: 6.2,
+  /** Average hop speed (m/s): above the player's walk (6.5), below the sprint (10). */
+  hopSpeed: 8,
   /** One hop lasts this long (s); the duck is grounded for `landFraction` of it. */
   hopPeriod: 0.62,
   landFraction: 0.2,

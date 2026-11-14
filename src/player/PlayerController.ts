@@ -13,13 +13,16 @@ import { PLAYER_LOCAL } from './tunables';
 export interface PlayerControllerDeps {
   physics: PhysicsWorld;
   player: PlayerState;
-  input: Pick<InputManager, 'getMoveAxis' | 'isDown' | 'consumeLookDelta'>;
+  input: Pick<InputManager, 'getMoveAxis' | 'isDown' | 'wasPressed' | 'consumeLookDelta'>;
   events: EventBus<GameEvents>;
   camera: Camera;
   getSensitivity: () => number;
 }
 
-/** First-person controller on a Rapier kinematic capsule (GDD 4, 4.2). Sole writer of movement state. */
+/**
+ * First-person controller on a Rapier kinematic capsule (GDD 4, 4.2) with jump and one air jump.
+ * Sole writer of movement state.
+ */
 export class PlayerController {
   private readonly character: CharacterBody;
   private readonly prev = new Vector3();
@@ -31,6 +34,11 @@ export class PlayerController {
   private readonly intent = new Vector3();
   private wasGrounded = false;
   private stepDistance = 0;
+  /** Seconds a jump press stays queued (set in update(), where input edges are valid). */
+  private jumpBuffer = 0;
+  /** Seconds left in which a ground jump is still allowed after leaving the ground. */
+  private coyote = 0;
+  private airJumpsLeft = 0;
 
   constructor(private readonly deps: PlayerControllerDeps) {
     const { physics, player } = deps;
@@ -63,6 +71,8 @@ export class PlayerController {
       this.wasGrounded = false;
       this.stepDistance = 0;
       this.intent.set(0, 0, 0);
+      this.jumpBuffer = 0;
+      this.coyote = 0;
     }
     this.prev.copy(this.cur);
 
@@ -81,7 +91,7 @@ export class PlayerController {
       vel.copy(external);
       player.sprinting = false;
     } else {
-      player.sprinting = canControl && canSprint(this.wasGrounded, axis.y, input.isDown('sprint'));
+      player.sprinting = canControl && canSprint(this.wasGrounded, axis.y, input.isDown('sprint'), player.sprinting);
       const speed = player.sprinting ? PLAYER.sprintSpeed : PLAYER.walkSpeed;
       desiredVelocity(axis.x, axis.y, player.yaw, speed, this.target2);
       this.vel2.x = vel.x;
@@ -90,7 +100,34 @@ export class PlayerController {
       approachHorizontal(this.vel2, this.target2, PLAYER.groundAccel, PLAYER.groundDecel, dt, control);
       vel.x = this.vel2.x;
       vel.z = this.vel2.z;
-      if (this.wasGrounded && vel.y <= 0) vel.y = -PLAYER_LOCAL.groundedStickSpeed;
+      // ---- jump / double jump ----
+      if (this.wasGrounded) {
+        this.coyote = PLAYER.coyoteTime;
+        this.airJumpsLeft = PLAYER.airJumps;
+      } else if (this.coyote > 0) {
+        this.coyote = Math.max(0, this.coyote - dt);
+      }
+      let jumped = false;
+      if (this.jumpBuffer > 0 && canControl) {
+        if (this.coyote > 0) {
+          vel.y = PLAYER.jumpSpeed;
+          this.coyote = 0;
+          this.jumpBuffer = 0;
+          jumped = true;
+          events.emit('player:jumped', { air: false, airJumpsLeft: this.airJumpsLeft });
+        } else if (this.airJumpsLeft > 0) {
+          vel.y = PLAYER.airJumpSpeed;
+          this.airJumpsLeft--;
+          this.jumpBuffer = 0;
+          jumped = true;
+          events.emit('player:jumped', { air: true, airJumpsLeft: this.airJumpsLeft });
+        }
+      }
+      if (this.jumpBuffer > 0) this.jumpBuffer = Math.max(0, this.jumpBuffer - dt);
+
+      if (jumped) {
+        // keep the take-off speed this step
+      } else if (this.wasGrounded && vel.y <= 0) vel.y = -PLAYER_LOCAL.groundedStickSpeed;
       else vel.y += SIM.gravity * dt;
     }
     const applyVy = vel.y;
@@ -142,6 +179,7 @@ export class PlayerController {
   update(_dt: number, alpha: number): void {
     const { player, input } = this.deps;
     const look = input.consumeLookDelta();
+    if (player.alive && !player.controlsLocked && input.wasPressed('jump')) this.jumpBuffer = PLAYER.jumpBufferTime;
     if (player.alive && !player.controlsLocked) {
       const s = PLAYER.lookRadPerPixel * this.deps.getSensitivity();
       player.yaw -= look.x * s;

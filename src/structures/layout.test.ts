@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { BOSS_ARENA, CRANE_SITES, KEEP_CLEAR, TOWERS, isKeepClear } from '@/config/level';
-import { BOSS, GRAPPLE } from '@/config/tunables';
+import { CRANE_SITES, KEEP_CLEAR, TOWERS, isKeepClear } from '@/config/level';
+import { GRAPPLE } from '@/config/tunables';
 import { bottomY } from './boxes';
 import { checkCoverage, groundFootprints, sampleWalkable } from './coverage';
 import { craneLocalParts, craneLowParts, placeCrane } from './craneLayout';
@@ -58,32 +58,16 @@ describe('cranes', () => {
 });
 
 describe('perches and platform', () => {
-  it('has at least two perches at each boss height, outside the arena, with landing on the slab', () => {
-    for (const h of BOSS.perchHeights) {
-      const at = layout.perches.filter((p) => p.topY === h);
-      expect(at.length).toBeGreaterThanOrEqual(2);
-    }
-    for (const p of layout.perches) {
-      const slab = p.boxes.find((b) => b.id.endsWith('/slab'))!;
-      expect(slab.half.x * 2).toBeGreaterThanOrEqual(4);
-      expect(slab.half.z * 2).toBeGreaterThanOrEqual(4);
-      expect(slab.center.y + slab.half.y).toBeCloseTo(p.topY);
-      expect(Math.hypot(slab.center.x - BOSS_ARENA.center.x, slab.center.z - BOSS_ARENA.center.z)).toBeGreaterThan(
-        BOSS_ARENA.radius,
-      );
-      const anchor = p.anchors[0]!;
-      expect(anchor.kind).toBe('perch');
-      expect(anchor.position.y).toBeCloseTo(p.topY + 2.2);
-      expect(anchor.landing).toEqual({ x: slab.center.x, y: p.topY, z: slab.center.z });
-    }
+  it('has no boss perch towers (the grappling hook was removed)', () => {
+    expect(layout.perches).toHaveLength(0);
   });
 
-  it('builds the 8 x 8 m tower-3 platform with top at y = 10 and two perch anchors, no stairs', () => {
+  it('builds the 8 x 8 m tower-3 platform with top at the tower-3 height and two masts, no stairs', () => {
     const tower = TOWERS[2]!;
     const slab = layout.platform.boxes.find((b) => b.id.endsWith('/slab'))!;
     expect(slab.half.x * 2).toBe(8);
     expect(slab.half.z * 2).toBe(8);
-    expect(slab.center.y + slab.half.y).toBe(10);
+    expect(slab.center.y + slab.half.y).toBe(tower.position.y);
     expect(slab.center.x).toBe(tower.position.x);
     expect(layout.platform.anchors).toHaveLength(2);
     expect(layout.platform.anchors[0]!.position.x).toBeGreaterThan(tower.position.x);
@@ -99,7 +83,7 @@ describe('perches and platform', () => {
 
 describe('lamp posts and coverage', () => {
   it('keeps lamp posts out of keep-clear discs and the control center', () => {
-    expect(layout.lamps.length).toBeGreaterThan(10);
+    expect(layout.lamps.length).toBeGreaterThanOrEqual(6);
     for (const l of layout.lamps) {
       expect(isKeepClear(l.x, l.z)).toBe(false);
       expect(l.height).toBeGreaterThanOrEqual(8);
@@ -109,7 +93,7 @@ describe('lamp posts and coverage', () => {
 
   it('covers every walkable 5 m sample of zones B and D within grapple range (100%)', () => {
     const samples = sampleWalkable(groundFootprints(layout.allBoxes));
-    expect(samples.length).toBeGreaterThan(500);
+    expect(samples.length).toBeGreaterThan(200);
     const result = checkCoverage(samples, layout.anchors, GRAPPLE.maxRange);
     expect(result.map((r) => r.zone).sort()).toEqual(['B', 'D']);
     for (const r of result) {

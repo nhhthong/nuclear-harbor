@@ -23,7 +23,7 @@ describe('event routes', () => {
 
   it('covers every GDD 11 group', () => {
     const routed = Object.keys(EVENT_ROUTES);
-    for (const e of ['weapon:fired', 'player:footstep', 'grapple:fired', 'enemy:alerted', 'enemy:destroyed', 'duck:windup', 'tower:activated', 'countdown:tick', 'boss:spawned', 'boss:attack', 'boss:weakPointDestroyed', 'boss:defeated']) {
+    for (const e of ['weapon:fired', 'player:footstep', 'player:jumped', 'enemy:alerted', 'enemy:destroyed', 'duck:windup', 'tower:activated', 'countdown:tick', 'boss:spawned', 'boss:attack', 'boss:weakPointDestroyed', 'boss:defeated']) {
       expect(routed).toContain(e);
     }
   });

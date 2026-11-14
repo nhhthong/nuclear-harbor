@@ -32,8 +32,8 @@ describe('warehouse', () => {
 
   it('walls block movement across the footprint away from the doors', () => {
     const f = WAREHOUSE_FOOTPRINT;
-    expect(wh.boxes.some((b) => hits(b, f.minX + 0.2, f.minX + 0.6, 60, 62))).toBe(true);
-    expect(wh.boxes.some((b) => hits(b, f.maxX - 0.6, f.maxX - 0.2, 60, 62))).toBe(true);
+    expect(wh.boxes.some((b) => hits(b, f.minX + 0.2, f.minX + 0.6, 42, 44))).toBe(true);
+    expect(wh.boxes.some((b) => hits(b, f.maxX - 0.6, f.maxX - 0.2, 42, 44))).toBe(true);
     expect(wh.boxes.some((b) => hits(b, -20, -19, f.maxZ - 0.6, f.maxZ - 0.2))).toBe(true);
     expect(wh.boxes.some((b) => hits(b, -20, -19, f.minZ + 0.2, f.minZ + 0.6))).toBe(true);
   });
