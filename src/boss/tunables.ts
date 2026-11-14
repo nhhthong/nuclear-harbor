@@ -15,6 +15,8 @@ export const WEAK_POINT_LEG_ANGLE: readonly number[] = [0.78, -2.28, 2.28, -0.78
 export const BOSS_LOCAL = {
   /** `?sandbox`: scale and spawn position so the boss fits the test scene (ticket step 5). */
   sandbox: { scale: 0.4, position: { x: -20, y: 0, z: 24 }, arenaRadius: 14 },
+  /** Tiny-level rework: the harbor boss is half size (about 9 m tall, feet ring 6 m) so it fits the quay. */
+  harborScale: 0.5,
   /**
    * T-22 reference port: the reference walker is ~2.5 units tall, so scale 7.2 gives ~18 m (twice
    * the 9 m dinosaur, well above the 10 m warehouse). Body centre / hull radius follow from it.

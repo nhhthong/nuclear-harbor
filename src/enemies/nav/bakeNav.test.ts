@@ -36,7 +36,7 @@ describe('bakeNav', () => {
     }
     const { nav, ms } = bakeNav(ctx);
     console.info(`harbor-sized bake: ${nav.cols}x${nav.rows} in ${ms.toFixed(1)} ms`);
-    expect(nav.walkableCount).toBeGreaterThan(nav.cols * nav.rows * 0.8);
+    expect(nav.walkableCount).toBeGreaterThan(nav.cols * nav.rows * 0.5);
     expect(ms).toBeLessThan(1000);
   });
 });

@@ -6,10 +6,11 @@ import { BOSS_LOCAL } from './tunables';
 const base = {
   centre: { x: BOSS_ARENA.center.x, z: BOSS_ARENA.center.z },
   arenaRadius: BOSS_ARENA.radius,
-  footprint: BOSS_LOCAL.footprintRadius,
+  footprint: BOSS_LOCAL.footprintRadius * BOSS_LOCAL.harborScale,
   obstacles: [],
+  clearance: BOSS_LOCAL.landing.clearance * BOSS_LOCAL.harborScale,
 };
-const gap = BOSS_LOCAL.landing.clearance;
+const gap = BOSS_LOCAL.landing.clearance * BOSS_LOCAL.harborScale;
 
 describe('pickLandingSpot', () => {
   it('lands at the arena centre when the player is far away', () => {

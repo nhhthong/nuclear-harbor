@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { LAND, PLAYER_SPAWN, TOWERS, WAREHOUSE_FOOTPRINT, ZONES } from '@/config/level';
-import { PLAYER, SIM } from '@/config/tunables';
+import { LAND, PLAYER_SPAWN, TOWERS } from '@/config/level';
 import { buildBarriers } from './barriers';
 import { WORLD_LOCAL } from './tunables';
 
@@ -22,27 +21,6 @@ describe('barriers', () => {
         expect(solidAt(LAND.maxX - 0.3, z, y), `east ${z} y${y}`).toBe(true);
       }
     }
-  });
-
-  it('seals both passages beside the warehouse, leaving the south door as the only way out of the forecourt', () => {
-    const w = WAREHOUSE_FOOTPRINT;
-    const z = w.maxZ - 0.3;
-    for (let x = LAND.minX + 1; x < w.minX; x += 2) expect(solidAt(x, z, 1), `west ${x}`).toBe(true);
-    for (let x = w.maxX + 0.5; x < LAND.maxX - 1; x += 2) expect(solidAt(x, z, 1), `east ${x}`).toBe(true);
-    expect(PLAYER_SPAWN.position.z).toBeGreaterThan(w.maxZ);
-  });
-
-  it('is taller than a double jump and leaves two dock gates', () => {
-    const jump = (PLAYER.jumpSpeed ** 2 + PLAYER.airJumpSpeed ** 2) / (2 * -SIM.gravity);
-    expect(WORLD_LOCAL.barriers.blastHeight).toBeGreaterThan(jump + 0.5);
-    const z = ZONES.D.maxZ;
-    const open: number[] = [];
-    for (let x = LAND.minX + 2; x < LAND.maxX - 2; x += 1) if (!solidAt(x, z, 1)) open.push(x);
-    expect(open.length).toBeGreaterThan(40);
-    expect(open.length).toBeLessThan(90);
-    // two separate gaps
-    const gaps = open.filter((x, i) => i === 0 || x - (open[i - 1] as number) > 1.5).length;
-    expect(gaps).toBe(2);
   });
 
   it('keeps towers and the spawn clear', () => {

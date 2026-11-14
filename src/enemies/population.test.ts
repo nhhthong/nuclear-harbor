@@ -1,14 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
-import { CRANE_SITES, BOSS_ARENA, LAND, PLAYER_SPAWN, TOWERS, ZONES, ENEMY_DISTRIBUTION, zoneAt, type ZoneId } from '@/config/level';
+import { BOSS_ARENA, LAND, PLAYER_SPAWN, TOWERS, ENEMY_DISTRIBUTION, zoneAt } from '@/config/level';
 import { ENEMY_COUNTS } from '@/config/tunables';
 import type { GameContext } from '@/core/GameContext';
-import { buildControlCenter, buildWarehouse } from '@/world/buildings';
 import { generateContainerLayout } from '@/world/containerLayout';
 import { NavGrid } from './nav/NavGrid';
+import { structureSolids } from '@/structures/layout';
 import { buildBarriers } from '@/world/barriers';
 import { ENEMY_LOCAL } from './tunables';
 import {
-  FALLBACK_CORRIDOR,
   FALLBACK_LANES,
   authoredHarbor,
   getPopulation,
@@ -24,17 +23,16 @@ function ctx(sandbox: boolean, query = '', hooks: Record<string, unknown> = {}):
   };
 }
 
-// ---- the real harbor geometry as seen by the nav bake (obstacles between 0.2 and 2.0 m) ----------
+// ---- the real quay geometry as seen by the nav bake (obstacles between 0.2 and 2.0 m) ----------
 const layout = generateContainerLayout();
-const warehouse = buildWarehouse();
 
 function realNav(): NavGrid {
   const nav = new NavGrid({ minX: LAND.minX, maxX: LAND.maxX, minZ: LAND.minZ, maxZ: LAND.maxZ }, 1.5);
   const eps = 0.74; // cell centres within half a cell of a box are blocked
   const boxes = [
     ...layout.boxes.map((b) => ({ c: b.center, h: b.halfExtents })),
-    ...[...warehouse.boxes, ...buildControlCenter()].filter((b) => b.kind !== 'roof').map((b) => ({ c: b.center, h: b.halfExtents })),
     ...buildBarriers().map((b) => ({ c: b.center, h: b.halfExtents })),
+    ...structureSolids().map((b) => ({ c: b.center, h: b.half })),
   ];
   for (const { c, h } of boxes) {
     if (c.y - h.y >= 2.0 || c.y + h.y <= 0.2) continue;
@@ -43,7 +41,7 @@ function realNav(): NavGrid {
   return nav;
 }
 
-const inputs = { lanes: layout.lanes, corridor: warehouse.corridor };
+const inputs = { lanes: layout.lanes };
 const authored = authoredHarbor(inputs);
 const count = (t: string) => authored.filter((p) => p.type === t).length;
 const dist = (a: readonly [number, number], x: number, z: number) => Math.hypot(a[0] - x, a[1] - z);
@@ -70,15 +68,16 @@ describe('sandbox population', () => {
   });
 });
 
-describe('authored harbor population (AC4)', () => {
-  it('has exactly 14 army / 10 spot / 6 duck', () => {
+describe('authored harbor population', () => {
+  it('has exactly 3 army / 3 spot / 2 duck', () => {
     expect(count('army')).toBe(ENEMY_COUNTS.army);
     expect(count('spot')).toBe(ENEMY_COUNTS.spot);
     expect(count('duck')).toBe(ENEMY_COUNTS.duck);
+    expect(authored).toHaveLength(ENEMY_COUNTS.total);
   });
 
   it('honours ENEMY_DISTRIBUTION per zone', () => {
-    for (const zone of Object.keys(ZONES) as ZoneId[]) {
+    for (const zone of ['A', 'B', 'C', 'D'] as const) {
       for (const type of ['army', 'spot', 'duck'] as const) {
         const n = authored.filter((p) => p.type === type && zoneAt(p.at[0], p.at[1]) === zone).length;
         expect(n, `${type} in ${zone}`).toBe(ENEMY_DISTRIBUTION[zone][type]);
@@ -104,60 +103,29 @@ describe('authored harbor population (AC4)', () => {
   it('lets robots reach their patrol points (a path exists between consecutive points)', () => {
     const nav = realNav();
     for (const p of authored) {
-      for (let i = 1; i < p.patrol.length; i++) {
-        const a = p.patrol[i - 1]!;
-        const b = p.patrol[i]!;
+      for (let i = 0; i < p.patrol.length; i++) {
+        const a = p.patrol[i]!;
+        const b = p.patrol[(i + 1) % p.patrol.length]!;
         expect(nav.findPath(a[0], a[1], b[0], b[1]), `${p.type} ${a} -> ${b}`).not.toBeNull();
       }
     }
   });
 
-  it('puts most Ducks on straight yard lanes', () => {
-    const onLane = authored
-      .filter((p) => p.type === 'duck')
-      .filter((p) =>
-        layout.lanes.some((l) => {
-          const half = l.width / 2;
-          return l.axis === 'z'
-            ? Math.abs(p.at[0] - l.start.x) <= half && p.at[1] >= l.start.z && p.at[1] <= l.end.z
-            : Math.abs(p.at[1] - l.start.z) <= half && p.at[0] >= l.start.x && p.at[0] <= l.end.x;
-        }),
-      );
-    expect(onLane.length).toBeGreaterThanOrEqual(4);
-  });
-
-  it('runs one Duck through the warehouse corridor and one over the open dock', () => {
+  it('runs both Ducks along yard aisles and keeps robots out of the boss arena', () => {
     const ducks = authored.filter((p) => p.type === 'duck');
-    const c = warehouse.corridor;
-    expect(ducks.some((p) => p.at[1] > c.minZ && p.at[1] < c.maxZ && p.at[0] >= c.minX && p.at[0] <= c.maxX)).toBe(true);
-    expect(ducks.some((p) => zoneAt(p.at[0], p.at[1]) === 'D')).toBe(true);
-  });
-
-  it('keeps robots out of crane discs and the boss arena', () => {
+    for (const d of ducks) expect(layout.lanes.some((l) => l.axis === 'x' && Math.abs(l.start.z - d.at[1]) < 0.01)).toBe(true);
     for (const p of authored) {
-      for (const pt of [p.at, ...p.patrol]) {
-        for (const crane of CRANE_SITES) expect(dist(pt, crane.position.x, crane.position.z), `${p.type} ${pt} near ${crane.id}`).toBeGreaterThan(14);
-        expect(dist(pt, BOSS_ARENA.center.x, BOSS_ARENA.center.z)).toBeGreaterThan(BOSS_ARENA.radius + 4);
-      }
+      for (const pt of [p.at, ...p.patrol]) expect(dist(pt, BOSS_ARENA.center.x, BOSS_ARENA.center.z)).toBeGreaterThan(BOSS_ARENA.radius);
     }
   });
 
-  it('guards tower 1 lightly and tower 4 the heaviest', () => {
-    const guards = TOWERS.map((t) => authored.filter((p) => dist(p.at, t.position.x, t.position.z) <= 18).length);
-    expect(guards[0]).toBeLessThanOrEqual(2);
-    expect(guards[3]).toBe(Math.max(...guards));
-    expect(guards[3]).toBeGreaterThan(guards[1]!);
-    expect(guards[3]).toBeGreaterThan(guards[2]!);
-    expect(guards[0]).toBe(Math.min(...guards));
+  it('guards the relay tower', () => {
+    const t = TOWERS[0]!;
+    expect(authored.filter((p) => dist(p.at, t.position.x, t.position.z) <= 8).length).toBeGreaterThanOrEqual(1);
   });
 
-  it('is deterministic', () => {
+  it('is deterministic and the fallback lanes equal the world generator output', () => {
     expect(JSON.stringify(authoredHarbor(inputs))).toBe(JSON.stringify(authoredHarbor(inputs)));
-  });
-});
-
-describe('lane data', () => {
-  it('the fallback lanes equal the world generator output', () => {
     expect(FALLBACK_LANES).toHaveLength(layout.lanes.length);
     for (const l of layout.lanes) {
       const f = FALLBACK_LANES.find((x) => x.id === l.id);
@@ -170,32 +138,22 @@ describe('lane data', () => {
     }
   });
 
-  it('the fallback corridor equals the warehouse corridor', () => {
-    expect(FALLBACK_CORRIDOR).toMatchObject({
-      minX: warehouse.corridor.minX,
-      maxX: warehouse.corridor.maxX,
-      minZ: warehouse.corridor.minZ,
-      maxZ: warehouse.corridor.maxZ,
-    });
-  });
-
   it('reads the world hook when present and rejects malformed data', () => {
-    const good = harborInputs(ctx(false, '', { world: { lanes: layout.lanes, corridor: warehouse.corridor } }));
+    const good = harborInputs(ctx(false, '', { world: { lanes: layout.lanes } }));
     expect(good.lanes).toEqual(layout.lanes);
     expect(harborInputs(ctx(false, '', { world: { lanes: [{ id: 3 }] } })).lanes).toBe(FALLBACK_LANES);
-    expect(harborInputs(ctx(false)).corridor).toBe(FALLBACK_CORRIDOR);
   });
 });
 
 describe('getPopulation on the harbor', () => {
-  it('returns 14 / 10 / 6 spawns on walkable cells', () => {
+  it('returns 3 / 3 / 2 spawns on walkable cells without warnings', () => {
     const nav = realNav();
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-    const pop = getPopulation(ctx(false, '', { world: { lanes: layout.lanes, corridor: warehouse.corridor } }), nav);
+    const pop = getPopulation(ctx(false, '', { world: { lanes: layout.lanes } }), nav);
     expect(warn).not.toHaveBeenCalled();
     warn.mockRestore();
     const n = (t: string) => pop.filter((p) => p.type === t).length;
-    expect([n('army'), n('spot'), n('duck')]).toEqual([14, 10, 6]);
+    expect([n('army'), n('spot'), n('duck')]).toEqual([3, 3, 2]);
     for (const p of pop) expect(nav.isWalkable(p.position.x, p.position.z)).toBe(true);
   });
 

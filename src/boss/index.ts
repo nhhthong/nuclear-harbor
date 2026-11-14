@@ -491,7 +491,7 @@ export function createBossModule(): GameModule {
     init(context) {
       ctx = context;
       const sandbox = context.flags.sandbox;
-      scale = sandbox ? BOSS_LOCAL.sandbox.scale : 1;
+      scale = sandbox ? BOSS_LOCAL.sandbox.scale : BOSS_LOCAL.harborScale;
       scheduler = new AttackScheduler(scale);
       if (sandbox) {
         origin = { x: BOSS_LOCAL.sandbox.position.x, z: BOSS_LOCAL.sandbox.position.z };

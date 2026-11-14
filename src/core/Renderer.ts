@@ -11,10 +11,58 @@ import {
 } from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+import { GTAOPass } from 'three/examples/jsm/postprocessing/GTAOPass.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { CAMERA, PERFORMANCE, type QualityPreset } from '@/config/tunables';
 import { ShadowScheduler, effectivePixelRatio, fogRange } from './quality';
+
+/**
+ * Final display-space pass: slight chromatic aberration towards the corners, a cool-shadow / warm-
+ * highlight grade, vignette and animated film grain. Runs after tone mapping and sRGB encoding.
+ */
+const GRADE_SHADER = {
+  name: 'GradeShader',
+  uniforms: {
+    tDiffuse: { value: null },
+    uTime: { value: 0 },
+    uVignette: { value: 0.4 },
+    uGrain: { value: 0.03 },
+    uAberration: { value: 0.0015 },
+  },
+  vertexShader: /* glsl */ `
+    varying vec2 vUv;
+    void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }
+  `,
+  fragmentShader: /* glsl */ `
+    uniform sampler2D tDiffuse;
+    uniform float uTime;
+    uniform float uVignette;
+    uniform float uGrain;
+    uniform float uAberration;
+    varying vec2 vUv;
+    float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+    void main() {
+      vec2 c = vUv - 0.5;
+      float r2 = dot(c, c);
+      vec2 off = c * r2 * uAberration * 8.0;
+      vec3 col;
+      col.r = texture2D(tDiffuse, vUv + off).r;
+      col.g = texture2D(tDiffuse, vUv).g;
+      col.b = texture2D(tDiffuse, vUv - off).b;
+      // grade: lift shadows towards teal, push highlights warm, a touch more contrast
+      float luma = dot(col, vec3(0.2126, 0.7152, 0.0722));
+      col = mix(col, col * vec3(0.90, 1.0, 1.10), (1.0 - smoothstep(0.0, 0.45, luma)) * 0.55);
+      col = mix(col, col * vec3(1.06, 1.0, 0.92), smoothstep(0.45, 1.0, luma) * 0.5);
+      col = (col - 0.5) * 1.06 + 0.5;
+      col *= 1.0 - uVignette * smoothstep(0.12, 0.75, r2 * 2.0);
+      float n = hash(vUv * vec2(1920.0, 1080.0) + fract(uTime) * 91.7) - 0.5;
+      col += n * uGrain * (1.0 - 0.6 * luma);
+      gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
+    }
+  `,
+};
 
 /**
  * Owns the WebGLRenderer and the main camera. Feature modules never create renderers; they use
@@ -32,6 +80,14 @@ export class Renderer {
   private composerScene: Scene | null = null;
   private bloomEnabled = false;
   private bloomFailed = false;
+  private aoEnabled = false;
+  private gradePass: ShaderPass | null = null;
+  private gradeTime = 0;
+  /**
+   * Called at the start of every frame, before the main scene render (after the per-frame counter
+   * reset): extra passes such as the ground's planar reflection register here.
+   */
+  readonly preRender: Array<() => void> = [];
   /** Set by Game: true while moving casters exist (playing); drives the low-rate shadow refresh. */
   shadowDynamicActive = false;
 
@@ -39,7 +95,7 @@ export class Renderer {
     this.webgl = new WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
     this.webgl.outputColorSpace = SRGBColorSpace;
     this.webgl.toneMapping = ACESFilmicToneMapping;
-    this.webgl.toneMappingExposure = 1.08;
+    this.webgl.toneMappingExposure = PERFORMANCE.grade.exposure;
     this.webgl.shadowMap.enabled = true;
     this.webgl.shadowMap.type = PCFShadowMap;
     // Several passes render per frame when bloom is on: reset the counters once per frame ourselves
@@ -69,7 +125,8 @@ export class Renderer {
     this.webgl.shadowMap.enabled = q.shadows;
     this.shadowScheduler.hz = q.dynamicShadowHz;
     this.bloomEnabled = q.bloom && !this.bloomFailed;
-    if (!this.bloomEnabled) this.disposeComposer();
+    if (!this.bloomEnabled || this.aoEnabled !== q.ao) this.disposeComposer();
+    this.aoEnabled = q.ao;
     this.shadowScheduler.markDirty();
     this.camera.far = q.viewDistance;
     this.camera.updateProjectionMatrix();
@@ -111,6 +168,11 @@ export class Renderer {
       this.webgl.shadowMap.needsUpdate = true;
     }
     this.webgl.info.reset();
+    for (const hook of this.preRender) hook();
+    if (this.gradePass) {
+      this.gradeTime += dt;
+      (this.gradePass.uniforms.uTime as { value: number }).value = this.gradeTime;
+    }
     if (this.bloomEnabled) {
       const composer = this.ensureComposer(scene);
       if (composer) {
@@ -130,9 +192,20 @@ export class Renderer {
       const target = new WebGLRenderTarget(size.x, size.y, { type: HalfFloatType, samples: PERFORMANCE.bloom.msaaSamples });
       const composer = new EffectComposer(this.webgl, target);
       composer.addPass(new RenderPass(scene, this.camera));
+      if (this.aoEnabled) {
+        const ao = new GTAOPass(scene, this.camera, size.x, size.y);
+        ao.updateGtaoMaterial({ radius: 0.6, distanceExponent: 1.4, thickness: 1.2, scale: 1.25, samples: 12 });
+        composer.addPass(ao);
+      }
       const b = PERFORMANCE.bloom;
       composer.addPass(new UnrealBloomPass(new Vector2(size.x, size.y), b.strength, b.radius, b.threshold));
       composer.addPass(new OutputPass());
+      this.gradePass = new ShaderPass(GRADE_SHADER);
+      const g = PERFORMANCE.grade;
+      (this.gradePass.uniforms.uVignette as { value: number }).value = g.vignette;
+      (this.gradePass.uniforms.uGrain as { value: number }).value = g.grain;
+      (this.gradePass.uniforms.uAberration as { value: number }).value = g.aberration;
+      composer.addPass(this.gradePass);
       this.composer = composer;
       this.composerScene = scene;
       this.resize();
@@ -152,6 +225,7 @@ export class Renderer {
     this.composer.dispose();
     this.composer = null;
     this.composerScene = null;
+    this.gradePass = null;
   }
 
   dispose(): void {
