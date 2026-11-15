@@ -78,11 +78,11 @@ export class Duck extends BaseEnemy {
     );
     const { shared } = deps;
     const m = modelFor(shared);
-    const mat = shared.get('duck:mat', () => createVertexColorMaterial(0.5, 0.12));
+    const mat = shared.get('duck:mat', () => createVertexColorMaterial(0.4, 0.55, { key: 'duck', wear: 0.5, bottomY: -0.9, height: 1.8 }));
     const geo = (key: string, g: BufferGeometry): BufferGeometry => shared.get(`duck:${key}`, () => g);
     this.beaconOn = shared.get(
       'duck:beacon-on',
-      () => new MeshStandardMaterial({ color: 0x401000, emissive: 0xff3b1f, emissiveIntensity: 4 }),
+      () => new MeshStandardMaterial({ color: 0x401000, emissive: 0xff3b1f, emissiveIntensity: 7 }),
     );
     this.beaconOff = shared.get(
       'duck:beacon-off',

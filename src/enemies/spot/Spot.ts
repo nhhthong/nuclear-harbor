@@ -70,15 +70,15 @@ export class Spot extends BaseEnemy {
     this.lastZ = this.position.z;
     const { shared } = deps;
     const m = modelFor(shared);
-    const mat = shared.get('spot:mat', () => createVertexColorMaterial(0.35, 0.25));
+    const mat = shared.get('spot:mat', () => createVertexColorMaterial(0.36, 0.62, { key: 'spot', wear: 0.45, bottomY: -0.6, height: 1.4 }));
     const geo = (key: string, g: BufferGeometry): BufferGeometry => shared.get(`spot:${key}`, () => g);
     this.lampOff = shared.get(
       'spot:lamp-off',
-      () => new MeshStandardMaterial({ color: 0x0a141a, emissive: 0x2a6070, emissiveIntensity: 0.5 }),
+      () => new MeshStandardMaterial({ color: 0x0a141a, emissive: 0x38c8e8, emissiveIntensity: 1.6 }),
     );
     this.lampOn = shared.get(
       'spot:lamp-on',
-      () => new MeshStandardMaterial({ color: 0x300000, emissive: 0xff2a1a, emissiveIntensity: 3.5 }),
+      () => new MeshStandardMaterial({ color: 0x300000, emissive: 0xff2a1a, emissiveIntensity: 5 }),
     );
 
     const near = new Group();

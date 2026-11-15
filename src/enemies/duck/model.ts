@@ -15,12 +15,14 @@ import {
 import { box, cylX, cylZ, Parts, sphere, type V3 } from './modelKit';
 import { DUCK } from './tunables';
 
-/** Palette of the reference duck. */
+/** "Bomber" palette: slate armour, hazard-orange beak, red charges (names kept from the reference duck). */
 export const DUCK_COLORS = {
-  purple: 0xc2b0d8,
-  richPurple: 0xa283cc,
-  yellow: 0xf7dc4f,
-  cyan: 0xa7dde6,
+  purple: 0x58636e,
+  richPurple: 0x333b44,
+  yellow: 0xf29a1a,
+  cyan: 0x9af0ff,
+  red: 0xb3261e,
+  black: 0x101114,
   faceplate: 0x878580,
   servo: 0x1e2025,
   silver: 0xd0d3da,
@@ -211,6 +213,62 @@ export function buildDuckModel(): DuckModel {
     body.add(box(0.28, 0.24, 0.34, 0.04), C.servo, [side * 0.46, 0.36, 0.04], [0, side * -0.25, 0]);
     body.add(cylX(0.11, 0.04, 14), C.silver, [side * 0.31, 0.38, 0.12]);
   }
+  // ---- "Bomber" kit: strapped charges, detonator, hazard plate, armour, antenna ----------
+  body.base = id;
+  for (const [y, z] of [
+    [1.3, -0.62],
+    [1.03, -0.64],
+    [1.17, -0.84],
+  ] as const) {
+    body.add(cylX(0.125, 0.92, 14), C.red, [0, y, z]);
+    for (const x of [-0.47, 0.47]) body.add(cylX(0.132, 0.05, 14), C.yellow, [x, y, z]);
+    for (const x of [-0.5, 0.5]) body.add(cylX(0.06, 0.03, 8), C.servo, [x, y, z]);
+  }
+  for (const x of [-0.26, 0.26]) {
+    body.add(box(0.07, 0.6, 0.5, 0.02), C.black, [x, 1.17, -0.7]);
+    body.add(box(0.09, 0.07, 0.05, 0.01), C.silver, [x, 1.17, -0.96]);
+  }
+  // detonator box with a display, fuse wires up to the head
+  body.add(box(0.3, 0.2, 0.09, 0.02), C.servo, [0, 1.5, -0.56]);
+  body.add(box(0.17, 0.08, 0.02), C.glass, [-0.03, 1.52, -0.61]);
+  for (const [x, col] of [
+    [-0.1, C.red],
+    [0.0, C.yellow],
+    [0.1, C.cyan],
+  ] as const) {
+    body.add(
+      cable(
+        [
+          [x, 1.6, -0.56],
+          [x * 1.6, 1.8, -0.5],
+          [x * 1.2, 2.05, -0.36],
+        ],
+        0.012,
+      ),
+      col,
+    );
+  }
+  // chest hazard plate with chevrons, side armour, shoulder bolts
+  body.add(box(0.86, 0.26, 0.05, 0.02), C.yellow, [0, 1.13, 0.375]);
+  for (let i = 0; i < 5; i++) body.add(box(0.07, 0.34, 0.056), C.black, [-0.32 + i * 0.16, 1.13, 0.376], [0, 0, -0.6]);
+  body.add(box(0.9, 0.035, 0.07, 0.01), C.richPurple, [0, 1.275, 0.375]);
+  body.add(box(0.9, 0.035, 0.07, 0.01), C.richPurple, [0, 0.985, 0.375]);
+  for (const side of [-1, 1]) {
+    body.add(box(0.05, 0.42, 0.66, 0.02), C.richPurple, [side * 0.6, 1.17, -0.08]);
+    for (const z of [-0.3, 0.14]) body.add(cylX(0.03, 0.07, 6), C.silver, [side * 0.62, 1.3, z]);
+    body.add(box(0.06, 0.06, 0.5, 0.015), C.yellow, [side * 0.61, 0.98, -0.08]);
+  }
+  // whip antenna with a base coil
+  body.add(cylX(0.035, 0.05, 8), C.silver, [0.42, 1.46, -0.38], [0, 0, Math.PI / 2]);
+  body.add(box(0.014, 0.95, 0.014), C.black, [0.42, 1.92, -0.4], [-0.12, 0, 0.05]);
+  // armoured brow and cheek plates on the head
+  body.base = head;
+  body.add(box(1.0, 0.07, 0.3, 0.025), C.richPurple, [0, 0.74, 0.3], [0.5, 0, 0]);
+  for (const side of [-1, 1]) {
+    body.add(box(0.045, 0.34, 0.6, 0.02), C.richPurple, [side * 0.61, 0.3, 0.02]);
+    body.add(box(0.05, 0.05, 0.62, 0.012), C.yellow, [side * 0.615, 0.12, 0.02]);
+  }
+  body.base = id;
   const bodyGeo = body.merge(world);
 
   // ---- feet --------------------------------------------------------------------------

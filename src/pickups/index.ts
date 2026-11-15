@@ -179,7 +179,9 @@ export function createPickupsModule(): GameModule {
       renderer = new PickupRenderer();
       res.track(renderer.meshes.ammo);
       res.track(renderer.meshes.medkit);
-      context.scene.add(renderer.meshes.ammo, renderer.meshes.medkit);
+      res.track(renderer.halos.ammo);
+      res.track(renderer.halos.medkit);
+      context.scene.add(renderer.meshes.ammo, renderer.meshes.medkit, renderer.halos.ammo, renderer.halos.medkit);
       pool = new ObjectPool<Pickup>({
         create: makePickup,
         capacity: ECONOMY.maxEnemyDropsPerZone * PICKUP.zoneCount,
