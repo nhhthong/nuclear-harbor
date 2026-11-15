@@ -133,7 +133,7 @@ export function createDinosaurModule(): GameModule {
   function buildBar(c: GameContext): void {
     const el = document.createElement('div');
     el.style.cssText =
-      'position:absolute;left:50%;top:15vh;transform:translateX(-50%);width:min(46vh,60vw);display:none;pointer-events:none;font:700 1.5vh "Bahnschrift","Segoe UI",system-ui,sans-serif;color:#ffe2cf;text-align:center;letter-spacing:.34em;text-shadow:0 1px 4px #000';
+      'position:absolute;left:50%;bottom:20vh;transform:translateX(-50%);width:min(52vh,60vw);display:none;pointer-events:none;font:700 1.5vh "Bahnschrift","Segoe UI",system-ui,sans-serif;color:#ffe2cf;text-align:center;letter-spacing:.34em;text-shadow:0 1px 4px #000';
     const label = document.createElement('div');
     label.textContent = 'CRIMSON REX // RELAY GUARDIAN';
     const track = document.createElement('div');
