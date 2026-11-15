@@ -59,7 +59,7 @@ simulation, procedural audio and procedurally built models. There is no backend 
 <table>
   <tr>
     <td width="50%"><img src="docs/media/sunset-menu.jpg" alt="Main menu over a crane shot of the quay"><br><sub>Main menu: live crane shot of the level, mission briefing</sub></td>
-    <td width="50%"><img src="docs/media/sunset-yard.jpg" alt="Lane through the container yard with a robot and the gantry crane"><br><sub>Container yard: liveries, corrugated steel, reflections</sub></td>
+    <td width="50%"><img src="docs/media/sunset-yard.jpg" alt="Lane through the container yard with a robot and the gantry crane"><br><sub>Container yard with the HUD: radar, countdown, heading tape, health and magazine bars</sub></td>
   </tr>
   <tr>
     <td width="50%"><img src="docs/media/sunset-court.jpg" alt="Relay court at sunset with an army mech"><br><sub>Relay court, looking into the sun</sub></td>

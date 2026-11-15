@@ -64,3 +64,5 @@ Owner feedback from a real machine: lag and a black screen when turning; asked f
 - **Pickups, VFX, menu**: modelled ammo case and trauma kit with light columns; shrapnel, dust skirt, embers, muzzle smoke, scorch marks, smouldering wrecks and camera shake (`VFX.shake`); cinematic main menu with a crane shot of the level.
 - **Measured** (software GL, medium): about 100 to 180 draw calls and 0.45 to 0.56 M triangles per frame. No GPU frame-rate measurement exists.
 - **Not verified**: a full run, balance with 18 robots and the Rex, the Rex inside the court next to containers, frame rate on a real GPU.
+- **HUD** (, ): segmented HP bar with a lagging damage ghost, magazine bar with reload progress, countdown with a remaining-time bar, heading tape, gap crosshair, X hit marker, lower-third toasts; a **radar** in the top-left corner (42 m, up = view direction) shows robots, the relay tower, the Rex (read through ) and the boss spawn point.
+- **Rex model**: chest, skull, jaw, feet and tail are lofted superellipse shells ( in ) instead of boxes; the hit volumes are unchanged.

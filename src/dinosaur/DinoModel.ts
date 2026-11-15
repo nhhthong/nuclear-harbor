@@ -1,5 +1,6 @@
 import {
   Box3,
+  BufferAttribute,
   BoxGeometry,
   BufferGeometry,
   Color,
@@ -83,6 +84,62 @@ function part(parent: Object3D, geo: BufferGeometry, tag: Tag, x: number, y: num
   return mesh;
 }
 
+interface Section {
+  z: number;
+  /** Centre height, width and height of the cross-section. */
+  y: number;
+  w: number;
+  h: number;
+}
+
+/**
+ * Smooth skin lofted through cross-sections along Z (ascending). Each section is a superellipse
+ * (`power` 2 = ellipse, higher = squarer with rounded corners), so bodies, skulls and tails read as
+ * shaped armour shells instead of boxes. Ends are closed with flat caps.
+ */
+function loft(sections: readonly Section[], sides = 16, power = 2.8): BufferGeometry {
+  const pos: number[] = [];
+  const idx: number[] = [];
+  const e = 2 / power;
+  const ring = (sec: Section): number => {
+    const start = pos.length / 3;
+    for (let j = 0; j < sides; j++) {
+      const a = (j / sides) * Math.PI * 2;
+      const c = Math.cos(a);
+      const sn = Math.sin(a);
+      pos.push((sec.w / 2) * Math.sign(c) * Math.abs(c) ** e, sec.y + (sec.h / 2) * Math.sign(sn) * Math.abs(sn) ** e, sec.z);
+    }
+    return start;
+  };
+  const starts = sections.map(ring);
+  for (let k = 0; k < sections.length - 1; k++) {
+    const a = starts[k] as number;
+    const b = starts[k + 1] as number;
+    for (let j = 0; j < sides; j++) {
+      const j1 = (j + 1) % sides;
+      idx.push(a + j, a + j1, b + j, a + j1, b + j1, b + j);
+    }
+  }
+  // caps on their own vertices so the rim stays a hard edge
+  const cap = (sec: Section, front: boolean): void => {
+    const start = ring(sec);
+    const centre = pos.length / 3;
+    pos.push(0, sec.y, sec.z);
+    for (let j = 0; j < sides; j++) {
+      const j1 = (j + 1) % sides;
+      if (front) idx.push(centre, start + j, start + j1);
+      else idx.push(centre, start + j1, start + j);
+    }
+  };
+  cap(sections[0] as Section, false);
+  cap(sections[sections.length - 1] as Section, true);
+  const geo = new BufferGeometry();
+  geo.setAttribute('position', new BufferAttribute(new Float32Array(pos), 3));
+  geo.setIndex(idx);
+  geo.computeVertexNormals();
+  return geo;
+}
+
 /** Flat blade: a 4-sided cone squashed sideways. */
 function blade(radius: number, height: number, thickness = 0.28): BufferGeometry {
   const g = new ConeGeometry(radius, height, 4);
@@ -111,12 +168,28 @@ function buildReference(): { root: Group; throat: Mesh; jawGroup: Group } {
   const torso = new Group();
   torso.position.set(0, 1.2, 0);
   rig.add(torso);
-  const chest = tagged(new BoxGeometry(0.9, 1.1, 1.3), 'red');
-  chest.position.set(0, 0.5, 0.1);
+  // barrel chest: one lofted shell, a darker armour belt around it and a keel plate
+  const chest = tagged(
+    loft([
+      { z: -0.62, y: 0.42, w: 0.62, h: 0.7 },
+      { z: -0.3, y: 0.48, w: 0.88, h: 1.02 },
+      { z: 0.15, y: 0.52, w: 0.96, h: 1.16 },
+      { z: 0.55, y: 0.5, w: 0.9, h: 1.04 },
+      { z: 0.8, y: 0.46, w: 0.66, h: 0.74 },
+    ]),
+    'red',
+  );
   torso.add(chest);
-  const plate = tagged(new BoxGeometry(0.95, 0.5, 1.1), 'dark');
-  plate.position.set(0, 0.45, 0.25);
+  const plate = tagged(
+    loft([
+      { z: -0.05, y: 0.5, w: 1.0, h: 1.18 },
+      { z: 0.25, y: 0.52, w: 1.02, h: 1.22 },
+      { z: 0.5, y: 0.5, w: 0.97, h: 1.12 },
+    ]),
+    'dark',
+  );
   torso.add(plate);
+  part(torso, loft([{ z: -0.45, y: -0.06, w: 0.3, h: 0.16 }, { z: 0.2, y: -0.1, w: 0.42, h: 0.2 }, { z: 0.72, y: -0.02, w: 0.3, h: 0.16 }], 10, 2), 'steel', 0, 0, 0);
   const coreGeo = new CylinderGeometry(0.22, 0.22, 0.15, 20);
   coreGeo.rotateX(Math.PI / 2);
   const core = tagged(coreGeo, 'glow');
@@ -166,12 +239,20 @@ function buildReference(): { root: Group; throat: Mesh; jawGroup: Group } {
   const head = new Group();
   head.position.set(0, 0.8, -0.25);
   neck.add(head);
-  const skull = tagged(new BoxGeometry(0.75, 0.75, 1.1), 'red');
-  skull.position.set(0, 0.2, 0.15);
+  // skull and snout as one tapering shell (wide braincase, narrow muzzle with a raised nose)
+  const skull = tagged(
+    loft([
+      { z: -0.45, y: 0.24, w: 0.5, h: 0.5 },
+      { z: -0.2, y: 0.22, w: 0.76, h: 0.74 },
+      { z: 0.3, y: 0.2, w: 0.78, h: 0.72 },
+      { z: 0.62, y: 0.14, w: 0.68, h: 0.56 },
+      { z: 1.0, y: 0.1, w: 0.6, h: 0.48 },
+      { z: 1.22, y: 0.1, w: 0.52, h: 0.44 },
+      { z: 1.3, y: 0.08, w: 0.38, h: 0.32 },
+    ]),
+    'red',
+  );
   head.add(skull);
-  const snout = tagged(new BoxGeometry(0.65, 0.5, 0.85), 'red');
-  snout.position.set(0, 0.1, 0.85);
-  head.add(snout);
   for (const x of [-0.38, 0.38]) {
     const eye = tagged(new SphereGeometry(0.09, 10, 10), 'glow');
     eye.position.set(x, 0.3, 0.35);
@@ -194,17 +275,22 @@ function buildReference(): { root: Group; throat: Mesh; jawGroup: Group } {
     part(head, new ConeGeometry(0.06, 0.34, 5), 'bone', sx * 0.24, -0.3, 1.18, Math.PI, 0, 0);
     part(head, new CylinderGeometry(0.035, 0.035, 0.5, 8), 'light', sx * 0.4, -0.12, 0.2, 0.9, 0, 0);
   }
-  part(head, new BoxGeometry(0.5, 0.08, 0.72), 'dark', 0, 0.39, 0.86);
-  // bevelled skull and snout: turned boxes break the cube silhouette
-  part(head, new BoxGeometry(0.58, 0.58, 1.0), 'red', 0, 0.2, 0.15, 0, 0, Math.PI / 4);
-  part(head, new BoxGeometry(0.44, 0.44, 0.8), 'dark', 0, 0.12, 0.86, 0, 0, Math.PI / 4);
+  // nasal armour following the muzzle
+  part(head, loft([{ z: 0.5, y: 0.4, w: 0.46, h: 0.14 }, { z: 0.9, y: 0.34, w: 0.44, h: 0.14 }, { z: 1.26, y: 0.28, w: 0.3, h: 0.1 }], 10, 2.4), 'dark', 0, 0, 0);
   for (let i = 0; i < 4; i++) part(head, blade(0.1, 0.34 - i * 0.03, 0.4), 'glow', 0, 0.68, -0.32 + i * 0.24, -0.55, 0, 0);
   const jawGroup = new Group();
   jawGroup.position.set(0, -0.05, 0.5);
   jawGroup.userData.pivot = 'jaw';
   head.add(jawGroup);
-  const jaw = tagged(new BoxGeometry(0.6, 0.3, 0.9), 'dark');
-  jaw.position.set(0, -0.1, 0.3);
+  const jaw = tagged(
+    loft([
+      { z: -0.2, y: -0.08, w: 0.64, h: 0.34 },
+      { z: 0.3, y: -0.1, w: 0.62, h: 0.3 },
+      { z: 0.68, y: -0.1, w: 0.5, h: 0.24 },
+      { z: 0.8, y: -0.09, w: 0.34, h: 0.16 },
+    ]),
+    'dark',
+  );
   jawGroup.add(jaw);
   for (let i = 0; i < 5; i++) {
     const z = 0.45 + i * 0.12;
@@ -266,8 +352,10 @@ function buildReference(): { root: Group; throat: Mesh; jawGroup: Group } {
     shin.position.set(0, -1.35, 0.15);
     shin.rotation.x = Math.PI / 10;
     leg.add(shin);
-    const foot = tagged(new BoxGeometry(0.35, 0.3, 0.65), 'light');
-    foot.position.set(0, -1.8, 0.25);
+    const foot = tagged(
+      loft([{ z: -0.14, y: -1.82, w: 0.3, h: 0.24 }, { z: 0.2, y: -1.8, w: 0.42, h: 0.32 }, { z: 0.6, y: -1.84, w: 0.4, h: 0.22 }], 12, 2.6),
+      'light',
+    );
     leg.add(foot);
     for (let i = 0; i < 3; i++) {
       const toe = tagged(new ConeGeometry(0.085, 0.44, 6), 'claw');
@@ -295,9 +383,22 @@ function buildReference(): { root: Group; throat: Mesh; jawGroup: Group } {
     if (i === 4) seg.userData.pivot = 'tailB';
     if (i === 8) seg.userData.pivot = 'tailC';
     const scale = Math.max(0.4, 1 - i * 0.07);
-    const box = tagged(new BoxGeometry(0.6 * scale, 0.55 * scale, 0.5 * scale), i % 2 === 0 ? 'red' : 'dark');
-    box.position.set(0, 0.1 * scale, -0.2);
+    // continuous tapering tail: each link runs into the size of the next one, with a dark band at the joint
+    const next = i === 10 ? scale * 0.7 : Math.max(0.4, 1 - (i + 1) * 0.07);
+    const box = tagged(
+      loft(
+        [
+          { z: -0.5, y: 0.1 * next, w: 0.6 * next, h: 0.55 * next },
+          { z: -0.2, y: 0.1 * scale, w: 0.6 * (scale + next) * 0.5, h: 0.56 * (scale + next) * 0.5 },
+          { z: 0.06, y: 0.1 * scale, w: 0.6 * scale, h: 0.55 * scale },
+        ],
+        12,
+        2.4,
+      ),
+      'red',
+    );
     seg.add(box);
+    part(seg, loft([{ z: -0.03, y: 0.1 * scale, w: 0.66 * scale, h: 0.6 * scale }, { z: 0.07, y: 0.1 * scale, w: 0.66 * scale, h: 0.6 * scale }], 12, 2.4), 'dark', 0, 0, 0);
     if (i < 8) {
       const spine = tagged(new ConeGeometry(0.08 * scale, 0.25 * scale, 4), 'glow');
       spine.position.set(0, 0.35 * scale, -0.2);
@@ -305,9 +406,7 @@ function buildReference(): { root: Group; throat: Mesh; jawGroup: Group } {
       seg.add(spine);
     }
     for (const sx of [-1, 1]) part(seg, blade(0.09 * scale, 0.42 * scale, 0.4), 'dark', sx * 0.38 * scale, 0.1 * scale, -0.2, 0, 0, sx * -Math.PI / 2);
-    // second box turned 45 degrees: octagonal armoured section instead of a plain cube, plus a joint ring
-    part(seg, new BoxGeometry(0.46 * scale, 0.46 * scale, 0.42 * scale), i % 2 === 0 ? 'dark' : 'red', 0, 0.1 * scale, -0.2, 0, 0, Math.PI / 4);
-    part(seg, new CylinderGeometry(0.2 * scale, 0.2 * scale, 0.1, 10), 'steel', 0, 0.1 * scale, 0.04, Math.PI / 2, 0, 0);
+
     if (i === 10) {
       // tail club: four bone spikes and a glowing blade
       for (const sx of [-1, 1]) {
