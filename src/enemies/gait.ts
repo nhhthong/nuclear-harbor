@@ -34,7 +34,8 @@ export function strideLength(legLength: number, speedFraction: number): number {
   return 4 * legLength * Math.sin(hipAmplitude(speedFraction));
 }
 
-function legAt(phase: number, amp: number, lift: number, out: LegPose): void {
+/** One leg at `phase`: hip swing of amplitude `amp`, knee fold up to `lift` during the swing. */
+export function legAt(phase: number, amp: number, lift: number, out: LegPose): void {
   const s = Math.sin(phase);
   const c = Math.cos(phase);
   // stance: the leg sweeps back almost straight; swing: it comes forward with the knee folded

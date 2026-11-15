@@ -233,6 +233,8 @@ export function createScorpionModule(): GameModule {
         },
         force: (skill: ScorpionSkill) => scorpions.find((d) => d.alive)?.forceSkill(skill) ?? false,
         shield: () => scorpions.find((d) => d.alive)?.raiseShield(true) ?? false,
+        /** Moves the guard spot (it walks there while guarding). */
+        guardAt: (x: number, z: number) => scorpions.find((d) => d.alive)?.spot.set(x, 0, z),
         damage: (amount: number, zone: HitZone = 'body') =>
           scorpions.find((d) => d.alive)?.applyDamage({ amount, zone, source: 'player' }) ?? null,
         drops: () => drops?.list() ?? [],

@@ -1,4 +1,5 @@
-import { BufferGeometry, Euler, Matrix4, Quaternion, Vector3 } from 'three';
+import { BufferAttribute, BufferGeometry, Euler, Matrix4, Quaternion, Vector3 } from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { box, cylX, cylZ, Parts, rod, sphere, sweptLink, type V3 } from '../duck/modelKit';
 import { SPOT } from './tunables';
 
@@ -20,13 +21,19 @@ export const SPOT_COLORS = {
 
 export interface SpotModel {
   body: BufferGeometry;
-  /** Diagonal leg pairs, authored around the shoulder axis (mesh sits at `legPivot`). */
-  legsA: BufferGeometry;
-  legsB: BufferGeometry;
-  legPivot: Vector3;
   /** Emissive optics (corner lamps, lens stack, visor strip). */
   lamps: BufferGeometry;
   far: BufferGeometry;
+  /**
+   * Body and the four legs in one skinned geometry. Bones: 0 body, then per leg (FR, FL, RR, RL)
+   * thigh 1 + 2i and shin 2 + 2i. Every vertex is bound rigidly to one bone.
+   */
+  rig: BufferGeometry;
+  /** Bone rest positions relative to the parent bone (game frame, no rotation). */
+  boneRest: Vector3[];
+  boneParent: number[];
+  /** Shoulder height above the feet (m), for the stride length. */
+  legLength: number;
 }
 
 const C = SPOT_COLORS;
@@ -54,16 +61,17 @@ const LEGS: readonly LegDef[] = [
   { side: -1, front: false, z: -0.78, zStep: -0.15 },
 ];
 
-function addLeg(p: Parts, leg: LegDef): void {
+/** One leg in two rigid pieces: `up` (shoulder to knee) and `lo` (knee joint, shin, wheel foot). */
+function addLeg(up: Parts, lo: Parts, leg: LegDef): void {
   const s = leg.side * 0.78;
   const z = leg.z;
   const zs = leg.zStep;
   const kneeZ = z + zs;
   const wheelZ = z + zs + (leg.front ? 0.13 : -0.11);
-  p.add(rod([s * 0.65, 1.67, z - 0.015], [s * 0.78, 1.3, z + zs * 0.46], 0.085, 0.065, 8), C.dark);
-  p.add(rod([s * 0.62, 1.69, z - 0.08], [s * 0.83, 1.27, z + zs * 0.48], 0.026, 0.022, 6), C.silver);
-  p.add(rod([s * 0.83, 1.28, z + zs * 0.48], [s * 0.91, 1.13, z + zs * 0.85], 0.035, 0.028, 6), C.graphiteLight);
-  p.add(
+  up.add(rod([s * 0.65, 1.67, z - 0.015], [s * 0.78, 1.3, z + zs * 0.46], 0.085, 0.065, 8), C.dark);
+  up.add(rod([s * 0.62, 1.69, z - 0.08], [s * 0.83, 1.27, z + zs * 0.48], 0.026, 0.022, 6), C.silver);
+  up.add(rod([s * 0.83, 1.28, z + zs * 0.48], [s * 0.91, 1.13, z + zs * 0.85], 0.035, 0.028, 6), C.graphiteLight);
+  up.add(
     sweptLink(
       [
         [s * 0.75, 1.78, z],
@@ -78,13 +86,13 @@ function addLeg(p: Parts, leg: LegDef): void {
     ),
     C.yellow,
   );
-  p.add(sphere(0.145, 10, 7), C.yellowHighlight, [s * 0.91, 1.57, z + zs * 0.36], [0, 0, 0], [1.08, 1.18, 0.82]);
-  p.add(cylX(0.085, 0.17, 12), C.dark, [s * 1.0, 1.09, kneeZ]);
-  p.add(cylX(0.057, 0.19, 10), C.silver, [s * 1.055, 1.09, kneeZ]);
-  p.add(sphere(0.12, 10, 7), C.dark, [s * 0.99, 1.08, kneeZ], [0, 0, 0], [1, 0.92, 0.92]);
-  p.add(cylX(0.105, 0.18, 12), C.graphite, [s * 1.02, 1.08, kneeZ]);
-  p.add(cylX(0.07, 0.2, 10), C.silver, [s * 1.09, 1.08, kneeZ]);
-  p.add(
+  up.add(sphere(0.145, 10, 7), C.yellowHighlight, [s * 0.91, 1.57, z + zs * 0.36], [0, 0, 0], [1.08, 1.18, 0.82]);
+  lo.add(cylX(0.085, 0.17, 12), C.dark, [s * 1.0, 1.09, kneeZ]);
+  lo.add(cylX(0.057, 0.19, 10), C.silver, [s * 1.055, 1.09, kneeZ]);
+  lo.add(sphere(0.12, 10, 7), C.dark, [s * 0.99, 1.08, kneeZ], [0, 0, 0], [1, 0.92, 0.92]);
+  lo.add(cylX(0.105, 0.18, 12), C.graphite, [s * 1.02, 1.08, kneeZ]);
+  lo.add(cylX(0.07, 0.2, 10), C.silver, [s * 1.09, 1.08, kneeZ]);
+  lo.add(
     sweptLink(
       [
         [s * 1.0, 1.02, kneeZ],
@@ -99,27 +107,27 @@ function addLeg(p: Parts, leg: LegDef): void {
     ),
     C.graphite,
   );
-  p.add(rod([s * 0.94, 0.96, kneeZ - 0.035], [s * 0.97, 0.55, wheelZ + 0.08], 0.028, 0.022, 6), C.silver);
-  p.add(sphere(0.075, 8, 6), C.graphiteLight, [s * 1.06, 0.23, wheelZ], [0, 0, 0], [1, 0.65, 0.72]);
+  lo.add(rod([s * 0.94, 0.96, kneeZ - 0.035], [s * 0.97, 0.55, wheelZ + 0.08], 0.028, 0.022, 6), C.silver);
+  lo.add(sphere(0.075, 8, 6), C.graphiteLight, [s * 1.06, 0.23, wheelZ], [0, 0, 0], [1, 0.65, 0.72]);
   // wheel foot: rubber tyre, graphite and silver caps
   const wx = s * 1.05;
-  p.add(cylX(0.135, 0.19, 16), C.rubber, [wx, 0.145, wheelZ]);
-  p.add(cylX(0.078, 0.215, 12), C.graphite, [wx + leg.side * 0.015, 0.145, wheelZ]);
-  p.add(cylX(0.045, 0.228, 10), C.silver, [wx + leg.side * 0.02, 0.145, wheelZ]);
-  p.add(cylX(0.022, 0.235, 8), C.dark, [wx + leg.side * 0.025, 0.145, wheelZ]);
+  lo.add(cylX(0.135, 0.19, 16), C.rubber, [wx, 0.145, wheelZ]);
+  lo.add(cylX(0.078, 0.215, 12), C.graphite, [wx + leg.side * 0.015, 0.145, wheelZ]);
+  lo.add(cylX(0.045, 0.228, 10), C.silver, [wx + leg.side * 0.02, 0.145, wheelZ]);
+  lo.add(cylX(0.022, 0.235, 8), C.dark, [wx + leg.side * 0.025, 0.145, wheelZ]);
   // knee guard with a hazard edge, shin blade and a second hydraulic ram
-  p.add(box(0.05, 0.24, 0.26, 0.03), C.yellowSide, [s * 1.15, 1.1, kneeZ], [0, 0, leg.side * -0.12]);
-  p.add(box(0.054, 0.045, 0.27, 0.015), C.accent, [s * 1.152, 1.2, kneeZ], [0, 0, leg.side * -0.12]);
-  p.add(box(0.035, 0.46, 0.11, 0.02), C.yellow, [s * 1.14, 0.62, wheelZ + (leg.front ? 0.2 : -0.18)], [leg.front ? -0.3 : 0.3, 0, 0]);
-  p.add(rod([s * 0.86, 1.52, z + zs * 0.2], [s * 1.02, 1.16, kneeZ + (leg.front ? -0.1 : 0.1)], 0.03, 0.03, 6), C.dark);
-  p.add(rod([s * 0.9, 1.42, z + zs * 0.3], [s * 1.02, 1.16, kneeZ + (leg.front ? -0.1 : 0.1)], 0.017, 0.017, 6), C.silver);
+  lo.add(box(0.05, 0.24, 0.26, 0.03), C.yellowSide, [s * 1.15, 1.1, kneeZ], [0, 0, leg.side * -0.12]);
+  lo.add(box(0.054, 0.045, 0.27, 0.015), C.accent, [s * 1.152, 1.2, kneeZ], [0, 0, leg.side * -0.12]);
+  lo.add(box(0.035, 0.46, 0.11, 0.02), C.yellow, [s * 1.14, 0.62, wheelZ + (leg.front ? 0.2 : -0.18)], [leg.front ? -0.3 : 0.3, 0, 0]);
+  up.add(rod([s * 0.86, 1.52, z + zs * 0.2], [s * 1.02, 1.16, kneeZ + (leg.front ? -0.1 : 0.1)], 0.03, 0.03, 6), C.dark);
+  up.add(rod([s * 0.9, 1.42, z + zs * 0.3], [s * 1.02, 1.16, kneeZ + (leg.front ? -0.1 : 0.1)], 0.017, 0.017, 6), C.silver);
   // mud guard over the wheel
-  p.add(box(0.2, 0.03, 0.3, 0.012), C.yellowSide, [wx, 0.31, wheelZ]);
+  lo.add(box(0.2, 0.03, 0.3, 0.012), C.yellowSide, [wx, 0.31, wheelZ]);
 }
 
 /**
  * Builds every Spot geometry once in the reference's units and bakes scale, floor offset and the turn
- * (the reference faces +Z, the game faces -Z). Legs are merged per diagonal pair for a trot with 2 meshes.
+ * (the reference faces +Z, the game faces -Z). Body and legs share one skinned geometry.
  */
 export function buildSpotModel(): SpotModel {
   const s = SPOT.modelScale;
@@ -217,20 +225,40 @@ export function buildSpotModel(): SpotModel {
   }
   const bodyGeo = body.merge(world);
 
-  // diagonal leg pairs: (FR + RL) and (FL + RR)
-  const pivotGame = new Vector3(0, SHOULDER_Y * s - SPOT.centerHeight, 0);
-  const pivotShift = new Matrix4().makeTranslation(0, -pivotGame.y, 0);
-  const bake = pivotShift.clone().multiply(world);
-  const pairA = new Parts();
-  pairA.base = id;
-  addLeg(pairA, LEGS[0] as LegDef);
-  addLeg(pairA, LEGS[3] as LegDef);
-  const legsA = pairA.merge(bake);
-  const pairB = new Parts();
-  pairB.base = id;
-  addLeg(pairB, LEGS[1] as LegDef);
-  addLeg(pairB, LEGS[2] as LegDef);
-  const legsB = pairB.merge(bake);
+  // skinned rig: body plus thigh and shin of each leg
+  const rigParts: BufferGeometry[] = [bodyGeo.clone()];
+  const rigBones: number[] = [0];
+  const boneRest: Vector3[] = [new Vector3()];
+  const boneParent: number[] = [-1];
+  const toGame = (x: number, y: number, z: number): Vector3 => new Vector3(x, y, z).applyMatrix4(world);
+  LEGS.forEach((leg, i) => {
+    const up = new Parts();
+    const lo = new Parts();
+    addLeg(up, lo, leg);
+    rigParts.push(up.merge(world), lo.merge(world));
+    rigBones.push(1 + 2 * i, 2 + 2 * i);
+    const shoulder = toGame(leg.side * 0.62, SHOULDER_Y, leg.z);
+    const knee = toGame(leg.side * 0.78, 1.09, leg.z + leg.zStep);
+    boneRest.push(shoulder, knee.clone().sub(shoulder));
+    boneParent.push(0, 1 + 2 * i);
+  });
+  rigParts.forEach((g, k) => {
+    const n = g.getAttribute('position').count;
+    const idx = new Uint16Array(n * 4);
+    const wgt = new Float32Array(n * 4);
+    for (let v = 0; v < n; v++) {
+      idx[v * 4] = rigBones[k] as number;
+      wgt[v * 4] = 1;
+    }
+    g.setAttribute('skinIndex', new BufferAttribute(idx, 4));
+    g.setAttribute('skinWeight', new BufferAttribute(wgt, 4));
+  });
+  const rig = mergeGeometries(rigParts, false);
+  for (const g of rigParts) g.dispose();
+  if (!rig) throw new Error('spot rig merge failed');
+  rig.computeBoundingSphere();
+  const legLength = (boneRest[1] as Vector3).y + SPOT.centerHeight;
+
 
   // emissive optics
   const lamps = new Parts();
@@ -255,5 +283,5 @@ export function buildSpotModel(): SpotModel {
   for (const leg of LEGS) far.add(box(0.22, 1.7, 0.26), C.graphite, [leg.side * 0.95, 0.95, leg.z + leg.zStep]);
   const farGeo = far.merge(world);
 
-  return { body: bodyGeo, legsA, legsB, legPivot: pivotGame, lamps: lampGeo, far: farGeo };
+  return { body: bodyGeo, lamps: lampGeo, far: farGeo, rig, boneRest, boneParent, legLength };
 }

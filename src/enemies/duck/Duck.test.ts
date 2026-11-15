@@ -45,7 +45,7 @@ function runUntilState(r: Rig, state: string, maxSeconds: number): void {
 }
 
 describe('Bomber Duck (headless physics)', () => {
-  it('has 60 HP, the duck id, a head crit volume and a model of at most 4 meshes (6 draw calls with the shadow pass and the arming ring) near, 1 far', async () => {
+  it('has 60 HP, the duck id, a head crit volume and a model of at most 5 meshes (the feet step separately) near, 1 far', async () => {
     const r = await rig(40);
     expect(r.d.type).toBe('duck');
     expect(r.d.maxHp).toBe(60);
@@ -64,10 +64,10 @@ describe('Bomber Duck (headless physics)', () => {
       });
       return n;
     };
-    expect(count(levels[0]?.object)).toBeLessThanOrEqual(4);
+    expect(count(levels[0]?.object)).toBeLessThanOrEqual(5);
     expect(count(levels[1]?.object)).toBe(1);
     const second = r.m.spawn({ type: 'duck', position: new Vector3(5, 0, 0), patrol: [] }) as unknown as Duck;
-    const geo = (e: Duck) => (e as unknown as { feet: Mesh }).feet.geometry;
+    const geo = (e: Duck) => (e as unknown as { footL: Mesh }).footL.geometry;
     expect(geo(second)).toBe(geo(r.d));
   });
 

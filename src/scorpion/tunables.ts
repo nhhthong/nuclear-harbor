@@ -20,6 +20,8 @@ export const SCORPION = {
   spawnClearRadius: 3,
   /** Max distance from its guard spot (m). */
   leashRadius: 20,
+  /** Ground covered by one full gait cycle (m); the leg phase is advanced by distance, not time. */
+  strideLength: 1.5,
   walkSpeed: 4.2,
   /** Turn rate while walking (rad/s). */
   turnRate: 1.5,

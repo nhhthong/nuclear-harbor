@@ -38,11 +38,7 @@ export const SPOT = {
   noseForward: 0.75,
   noseUp: 0.25,
   radius: 0.8,
-  /** Trot animation. */
-  trotFrequency: 2.4,
-  /** Leg swing amplitude (rad) while trotting, and the stretched gallop pose during the lunge. */
-  trotSwing: 0.45,
-  lungeSwing: 0.6,
+  /** Body drop (m) at the end of the crouch telegraph; the trot itself lives in `src/enemies/gait.ts`. */
   crouchDrop: 0.1,
   /** Far LOD switch distance (m). */
   lodFar: 38,
