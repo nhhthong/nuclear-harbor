@@ -7,7 +7,7 @@ import { navFor } from './nav/bakeNav';
 import type { NavGrid, PathPoint } from './nav/NavGrid';
 import { ENEMY_LOCAL } from './tunables';
 
-const TYPES: readonly EnemyType[] = ['army', 'spot', 'duck'];
+const TYPES: readonly EnemyType[] = ['army', 'spot', 'duck', 'samurai'];
 
 /** Parses `?enemies=army,spot|none`; the default is a single army robot. */
 export function parseEnemyParam(value: string | null): EnemyType[] {
@@ -130,6 +130,7 @@ const cross = (cx: number, cz: number): XZ[] => [
 const army = (patrol: XZ[], at: XZ = patrol[0] ?? [0, 0]): Authored => ({ type: 'army', at, patrol });
 const spot = (patrol: XZ[]): Authored => ({ type: 'spot', at: patrol[0] ?? [0, 0], patrol });
 
+const samurai = (patrol: XZ[]): Authored => ({ type: 'samurai', at: patrol[0] ?? [0, 0], patrol });
 const duck = (patrol: XZ[]): Authored => ({ type: 'duck', at: patrol[0] ?? [0, 0], patrol });
 
 /** Army loops (tower, lane crossings), spot beats and the Ducks outside the yard; the yard Ducks come from its aisles. */
@@ -152,6 +153,10 @@ const ARMY_SPOT_POSTS: readonly Authored[] = [
   spot(line([22, -22], [32, -22])),
   spot(line([10, -47], [10, -39])),
   duck(line([21, -30], [32, -30])),
+  // cyber samurai: one per area, none in the relay court
+  samurai(line([9.5, -7], [9.5, 4])),
+  samurai(line([-19.5, 28], [-26.5, 28.5])),
+  samurai(line([26, -25], [26, -34])),
 ];
 
 function laneAlong(lane: LaneData, d: number): XZ {

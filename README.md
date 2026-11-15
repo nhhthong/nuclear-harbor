@@ -69,6 +69,10 @@ simulation, procedural audio and procedurally built models. There is no backend 
     <td width="50%"><img src="docs/media/sunset-scorpion.jpg" alt="STINGER-7, the mecha scorpion semi-boss, seen from the side"><br><sub>STINGER-7, the relay guardian</sub></td>
     <td width="50%"><img src="docs/media/sunset-scorpion-venom.jpg" alt="Green venom pool left by the scorpion's venom shot"><br><sub>Venom shot: the pool keeps hurting for five seconds</sub></td>
   </tr>
+  <tr>
+    <td width="50%"><img src="docs/media/sunset-samurai.jpg" alt="Cyber samurai with a gold crest, red sash and a double-bladed polearm"><br><sub>Cyber samurai, the elite</sub></td>
+    <td width="50%"><img src="docs/media/sunset-samurai-dash.jpg" alt="Faint lightning left behind by the samurai's dashes"><br><sub>Lightning dashes leave a fading trail</sub></td>
+  </tr>
 </table>
 
 <sub>Captured from the production build with software rendering (no GPU), quality preset "medium".</sub>
@@ -88,6 +92,7 @@ simulation, procedural audio and procedurally built models. There is no backend 
 - **Vanguard army mech** (3): slow patrols, then smooth, disciplined advance and rocket salvos.
 - **Spot dog** (8): weak and fast, lunges and rams.
 - **Bomber Duck** (5): hops toward you, arms a **3-2-1** countdown and blows up for 15 damage.
+- **Cyber samurai** (3, elite): 300 HP, twice a regular robot. One per area (yard, gate apron, quay), never in the scorpion's court. A quick cut up close, a **leap and cleave** from up to 17 m, a **spinning polearm** that deflects 85% of frontal fire for 3 s when it is being shot, and twice per life (below 70% and 35% HP) a burst of six **lightning dashes** across an 8.5 m area that leaves faint lightning behind.
 - **STINGER-7 semi-boss** (mecha scorpion, about 6 m long, 1300 HP): rises behind the relay tower when you approach it. Three telegraphed skills: a **charge** that throws you straight back, a **venom shot** (green glob, burst damage and a pool that hurts for 5 s) and a **tail slam** whose blasts run out in a fan in front of it. Under sustained fire it crosses its claws and raises a **hexagon shield** that blocks 80% of frontal damage for a few seconds, so flank it or wait. It is stunned after ramming a wall and enrages below 40% HP. Weak spots: head sensors and the stinger bulb.
 - **Area streaming**: no robot exists at load. An area's robots appear when you approach it (never closer than 13 m), at most 10 are alive at once, and survivors are removed again after you leave.
 - **TITAN-04 final boss** (about 9 m tall): falls from the sky after the tower is activated, four knee-light weak points, then an exposed core.
@@ -233,7 +238,7 @@ Design rules (full text in [`.specify/memory/constitution.md`](.specify/memory/c
 | Target | 60 FPS desktop, 30 FPS low-end fallback |
 | Draw calls | at most 350 per frame; measured about 100 to 180 including the reflection pass |
 | Triangles | about 0.45 to 0.56 million per frame with shadow and reflection passes (measured) |
-| Enemies | roster of 18 regular robots streamed by area (10 alive at most), STINGER-7 and the boss |
+| Enemies | roster of 21 robots (18 regular, 3 samurai) streamed by area (10 alive at most), STINGER-7 and the boss |
 | Shadows | one sun shadow map, static content refreshed at 6 Hz (medium) or 12 Hz (high) for moving casters |
 | Presets | low: no shadows, reflection or bloom; medium: shadows, reflection, bloom; high: adds ambient occlusion |
 | Bundle | about 5.3 MB (Rapier's WASM is about 80% of it), split into three chunks |

@@ -73,12 +73,13 @@ describe('authored harbor population', () => {
     expect(count('army')).toBe(ENEMY_COUNTS.army);
     expect(count('spot')).toBe(ENEMY_COUNTS.spot);
     expect(count('duck')).toBe(ENEMY_COUNTS.duck);
+    expect(count('samurai')).toBe(ENEMY_COUNTS.samurai);
     expect(authored).toHaveLength(ENEMY_COUNTS.total);
   });
 
   it('honours ENEMY_DISTRIBUTION per zone', () => {
     for (const zone of ['A', 'B', 'C', 'D'] as const) {
-      for (const type of ['army', 'spot', 'duck'] as const) {
+      for (const type of ['army', 'spot', 'duck', 'samurai'] as const) {
         const n = authored.filter((p) => p.type === type && zoneAt(p.at[0], p.at[1]) === zone).length;
         expect(n, `${type} in ${zone}`).toBe(ENEMY_DISTRIBUTION[zone][type]);
       }
