@@ -36,6 +36,8 @@ export function createScorpionModule(): GameModule {
   let audio: ScorpionAudio | null = null;
   let drops: ScorpionDrops | null = null;
   let barEl: HTMLDivElement | null = null;
+  let barLabel: HTMLDivElement | null = null;
+  let barShield = false;
   let barFill: HTMLDivElement | null = null;
   let barText = '';
   let seed = 0;
@@ -144,6 +146,7 @@ export function createScorpionModule(): GameModule {
     el.append(label, track);
     c.uiRoot.appendChild(el);
     barEl = el;
+    barLabel = label;
     barFill = fill;
   }
 
@@ -165,6 +168,11 @@ export function createScorpionModule(): GameModule {
         barText = 'hidden';
       }
       return;
+    }
+    if (best.shielded !== barShield && barLabel) {
+      barShield = best.shielded;
+      barLabel.textContent = barShield ? 'STINGER-7 // SHIELD UP  -80% DAMAGE' : 'STINGER-7 // RELAY GUARDIAN';
+      barLabel.style.color = barShield ? '#7dff8a' : '';
     }
     const w = `${((best.hp / best.maxHp) * 100).toFixed(1)}%`;
     if (barText !== w) {
@@ -224,6 +232,7 @@ export function createScorpionModule(): GameModule {
           for (const d of scorpions) d.passive = on;
         },
         force: (skill: ScorpionSkill) => scorpions.find((d) => d.alive)?.forceSkill(skill) ?? false,
+        shield: () => scorpions.find((d) => d.alive)?.raiseShield(true) ?? false,
         damage: (amount: number, zone: HitZone = 'body') =>
           scorpions.find((d) => d.alive)?.applyDamage({ amount, zone, source: 'player' }) ?? null,
         drops: () => drops?.list() ?? [],
@@ -279,6 +288,7 @@ export function createScorpionModule(): GameModule {
       audio = null;
       barEl?.remove();
       barEl = null;
+      barLabel = null;
       barFill = null;
       towers.length = 0;
       guardIds = [];

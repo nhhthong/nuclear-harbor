@@ -94,6 +94,11 @@ export const SCORPION = {
     /** Below `venom.min` the scorpion prefers the tail slam, below this the venom shot, beyond it the charge. */
     venomPreferMax: 14,
   },
+  /**
+   * Claw guard: after taking `triggerDamage` within about `window` seconds the scorpion crosses its
+   * claws and raises a hex shield for `seconds`. Hits from inside the front arc lose `reduction`.
+   */
+  guard: { reduction: 0.8, seconds: 2.8, cooldown: 7, triggerDamage: 90, window: 1.5, frontHalfAngle: 1.3 },
   /** Player vertical reach for stomp/ram checks. */
   ramHeight: 2.4,
   drops: {

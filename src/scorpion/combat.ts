@@ -45,3 +45,14 @@ export function arcPosition(sx: number, sy: number, sz: number, ex: number, ey: 
   out.y = sy + (ey - sy) * k + 4 * SCORPION.skills.venom.apex * k * (1 - k);
   return out;
 }
+
+/**
+ * Damage that gets through the claw shield. `relativeAngle` is the bearing of the attacker from the
+ * scorpion's facing (rad, 0 = straight ahead): only hits from inside the front arc are reduced.
+ */
+export function shieldedDamage(amount: number, relativeAngle: number, shieldUp: boolean): number {
+  if (!shieldUp) return amount;
+  const g = SCORPION.guard;
+  const a = Math.abs(Math.atan2(Math.sin(relativeAngle), Math.cos(relativeAngle)));
+  return a <= g.frontHalfAngle ? amount * (1 - g.reduction) : amount;
+}

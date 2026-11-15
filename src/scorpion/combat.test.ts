@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { arcPosition, fanHit, inPool, ramContact, venomBurstDamage } from './combat';
+import { arcPosition, fanHit, inPool, ramContact, shieldedDamage, venomBurstDamage } from './combat';
 import { SCORPION } from './tunables';
 
 describe('venom', () => {
@@ -46,5 +46,17 @@ describe('ramContact', () => {
     expect(ramContact(SCORPION.skills.ram.hitRadius - 0.1, 0)).toBe(true);
     expect(ramContact(SCORPION.skills.ram.hitRadius + 0.1, 0)).toBe(false);
     expect(ramContact(1, SCORPION.ramHeight + 1)).toBe(false);
+  });
+});
+
+describe('shieldedDamage', () => {
+  const g = SCORPION.guard;
+  it('blocks 80% from the front while the shield is up, nothing otherwise', () => {
+    expect(g.reduction).toBe(0.8);
+    expect(shieldedDamage(100, 0, true)).toBeCloseTo(20);
+    expect(shieldedDamage(100, g.frontHalfAngle - 0.05, true)).toBeCloseTo(20);
+    expect(shieldedDamage(100, g.frontHalfAngle + 0.05, true)).toBe(100);
+    expect(shieldedDamage(100, Math.PI, true)).toBe(100);
+    expect(shieldedDamage(100, 0, false)).toBe(100);
   });
 });

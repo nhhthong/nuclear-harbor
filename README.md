@@ -88,7 +88,7 @@ simulation, procedural audio and procedurally built models. There is no backend 
 - **Vanguard army mech** (3): slow patrols, then smooth, disciplined advance and rocket salvos.
 - **Spot dog** (8): weak and fast, lunges and rams.
 - **Bomber Duck** (5): hops toward you, arms a **3-2-1** countdown and blows up for 15 damage.
-- **STINGER-7 semi-boss** (mecha scorpion, about 6 m long, 1300 HP): rises behind the relay tower when you approach it. Three telegraphed skills: a **charge** that throws you straight back, a **venom shot** (green glob, burst damage and a pool that hurts for 5 s) and a **tail slam** whose blasts run out in a fan in front of it. It is stunned after ramming a wall and enrages below 40% HP. Weak spots: head sensors and the stinger bulb.
+- **STINGER-7 semi-boss** (mecha scorpion, about 6 m long, 1300 HP): rises behind the relay tower when you approach it. Three telegraphed skills: a **charge** that throws you straight back, a **venom shot** (green glob, burst damage and a pool that hurts for 5 s) and a **tail slam** whose blasts run out in a fan in front of it. Under sustained fire it crosses its claws and raises a **hexagon shield** that blocks 80% of frontal damage for a few seconds, so flank it or wait. It is stunned after ramming a wall and enrages below 40% HP. Weak spots: head sensors and the stinger bulb.
 - **Area streaming**: no robot exists at load. An area's robots appear when you approach it (never closer than 13 m), at most 10 are alive at once, and survivors are removed again after you leave.
 - **TITAN-04 final boss** (about 9 m tall): falls from the sky after the tower is activated, four knee-light weak points, then an exposed core.
 

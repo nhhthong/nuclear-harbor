@@ -20,13 +20,13 @@ import type { GameContext } from '@/core/GameContext';
 import type { Damageable, DamageInfo, DamageResult, HitZone } from '@/core/types';
 import { Groups, QueryGroups } from '@/physics/groups';
 import { chooseSkill, createCooldowns, skillTelegraph, startCooldown, tickCooldowns } from './brain';
-import { arcPosition, fanHit, inPool, ramContact, venomBurstDamage } from './combat';
+import { arcPosition, fanHit, inPool, ramContact, shieldedDamage, venomBurstDamage } from './combat';
 import { createScorpionRig, createPose, type ScorpionAssets, type ScorpionRig } from './ScorpionModel';
 import type { ScorpionAudio } from './scorpionAudio';
 import type { ScorpionSkill } from './events';
 import { SCORPION } from './tunables';
 
-export type ScorpionState = 'spawning' | 'guard' | 'chase' | 'telegraph' | 'execute' | 'recover' | 'stunned' | 'dead';
+export type ScorpionState = 'spawning' | 'guard' | 'chase' | 'telegraph' | 'execute' | 'recover' | 'shield' | 'stunned' | 'dead';
 
 /** Shared decal geometry (telegraph discs and strips); materials are per scorpion. */
 export interface ScorpionDecals {
@@ -34,6 +34,8 @@ export interface ScorpionDecals {
   strip: PlaneGeometry;
   /** Venom glob. */
   glob: SphereGeometry;
+  /** Curved shell in front of the body that carries the hex shield. */
+  shield: SphereGeometry;
   dispose(): void;
 }
 
@@ -116,6 +118,43 @@ void main() {
   #include <colorspace_fragment>
 }`;
 
+
+// Hexagonal energy shield: honeycomb cells that switch on from the centre outwards (uOpen), a scan
+// line, bright cell edges and a flash where damage was absorbed (uHit).
+const SHIELD_FRAGMENT = /* glsl */ `
+uniform float uOpen;
+uniform float uHit;
+uniform float uTime;
+varying vec2 vUv;
+float hexDist(vec2 p) {
+  p = abs(p);
+  return max(dot(p, vec2(0.5, 0.8660254)), p.x);
+}
+void main() {
+  vec2 uv = (vUv - 0.5) * vec2(15.0, 9.0);
+  vec2 r = vec2(1.0, 1.7320508);
+  vec2 h = r * 0.5;
+  vec2 a = mod(uv, r) - h;
+  vec2 b = mod(uv - h, r) - h;
+  vec2 g = dot(a, a) < dot(b, b) ? a : b;
+  vec2 id = uv - g;
+  float d = hexDist(g);
+  float edge = smoothstep(0.40, 0.48, d);
+  // cells appear from the centre; each one flickers on its own clock
+  float dist = length(id / vec2(7.5, 4.5));
+  float on = smoothstep(dist - 0.12, dist + 0.02, uOpen * 1.25);
+  float rnd = fract(sin(dot(id, vec2(127.1, 311.7))) * 43758.5453);
+  float flick = 0.75 + 0.25 * sin(uTime * (3.0 + rnd * 6.0) + rnd * 6.28);
+  float scan = pow(0.5 + 0.5 * sin(vUv.y * 9.0 - uTime * 3.5), 12.0);
+  float border = smoothstep(0.78, 1.0, max(abs(vUv.x - 0.5), abs(vUv.y - 0.5)) * 2.0);
+  float core = (1.0 - smoothstep(0.0, 0.42, d)) * 0.06;
+  float alpha = on * flick * (edge * 0.85 + core + 0.07 + scan * 0.18 + uHit * (0.35 + rnd * 0.4)) * (1.0 - border * 0.75);
+  vec3 col = mix(vec3(0.12, 1.0, 0.32), vec3(0.75, 1.0, 0.8), edge * 0.6 + uHit * 0.5);
+  gl_FragColor = vec4(col * alpha * (1.6 + edge * 1.6 + uHit * 2.5), alpha);
+  #include <tonemapping_fragment>
+  #include <colorspace_fragment>
+}`;
+
 function decalMaterial(mode: number, color: number): ShaderMaterial {
   return new ShaderMaterial({
     uniforms: {
@@ -143,14 +182,18 @@ export function createDecals(): ScorpionDecals {
   strip.rotateX(-Math.PI / 2);
   strip.translate(0, 0, -0.5);
   const glob = new SphereGeometry(0.34, 12, 10);
+  // part of a sphere centred on -Z (the scorpion's forward axis)
+  const shield = new SphereGeometry(1, 28, 14, Math.PI * 1.5 - 1.15, 2.3, 0.45, 1.2);
   return {
     disc,
     strip,
     glob,
+    shield,
     dispose() {
       disc.dispose();
       strip.dispose();
       glob.dispose();
+      shield.dispose();
     },
   };
 }
@@ -222,6 +265,12 @@ export class Scorpion implements Damageable {
   private readonly fanMat: ShaderMaterial;
   private readonly poolMat: ShaderMaterial;
   private readonly globMat: MeshBasicMaterial;
+  private readonly shield: Mesh;
+  private readonly shieldMat: ShaderMaterial;
+  private shieldOpen = 0;
+  private shieldHit = 0;
+  private guardCooldown = 0;
+  private recentDamage = 0;
   // venom glob in flight and the pool it leaves; both outlive the skill state
   private globT = -1;
   private readonly globFrom = new Vector3();
@@ -281,6 +330,24 @@ export class Scorpion implements Damageable {
     this.pool = mk(decals.disc, this.poolMat);
     this.pool.renderOrder = 3;
     this.glob = mk(decals.glob, this.globMat);
+    this.shieldMat = new ShaderMaterial({
+      uniforms: { uOpen: { value: 0 }, uHit: { value: 0 }, uTime: { value: 0 } },
+      vertexShader: DECAL_VERTEX,
+      fragmentShader: SHIELD_FRAGMENT,
+      transparent: true,
+      depthWrite: false,
+      blending: AdditiveBlending,
+      side: DoubleSide,
+      fog: false,
+    });
+    this.shield = new Mesh(decals.shield, this.shieldMat);
+    this.shield.visible = false;
+    this.shield.renderOrder = 5;
+    this.shield.frustumCulled = false;
+    this.shield.userData.noReflect = true;
+    this.shield.position.set(0, SCORPION.heightM * 0.2, -SCORPION.bodyRadius * 0.35);
+    this.shield.scale.set(SCORPION.bodyRadius * 1.75, SCORPION.heightM * 0.62, SCORPION.bodyRadius * 1.75);
+    this.root.add(this.shield);
 
     const R = ctx.physics.rapier;
     this.body = ctx.physics.world.createRigidBody(
@@ -315,15 +382,41 @@ export class Scorpion implements Damageable {
     return { ...this.cooldowns };
   }
 
+  /** True while the hex shield is up (front hits are reduced). */
+  get shielded(): boolean {
+    return this.state_ === 'shield' && this.shieldOpen > 0.35;
+  }
+
+  /** Crosses the claws and raises the shield; refused mid-skill, while stunned or on cooldown. */
+  raiseShield(force = false): boolean {
+    if (this.state_ !== 'guard' && this.state_ !== 'chase' && this.state_ !== 'recover') return false;
+    if (!force && (this.guardCooldown > 0 || this.passive)) return false;
+    this.recentDamage = 0;
+    this.guardCooldown = SCORPION.guard.cooldown + SCORPION.guard.seconds;
+    this.hideDecals();
+    this.enter('shield');
+    this.audio.warn(0.3);
+    this.ringFx(this.position.x, this.position.z, 4, 0.3);
+    return true;
+  }
+
   get enraged(): boolean {
     return this.hp <= this.maxHp * SCORPION.enrageFraction;
   }
 
   applyDamage(info: DamageInfo): DamageResult {
     if (!this.alive) return { dealt: 0, zone: info.zone, killed: false, absorbed: true };
-    const result = resolveDamage(this.hp, info, DEFAULT_ZONE_MULTIPLIERS);
+    // claw shield: hits from the front lose most of their damage
+    const up = this.shielded;
+    const amount = shieldedDamage(info.amount, this.bearingToPlayer() - this.yaw, up);
+    const blocked = amount < info.amount;
+    const result = resolveDamage(this.hp, blocked ? { ...info, amount } : info, DEFAULT_ZONE_MULTIPLIERS);
     this.hp = result.hpAfter;
-    if (result.dealt > 0) this.hurtFlash = 1;
+    if (blocked) this.shieldHit = 1;
+    else if (result.dealt > 0) this.hurtFlash = 1;
+    // sustained fire makes it raise the shield
+    this.recentDamage += result.dealt;
+    if (!up && !result.killed && this.recentDamage >= SCORPION.guard.triggerDamage) this.raiseShield();
     if (result.killed) this.die();
     return { dealt: result.dealt, zone: result.zone, killed: result.killed, absorbed: result.absorbed };
   }
@@ -451,6 +544,8 @@ export class Scorpion implements Damageable {
     this.time += dt;
     this.stateTime += dt;
     tickCooldowns(this.cooldowns, dt);
+    this.guardCooldown = Math.max(0, this.guardCooldown - dt);
+    this.recentDamage = Math.max(0, this.recentDamage - (SCORPION.guard.triggerDamage / SCORPION.guard.window) * 0.5 * dt);
     const player = this.ctx.player;
     const d = this.hdist();
     const pose = this.pose;
@@ -530,6 +625,19 @@ export class Scorpion implements Damageable {
         pose.crouch *= 1 - k;
         pose.charge = 0;
         if (this.stateTime >= (this.enraged ? SCORPION.enragedRecover : SCORPION.recover)) this.enter('chase');
+        break;
+      }
+      case 'shield': {
+        // braced behind crossed claws, turning slowly to keep the shield on the player
+        this.turnTowards(this.bearingToPlayer(), dt, SCORPION.turnRate * 0.6);
+        const k = Math.min(1, dt * 9);
+        pose.claws += (-0.85 - pose.claws) * k;
+        pose.snap += (0 - pose.snap) * k;
+        pose.crouch += (0.5 - pose.crouch) * k;
+        pose.pitch += (0.05 - pose.pitch) * k;
+        pose.tailAim += (0.6 - pose.tailAim) * k;
+        pose.tailStrike *= 1 - k;
+        if (this.stateTime >= SCORPION.guard.seconds) this.enter('chase');
         break;
       }
       case 'stunned':
@@ -966,6 +1074,17 @@ export class Scorpion implements Damageable {
         pose.snap *= 1 - k;
       }
     }
+    // shield: cells switch on quickly, off a little slower; absorbed hits flash
+    const want = this.state_ === 'shield' && this.stateTime < SCORPION.guard.seconds - 0.25 ? 1 : 0;
+    this.shieldOpen += (want - this.shieldOpen) * Math.min(1, dt * (want ? 9 : 6));
+    this.shieldHit = Math.max(0, this.shieldHit - dt * 6);
+    this.shield.visible = this.shieldOpen > 0.02;
+    if (this.shield.visible) {
+      const u = this.shieldMat.uniforms;
+      (u.uOpen as { value: number }).value = this.shieldOpen;
+      (u.uHit as { value: number }).value = this.shieldHit;
+      (u.uTime as { value: number }).value = this.time;
+    }
     this.hurtFlash = Math.max(0, this.hurtFlash - dt * 5);
     if (this.state_ !== 'stunned') pose.flicker = this.hurtFlash * 0.7;
     this.rig.apply(pose);
@@ -991,6 +1110,7 @@ export class Scorpion implements Damageable {
     this.state_ = 'dead';
     this.hp = 0;
     this.hideDecals();
+    this.shield.visible = false;
     this.deathTime = 0;
     this.deathStage = 0;
     if (!this.released) {
@@ -1091,6 +1211,7 @@ export class Scorpion implements Damageable {
     this.fanMat.dispose();
     this.poolMat.dispose();
     this.globMat.dispose();
+    this.shieldMat.dispose();
     this.rig.dispose();
   }
 }
