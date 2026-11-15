@@ -220,6 +220,16 @@ export function createHud(ctx: GameContext, parent: HTMLElement): Hud {
       rg.lineTo(x - 5, y);
       rg.fill();
     }
+    // safe containers: green crosses
+    const sheltersHook = ctx.testHooks.world as { shelters?: Array<{ x: number; z: number }> } | undefined;
+    if (sheltersHook?.shelters) {
+      rg.fillStyle = '#3dff8a';
+      for (const sh of sheltersHook.shelters) {
+        const [x, y] = map(sh.x, sh.z);
+        rg.fillRect(x - 4.5, y - 1.5, 9, 3);
+        rg.fillRect(x - 1.5, y - 4.5, 3, 9);
+      }
+    }
     // robots
     const robots = ctx.enemies.alive();
     let near = 0;

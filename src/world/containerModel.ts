@@ -173,6 +173,97 @@ export function buildContainerGeometry(): ContainerGeometry {
   return { body: body.build(), hardware: hw.build() };
 }
 
+export interface ShelterGeometry {
+  body: BufferGeometry;
+  hardware: BufferGeometry;
+  /** Emissive parts: ceiling light, crosses, floor pad and door-frame strips. */
+  glow: BufferGeometry;
+}
+
+/**
+ * A container with its doors swung open, hollow inside: outer corrugated shell like the others, plus
+ * plain inner liners (so the room has visible walls), a floor, open door leaves lying along the side
+ * walls and green emissive medical markings. Model frame as `buildContainerGeometry` (open end +X).
+ */
+export function buildShelterGeometry(): ShelterGeometry {
+  const body = new MeshBuilder();
+  const hw = new MeshBuilder();
+  const glow = new MeshBuilder();
+  const hx = L / 2;
+  const hy = H / 2;
+  const hz = W / 2;
+  const post = 0.14;
+  const rail = 0.13;
+  const inset = 0.035;
+  const ribDepth = 0.034;
+  const liner = 0.12;
+  const wallH = H - 2 * rail;
+  const wallL = L - 2 * post;
+  const endW = W - 2 * post;
+
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) body.box(sx * (hx - post / 2), 0, sz * (hz - post / 2), post / 2, hy, post / 2);
+  for (const sy of [-1, 1]) {
+    for (const sz of [-1, 1]) body.box(0, sy * (hy - rail / 2), sz * (hz - post / 2), hx - post, rail / 2, post / 2);
+    for (const sx of [-1, 1]) {
+      // no sill across the doorway: it would be a step with nothing to stop the player
+      if (sx === 1 && sy === -1) continue;
+      body.box(sx * (hx - post / 2), sy * (hy - rail / 2), 0, post / 2, rail / 2, hz - post);
+    }
+  }
+  // floor slab, flush with the ground
+  body.box(0, -hy + 0.03, 0, hx - post, 0.03, hz - post);
+  // outer corrugated shell: both sides, the closed end and the roof
+  body.corrugated([-hx + post, -hy + rail, hz - inset - ribDepth], [1, 0, 0], [0, 1, 0], [0, 0, 1], wallL, wallH, 0.275, ribDepth);
+  body.corrugated([hx - post, -hy + rail, -hz + inset + ribDepth], [-1, 0, 0], [0, 1, 0], [0, 0, -1], wallL, wallH, 0.275, ribDepth);
+  body.corrugated([-hx + inset + ribDepth, -hy + rail, -hz + post], [0, 0, 1], [0, 1, 0], [-1, 0, 0], endW, wallH, 0.25, ribDepth);
+  body.corrugated([-hx + post, hy - 0.03 - 0.018, hz - post], [1, 0, 0], [0, 0, -1], [0, 1, 0], wallL, endW, 0.21, 0.018);
+  // inner liners: thin closed slabs whose inner face is where the colliders are
+  for (const s of [-1, 1]) body.box(0, 0, s * (hz - liner), hx - post, hy - rail, 0.02);
+  body.box(-hx + liner, 0, 0, 0.02, hy - rail, hz - post);
+  body.box(0, hy - liner, 0, hx - post, 0.02, hz - post);
+  // ribs on the liners so the inside is not a flat box
+  for (const s of [-1, 1]) for (let i = 0; i < 6; i++) body.box(-hx + 0.8 + i * 0.9, -0.1, s * (hz - liner - 0.025), 0.05, hy - 0.3, 0.012);
+
+  // door leaves swung open, lying along the side walls beyond the opening; ribs face outwards
+  const leafLen = 1.19;
+  for (const s of [-1, 1]) {
+    const lz = s * (hz - 0.12 + 0.03);
+    body.box(hx + leafLen / 2, 0, lz, leafLen / 2, wallH / 2, 0.02);
+    for (const ry of [-0.72, 0, 0.72]) body.box(hx + leafLen / 2, ry, lz + s * 0.024, leafLen / 2 - 0.07, 0.11, 0.008);
+    for (const b of [0.3, 0.8]) hw.box(hx + b, 0, lz + s * 0.04, 0.017, wallH / 2 + 0.03, 0.017);
+    for (const hyy of [-0.95, -0.32, 0.32, 0.95]) hw.box(hx + 0.02, hyy, lz, 0.03, 0.06, 0.045);
+  }
+  // corner castings
+  const cc = 0.089;
+  for (const sx of [-1, 1]) for (const sy of [-1, 1]) for (const sz of [-1, 1]) {
+    hw.box(sx * (hx - cc + 0.006), sy * (hy - cc * 0.66 + 0.004), sz * (hz - cc + 0.006), cc, cc * 0.66, cc);
+  }
+
+  // ---- green medical markings and light (emissive) ----
+  const cross = (cx: number, cy: number, cz: number, size: number, thick: number, axis: 'x' | 'z', depth: number): void => {
+    if (axis === 'x') {
+      glow.box(cx, cy, cz, depth, size / 2, thick / 2);
+      glow.box(cx, cy, cz, depth, thick / 2, size / 2);
+    } else {
+      glow.box(cx, cy, cz, thick / 2, size / 2, depth);
+      glow.box(cx, cy, cz, size / 2, thick / 2, depth);
+    }
+  };
+  // inside, on the back wall; outside, on both side walls
+  cross(-hx + liner + 0.02, 0.2, 0, 0.62, 0.2, 'x', 0.006);
+  for (const s of [-1, 1]) cross(0.4, 0.3, s * (hz + 0.012), 0.75, 0.24, 'z', 0.01);
+  // ceiling light strip and a pad on the floor
+  glow.box(0, hy - liner - 0.025, 0, hx - 0.7, 0.012, 0.12);
+  for (const s of [-1, 1]) {
+    glow.box(0.2, -hy + 0.065, s * 0.78, hx - 1.2, 0.006, 0.03);
+    glow.box(hx - 0.55, -hy + 0.065, 0, 0.03, 0.006, 0.78);
+  }
+  glow.box(-hx + 0.55, -hy + 0.065, 0, 0.03, 0.006, 0.78);
+  // door frame strips so the opening reads from a distance
+  for (const s of [-1, 1]) glow.box(hx + 0.002, 0, s * (hz - 0.07), 0.012, hy - 0.22, 0.022);
+  return { body: body.build(), hardware: hw.build(), glow: glow.build() };
+}
+
 export interface ContainerInstanceSpec {
   x: number;
   y: number;

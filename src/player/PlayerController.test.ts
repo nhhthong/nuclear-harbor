@@ -1,6 +1,6 @@
 import { PerspectiveCamera, Vector3 } from 'three';
 import { afterEach, describe, expect, it } from 'vitest';
-import { PLAYER, SIM } from '@/config/tunables';
+import { PLAYER } from '@/config/tunables';
 import { EventBus } from '@/core/EventBus';
 import type { GameEvents } from '@/core/events';
 import { InputManager } from '@/core/InputManager';
@@ -130,7 +130,7 @@ describe('PlayerController', () => {
     r.tick(30);
     expect(r.player.grounded).toBe(false);
     // after 0.5 s: v = g t
-    expect(r.player.velocity.y).toBeCloseTo(SIM.gravity * 0.5, 0);
+    expect(r.player.velocity.y).toBeCloseTo(PLAYER.gravity * 0.5, 0);
     r.tick(60);
     expect(r.player.grounded).toBe(true);
     expect(r.landed).toHaveLength(1);
@@ -210,7 +210,7 @@ describe('PlayerController', () => {
     expect(r.player.position.z).toBeCloseTo(30, 1);
   });
 
-  it('Space jumps about 1.9 m and a second press in the air reaches a container top', async () => {
+  it('Space jumps about 3.9 m and a second press in the air reaches a container top', async () => {
     const press = (r: Rig): void => {
       r.input.handleCode('Space', true);
       r.controller.update(DT, 1);
@@ -223,27 +223,29 @@ describe('PlayerController', () => {
     r.events.on('player:jumped', (e) => jumps.push(e.air));
     press(r);
     let apex = 0;
-    for (let i = 0; i < 90; i++) {
+    for (let i = 0; i < 110; i++) {
       r.tick(1);
       apex = Math.max(apex, r.player.position.y);
     }
-    expect(apex).toBeGreaterThan(1.7);
-    expect(apex).toBeLessThan(2.2);
+    expect(apex).toBeGreaterThan(3.6);
+    expect(apex).toBeLessThan(4.2);
     expect(r.player.grounded).toBe(true);
 
     // double jump: second press near the apex
     press(r);
-    r.tick(22);
+    r.tick(43);
     press(r);
     let apex2 = 0;
-    for (let i = 0; i < 120; i++) {
+    for (let i = 0; i < 150; i++) {
       r.tick(1);
       apex2 = Math.max(apex2, r.player.position.y);
     }
-    expect(apex2).toBeGreaterThan(3.1);
-    expect(apex2).toBeLessThan(4.0);
+    expect(apex2).toBeGreaterThan(6.4);
+    expect(apex2).toBeLessThan(7.5);
     // a third press in the air does nothing; landing restores the air jump
     expect(jumps).toEqual([false, false, true]);
+    r.tick(80);
+    expect(r.player.grounded).toBe(true);
     press(r);
     r.tick(5);
     press(r);

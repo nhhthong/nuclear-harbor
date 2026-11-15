@@ -9,6 +9,7 @@ import { createObjectivesModule } from '@/objectives';
 import { createPickupsModule } from '@/pickups';
 import { createPlayerModule } from '@/player';
 import { createSandboxModule } from '@/sandbox';
+import { createSheltersModule } from '@/shelters';
 import { createStructuresModule } from '@/structures';
 import { createUiModule } from '@/ui';
 import { createVfxModule } from '@/vfx';
@@ -34,6 +35,7 @@ export function createModules(): GameModule[] {
     createScorpionModule(),
     createObjectivesModule(),
     createPickupsModule(),
+    createSheltersModule(),
     createVfxModule(),
     createAudioModule(),
     createUiModule(),

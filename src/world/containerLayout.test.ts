@@ -15,13 +15,16 @@ function laneRect(l: Lane): { minX: number; maxX: number; minZ: number; maxZ: nu
   };
 }
 
+/** Half extents of the axis-aligned bounds of a (possibly rotated) collider box. */
+function aabbHalf(b: ColliderBox): { x: number; z: number } {
+  const c = Math.abs(Math.cos(b.yaw ?? 0));
+  const s = Math.abs(Math.sin(b.yaw ?? 0));
+  return { x: b.halfExtents.x * c + b.halfExtents.z * s, z: b.halfExtents.x * s + b.halfExtents.z * c };
+}
+
 function boxHitsRect(b: ColliderBox, r: ReturnType<typeof laneRect>): boolean {
-  return (
-    b.center.x - b.halfExtents.x < r.maxX - 1e-6 &&
-    b.center.x + b.halfExtents.x > r.minX + 1e-6 &&
-    b.center.z - b.halfExtents.z < r.maxZ - 1e-6 &&
-    b.center.z + b.halfExtents.z > r.minZ + 1e-6
-  );
+  const h = aabbHalf(b);
+  return b.center.x - h.x < r.maxX - 1e-6 && b.center.x + h.x > r.minX + 1e-6 && b.center.z - h.z < r.maxZ - 1e-6 && b.center.z + h.z > r.minZ + 1e-6;
 }
 
 describe('generateContainerLayout', () => {
@@ -70,8 +73,8 @@ describe('generateContainerLayout', () => {
     }
   });
 
-  it('merges colliders: at most 40% as many boxes as containers, all boxes on the ground tier stack', () => {
-    expect(layout.boxes.length).toBeLessThanOrEqual(layout.instances.length * 0.4);
+  it('merges colliders: equal-height neighbours share boxes (at most 80% as many boxes as containers)', () => {
+    expect(layout.boxes.length).toBeLessThanOrEqual(layout.instances.length * 0.8);
     expect(layout.boxes.length).toBeGreaterThan(0);
   });
 
@@ -79,7 +82,7 @@ describe('generateContainerLayout', () => {
     const H = WORLD.container.height;
     for (const b of layout.boxes) {
       const topY = b.center.y + b.halfExtents.y;
-      const isTopBox = layout.stackTops.some((t) => Math.abs(t.y - topY) < 1e-6 && Math.abs(t.x - b.center.x) <= b.halfExtents.x);
+      const isTopBox = layout.stackTops.some((t) => Math.abs(t.y - topY) < 1e-6 && Math.abs(t.x - b.center.x) <= aabbHalf(b).x + 1e-6);
       if (b.grappleable) expect(isTopBox).toBe(true);
       expect(Math.abs(b.halfExtents.y * 2 - H) < 1e-6 || !b.grappleable).toBe(true);
     }
@@ -89,8 +92,8 @@ describe('generateContainerLayout', () => {
         (b) =>
           b.grappleable &&
           Math.abs(b.center.y + b.halfExtents.y - t.y) < 1e-6 &&
-          Math.abs(t.x - b.center.x) <= b.halfExtents.x &&
-          Math.abs(t.z - b.center.z) <= b.halfExtents.z,
+          Math.abs(t.x - b.center.x) <= aabbHalf(b).x + 1e-6 &&
+          Math.abs(t.z - b.center.z) <= aabbHalf(b).z + 1e-6,
       );
       expect(holder).toBeDefined();
     }

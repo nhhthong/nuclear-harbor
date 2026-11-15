@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { AreaSpawner, type AreaSpawnerConfig, type LiveRobot } from './areaSpawner';
 import type { EnemySpawn } from './BaseEnemy';
 
-const cfg: AreaSpawnerConfig = { liveCap: 3, enterMargin: 2, exitMargin: 6, exitDelay: 1, despawnDistance: 20, minSpawnDistance: 5, interval: 0.1 };
+const cfg: AreaSpawnerConfig = { liveCap: 3, enterMargin: 2, exitMargin: 6, exitDelay: 1, despawnDistance: 20, minSpawnDistance: 5, spawnRadius: 30, interval: 0.1 };
 const areas = {
   A: { minX: 0, maxX: 20, minZ: 0, maxZ: 20 },
   B: { minX: 0, maxX: 20, minZ: 40, maxZ: 60 },
@@ -67,6 +67,27 @@ describe('AreaSpawner', () => {
     run(1, 10, 1);
     expect(live).toHaveLength(1);
     expect(s.remaining).toBe(1);
+  });
+
+  it('only streams in posts within the spawn radius, and never inside a safe disc', () => {
+    const { live, run } = setup([
+      { spawn: post(10, 15), zone: 'A' },
+      { spawn: post(10, 300), zone: 'B' },
+    ]);
+    // far post of an awake area is not spawned while the player is farther than the radius
+    run(1, 10, 1);
+    expect(live).toHaveLength(1);
+    const safe: Array<LiveRobot & { alive: boolean }> = [];
+    const s2 = new AreaSpawner([{ spawn: post(10, 15), zone: 'A' as const }], areas, cfg, {
+      spawn: (sp) => {
+        const r = { id: 'x', alive: true, position: { x: sp.position.x, z: sp.position.z } };
+        safe.push(r);
+        return r;
+      },
+      despawn: () => undefined,
+    }, [{ x: 12, z: 15, radius: 6 }]);
+    for (let t = 0; t < 1; t += 0.05) s2.update(0.05, 10, 1);
+    expect(safe).toHaveLength(0);
   });
 
   it('keeps robots of a sleeping area while the player is still near them', () => {

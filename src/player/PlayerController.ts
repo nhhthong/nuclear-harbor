@@ -1,6 +1,6 @@
 import { Vector3 } from 'three';
 import type { Camera } from 'three';
-import { PLAYER, SIM } from '@/config/tunables';
+import { PLAYER } from '@/config/tunables';
 import type { EventBus } from '@/core/EventBus';
 import type { GameEvents } from '@/core/events';
 import type { InputManager } from '@/core/InputManager';
@@ -101,7 +101,8 @@ export class PlayerController {
       vel.x = this.vel2.x;
       vel.z = this.vel2.z;
       // ---- jump / double jump ----
-      if (this.wasGrounded) {
+      // still "grounded" for a few ticks after take-off (snap distance): rising must not re-arm the jumps
+      if (this.wasGrounded && vel.y <= 0) {
         this.coyote = PLAYER.coyoteTime;
         this.airJumpsLeft = PLAYER.airJumps;
       } else if (this.coyote > 0) {
@@ -128,7 +129,7 @@ export class PlayerController {
       if (jumped) {
         // keep the take-off speed this step
       } else if (this.wasGrounded && vel.y <= 0) vel.y = -PLAYER_LOCAL.groundedStickSpeed;
-      else vel.y += SIM.gravity * dt;
+      else vel.y += PLAYER.gravity * dt;
     }
     const applyVy = vel.y;
 

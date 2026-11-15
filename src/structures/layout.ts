@@ -1,4 +1,4 @@
-import { CRANE_SITES, LAND } from '@/config/level';
+import { CRANE_SITES, LAND, fromLegacyZ } from '@/config/level';
 
 /**
  * Pure placement data of everything that stands on the quay besides containers: flood-light masts,
@@ -24,7 +24,7 @@ export interface FloodLight {
 const SODIUM = 0xffc48c;
 const LED = 0xcfe0ff;
 
-export const FLOOD_LIGHTS: readonly FloodLight[] = [
+const LEGACY_FLOOD_LIGHTS: readonly FloodLight[] = [
   { id: 'gate-w', x: -21, z: 25, height: 11, aimX: -9, aimZ: 13, color: SODIUM, intensity: 2600, castShadow: true },
   { id: 'gate-e', x: 21, z: 25, height: 11, aimX: 9, aimZ: 13, color: SODIUM, intensity: 2600, castShadow: true },
   { id: 'yard-w', x: -33.6, z: 2, height: 12, aimX: -14, aimZ: 3, color: LED, intensity: 2300, castShadow: false },
@@ -33,6 +33,9 @@ export const FLOOD_LIGHTS: readonly FloodLight[] = [
   { id: 'court-e', x: 19, z: -15, height: 11, aimX: 4, aimZ: -17, color: SODIUM, intensity: 2400, castShadow: false },
   { id: 'quay-w', x: -32, z: -24, height: 13, aimX: -12, aimZ: -36, color: LED, intensity: 3600, castShadow: true },
 ];
+
+/** Authored in the half-depth frame; stretched with the zones (x and heights are unchanged). */
+export const FLOOD_LIGHTS: readonly FloodLight[] = LEGACY_FLOOD_LIGHTS.map((f) => ({ ...f, z: fromLegacyZ(f.z), aimZ: fromLegacyZ(f.aimZ) }));
 
 export interface SolidBox {
   id: string;
@@ -105,7 +108,7 @@ function row(kind: PropKind, x0: number, z0: number, dx: number, dz: number, n: 
  * spawn disc: gate chicane, site office, drum and pallet dumps on the apron and the court, mooring
  * bollards along the quay edge.
  */
-export const PROPS: readonly Prop[] = [
+const LEGACY_PROPS: readonly Prop[] = [
   // gate chicane: two staggered rows of concrete barriers
   ...row('barrier', -13.5, 22.6, 3.15, 0, 3, 0, 0.2),
   ...row('barrier', 7.2, 24.4, 3.15, 0, 3, 0, 0.6),
@@ -137,6 +140,9 @@ export const PROPS: readonly Prop[] = [
   { kind: 'drum', x: -30.9, z: -44.6, yaw: 0, variant: 0.05 },
   { kind: 'pallet', x: -31.4, z: -46.6, yaw: 0.5, variant: 0.6 },
 ];
+
+/** Props of the half-depth frame moved onto the stretched zones (rows keep their own spacing). */
+export const PROPS: readonly Prop[] = LEGACY_PROPS.map((p) => ({ ...p, z: fromLegacyZ(p.z) }));
 
 /** Axis-aligned collider of a prop (yaw is 0 or PI/2 for the solid kinds that are not square). */
 export function propSolid(p: Prop): SolidBox | null {

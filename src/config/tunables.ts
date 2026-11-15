@@ -28,12 +28,14 @@ export const PLAYER = {
   walkSpeed: 6.5,
   sprintSpeed: 10,
   /**
-   * Owner request: double jump replaces the grappling hook. With gravity -24 a ground jump rises
-   * 1.9 m and the air jump adds 1.7 m (3.6 m when chained at the apex): one container (2.59 m) or
-   * the 3 m tower-3 gantry needs both jumps.
+   * Owner request: higher, longer jumps. The player has its own, lower gravity (the world value
+   * `SIM.gravity` stays -24): a ground jump rises 3.9 m and lasts 1.4 s (about 14 m at sprint speed),
+   * the air jump adds 3.3 m (7.2 m when chained at the apex). Two-high stacks (5.2 m) are reachable,
+   * three-high ones (7.8 m) are not.
    */
-  jumpSpeed: 9.6,
-  airJumpSpeed: 9.0,
+  gravity: -15,
+  jumpSpeed: 10.8,
+  airJumpSpeed: 10,
   airJumps: 1,
   /** Jump still allowed this long after walking off an edge (s). */
   coyoteTime: 0.1,
