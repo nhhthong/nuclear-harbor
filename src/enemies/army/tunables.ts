@@ -21,10 +21,6 @@ export const ARMY_LOCAL = {
   scanAmplitude: 0.7,
   /** Cooldown before the first telegraph after entering engage (s). */
   firstShotDelay: 0.6,
-  /** Footfall: metres per step and bob/roll of the body. */
-  stepLength: 1.5,
-  bobAmplitude: 0.06,
-  rollAmplitude: 0.025,
   /** Foot-down dust puff is only spawned this close to the player (m). */
   footDustRange: 30,
   /** Rocket muzzle in mech-local space (x is mirrored per side; forward is -z, y above the centre). */

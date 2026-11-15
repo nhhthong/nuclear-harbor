@@ -9,6 +9,9 @@ export const SAMURAI = {
   radius: 0.8,
   patrolSpeed: 2.4,
   chaseSpeed: 6.2,
+  /** Speed changes are eased (m/s^2) so it steps off and settles instead of snapping. */
+  acceleration: 9,
+  deceleration: 16,
   detectionRange: 34,
   loseTargetTime: 4,
   arriveRadius: 1.2,

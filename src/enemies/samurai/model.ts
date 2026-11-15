@@ -28,10 +28,16 @@ export interface SamuraiModel {
   body: BufferGeometry;
   /** Emissive parts of the body (eyes, strips). */
   bodyGlow: BufferGeometry;
-  /** Legs authored around the hip pivot. */
-  legL: BufferGeometry;
-  legR: BufferGeometry;
+  /** Thighs authored around the hip pivot, shins (with the feet) around the knee pivot. */
+  thighL: BufferGeometry;
+  thighR: BufferGeometry;
+  shinL: BufferGeometry;
+  shinR: BufferGeometry;
   hip: { x: number; y: number };
+  /** Knee pivot relative to the hip pivot, and the two bone lengths (m). */
+  knee: { y: number; z: number };
+  thighLength: number;
+  shinLength: number;
   /** Polearm authored along X around its grip centre. */
   weapon: BufferGeometry;
   /** Both blades: mirror-polished, own material. */
@@ -49,22 +55,31 @@ const C = SAMURAI_COLORS;
 const HIP_X = 0.25;
 const HIP_Y = 1.62;
 
-function leg(side: 1 | -1, armor: Parts): void {
+/** Knee joint in the body frame (x is mirrored per side). */
+const KNEE = { x: 0.28, y: 0.96, z: -0.04 } as const;
+
+/** One leg in two rigid pieces: thigh (hip to knee) and shin with the foot (knee down). */
+function leg(side: 1 | -1, thigh: Parts, shin: Parts): void {
   const x = side * HIP_X;
-  armor.add(sphere(0.17, 10, 8), C.gunmetal, [x, HIP_Y, 0]);
-  armor.add(rod([x, HIP_Y, 0], [x + side * 0.03, 0.98, -0.06], 0.14, 0.12, 8), C.gunmetal);
-  armor.add(box(0.36, 0.52, 0.38, 0.12), C.black, [x + side * 0.04, 1.3, -0.05], [0.06, 0, 0]);
-  armor.add(sphere(0.14, 10, 8), C.grey, [x + side * 0.03, 0.98, -0.2], [0, 0, 0], [1, 1.15, 0.6]);
-  armor.add(rod([x + side * 0.03, 1.02, -0.26], [x + side * 0.03, 1.2, -0.42], 0.05, 0.004, 5), C.gold);
-  armor.add(sphere(0.15, 10, 8), C.steelDark, [x + side * 0.03, 0.96, -0.04]);
-  armor.add(rod([x + side * 0.03, 0.96, -0.04], [x + side * 0.04, 0.3, 0.02], 0.11, 0.1, 8), C.gunmetal);
-  armor.add(box(0.36, 0.7, 0.42, 0.13), C.black, [x + side * 0.05, 0.6, 0], [-0.04, 0, 0]);
-  armor.add(box(0.4, 0.16, 0.46, 0.02), C.gunmetal, [x + side * 0.05, 0.92, 0]);
-  armor.add(box(0.26, 0.5, 0.08, 0.02), C.grey, [x + side * 0.05, 0.6, -0.23]);
-  armor.add(box(0.4, 0.2, 0.44, 0.03), C.gunmetal, [x + side * 0.05, 0.3, 0.02]);
-  armor.add(box(0.38, 0.2, 0.66, 0.08), C.black, [x + side * 0.05, 0.1, -0.1]);
-  armor.add(box(0.3, 0.12, 0.2, 0.02), C.grey, [x + side * 0.05, 0.08, -0.46]);
-  armor.add(box(0.26, 0.24, 0.16, 0.03), C.gunmetal, [x + side * 0.05, 0.14, 0.26]);
+  const kx = side * KNEE.x;
+  thigh.add(sphere(0.17, 10, 8), C.gunmetal, [x, HIP_Y, 0]);
+  thigh.add(rod([x, HIP_Y, 0], [kx, KNEE.y + 0.02, KNEE.z - 0.02], 0.14, 0.12, 8), C.gunmetal);
+  thigh.add(box(0.36, 0.52, 0.38, 0.12), C.black, [x + side * 0.04, 1.3, -0.05], [0.06, 0, 0]);
+  thigh.add(box(0.3, 0.1, 0.4, 0.03), C.gunmetal, [x + side * 0.04, 1.5, -0.04]);
+  // knee: ball joint, rounded cap with a gold spike (rides with the shin)
+  shin.add(sphere(0.15, 10, 8), C.steelDark, [kx, KNEE.y, KNEE.z]);
+  shin.add(sphere(0.14, 10, 8), C.grey, [kx, 0.98, -0.2], [0, 0, 0], [1, 1.15, 0.6]);
+  shin.add(rod([kx, 1.02, -0.26], [kx, 1.2, -0.42], 0.05, 0.004, 5), C.gold);
+  shin.add(rod([kx, KNEE.y, KNEE.z], [x + side * 0.04, 0.3, 0.02], 0.11, 0.1, 8), C.gunmetal);
+  shin.add(box(0.36, 0.7, 0.42, 0.13), C.black, [x + side * 0.05, 0.6, 0], [-0.04, 0, 0]);
+  shin.add(box(0.4, 0.14, 0.46, 0.04), C.gunmetal, [x + side * 0.05, 0.9, 0.02]);
+  shin.add(box(0.26, 0.5, 0.08, 0.03), C.grey, [x + side * 0.05, 0.6, -0.23]);
+  // ankle and foot
+  shin.add(sphere(0.13, 10, 8), C.steelDark, [x + side * 0.05, 0.27, 0.03]);
+  shin.add(box(0.4, 0.2, 0.44, 0.06), C.gunmetal, [x + side * 0.05, 0.3, 0.02]);
+  shin.add(box(0.38, 0.2, 0.66, 0.08), C.black, [x + side * 0.05, 0.1, -0.1]);
+  shin.add(box(0.3, 0.12, 0.2, 0.04), C.grey, [x + side * 0.05, 0.08, -0.46]);
+  shin.add(box(0.26, 0.24, 0.16, 0.05), C.gunmetal, [x + side * 0.05, 0.14, 0.26]);
 }
 
 /** Blade stations along its length: x, spine height, edge height, thickness. The last one is the point. */
@@ -231,14 +246,19 @@ export function buildSamuraiModel(): SamuraiModel {
   const body = b.merge(down);
   const bodyGlow = g.merge(down);
 
-  // ---- legs (pivot at the hip) ------------------------------------------------------------
+  // ---- legs: thigh around the hip, shin and foot around the knee ---------------------------
   const hipDown = new Matrix4().makeTranslation(0, -HIP_Y, 0);
-  const ll = new Parts();
-  const lr = new Parts();
-  leg(-1, ll);
-  leg(1, lr);
-  const legL = ll.merge(hipDown);
-  const legR = lr.merge(hipDown);
+  const kneeDown = new Matrix4().makeTranslation(0, -KNEE.y, -KNEE.z);
+  const tl = new Parts();
+  const tr = new Parts();
+  const sl = new Parts();
+  const sr = new Parts();
+  leg(-1, tl, sl);
+  leg(1, tr, sr);
+  const thighL = tl.merge(hipDown);
+  const thighR = tr.merge(hipDown);
+  const shinL = sl.merge(kneeDown);
+  const shinR = sr.merge(kneeDown);
 
   // ---- polearm ----------------------------------------------------------------------------
   const w = new Parts();
@@ -266,9 +286,14 @@ export function buildSamuraiModel(): SamuraiModel {
   return {
     body,
     bodyGlow,
-    legL,
-    legR,
+    thighL,
+    thighR,
+    shinL,
+    shinR,
     hip: { x: HIP_X, y: HIP_Y - SAMURAI.centerHeight },
+    knee: { y: KNEE.y - HIP_Y, z: KNEE.z },
+    thighLength: HIP_Y - KNEE.y,
+    shinLength: KNEE.y,
     weapon,
     blade: bladeGeo,
     weaponGlow,

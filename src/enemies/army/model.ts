@@ -9,6 +9,7 @@ import {
   ExtrudeGeometry,
   Group,
   Material,
+  Matrix4,
   MeshBasicMaterial,
   MeshStandardMaterial,
   Mesh,
@@ -431,6 +432,7 @@ function leg(isLeft: boolean): Group {
   const thigh = new Group();
   thigh.position.set(side * 0.42, -0.02, 0.02);
   thigh.rotation.z = side * 0.09;
+  thigh.userData.bone = isLeft ? 1 : 3;
   const thighBox = M(chamferedBox(0.38, 0.84, 0.44, 0.035), 'armor');
   thighBox.position.y = -0.36;
   thigh.add(thighBox);
@@ -443,6 +445,7 @@ function leg(isLeft: boolean): Group {
 
   const knee = new Group();
   knee.position.set(0, -0.82, 0.04);
+  knee.userData.bone = isLeft ? 2 : 4;
   const kneeGeo = new CylinderGeometry(0.18, 0.18, 0.42, seg(24));
   kneeGeo.rotateZ(Math.PI / 2);
   knee.add(M(kneeGeo, 'gunmetal'));
@@ -744,8 +747,19 @@ function prepared(geo: BufferGeometry, key: Key, matrixWorld: Object3D['matrixWo
   return g;
 }
 
+/**
+ * Bones of the walk rig: 0 body, 1 left thigh, 2 left shin (knee down), 3 right thigh, 4 right shin.
+ * Every vertex of the merged near model is bound rigidly (weight 1) to the bone it hangs from, so
+ * the legs bend while the model stays six draw calls.
+ */
+export const ARMY_BONE_PARENT: readonly number[] = [-1, 0, 1, 0, 3];
+
 export interface ArmyAssets {
   near: ReadonlyArray<{ id: Group6; geometry: BufferGeometry; material: Material }>;
+  /** Rest transform of each bone relative to its parent bone, in the robot's visual frame. */
+  boneRest: readonly Matrix4[];
+  /** Hip height above the feet (m), for the stride length. */
+  legLength: number;
   far: { geometry: BufferGeometry; material: Material };
   /** Missile-cell glow materials, dim -> bright (swapped on the glow mesh, never cloned per robot). */
   glow: ReadonlyArray<Material>;
@@ -808,10 +822,38 @@ export function getArmyAssets(shared: SharedAssets): ArmyAssets {
     if (!key) return;
     const id = MERGE_GROUP[key];
     const list = buckets.get(id) ?? [];
-    list.push(prepared(mesh.geometry, key, mesh.matrixWorld));
+    const g = prepared(mesh.geometry, key, mesh.matrixWorld);
+    let bone = 0;
+    for (let n: Object3D | null = mesh; n; n = n.parent) {
+      if (typeof n.userData.bone === 'number') {
+        bone = n.userData.bone as number;
+        break;
+      }
+    }
+    const count = g.getAttribute('position').count;
+    const idx = new Uint16Array(count * 4);
+    const wgt = new Float32Array(count * 4);
+    for (let i = 0; i < count; i++) {
+      idx[i * 4] = bone;
+      wgt[i * 4] = 1;
+    }
+    g.setAttribute('skinIndex', new BufferAttribute(idx, 4));
+    g.setAttribute('skinWeight', new BufferAttribute(wgt, 4));
+    list.push(g);
     buckets.set(id, list);
     mesh.geometry.dispose();
   });
+
+  // bone rest transforms (relative to the parent bone) from the assembled reference
+  const boneWorld: Matrix4[] = [new Matrix4(), new Matrix4(), new Matrix4(), new Matrix4(), new Matrix4()];
+  holder.traverse((o) => {
+    if (typeof o.userData.bone === 'number') boneWorld[o.userData.bone as number] = o.matrixWorld.clone();
+  });
+  const boneRest = boneWorld.map((m, i) => {
+    const parent = ARMY_BONE_PARENT[i] as number;
+    return parent < 0 ? m.clone() : new Matrix4().copy(boneWorld[parent] as Matrix4).invert().multiply(m);
+  });
+  const legLength = new Vector3().setFromMatrixPosition(boneWorld[1] as Matrix4).y + ARMY_LOCAL.centerHeight;
 
   const armor = armorTextures();
   const decal = decalAtlas();
@@ -866,7 +908,7 @@ export function getArmyAssets(shared: SharedAssets): ArmyAssets {
     material: shared.get('army:far-mat', () => new MeshStandardMaterial({ vertexColors: true, roughness: 0.6, metalness: 0.3 })),
   };
 
-  const assets: ArmyAssets = { near, far, glow };
+  const assets: ArmyAssets = { near, far, glow, boneRest, legLength };
   cache.set(shared, assets);
   return assets;
 }

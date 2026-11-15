@@ -15,6 +15,7 @@ import { BaseEnemy, type EnemyDeps, type EnemySpawn } from '../BaseEnemy';
 import { createVertexColorMaterial } from '../duck/modelKit';
 import { forgetTarget, markAware, type Perception } from '../perception';
 import type { SharedAssets } from '../SharedAssets';
+import { approach, createGaitPose, gaitPose, strideLength } from '../gait';
 import { coneHit, dashUsesDue, deflectedDamage, distanceToSegment, pickDashPoint } from './logic';
 import { buildSamuraiModel, type SamuraiModel } from './model';
 import { SAMURAI } from './tunables';
@@ -106,8 +107,17 @@ export class Samurai extends BaseEnemy {
   private seed: number;
 
   private readonly model = new Group();
-  private readonly legL: Mesh;
-  private readonly legR: Mesh;
+  private readonly thighL: Mesh;
+  private readonly thighR: Mesh;
+  private readonly shinL: Mesh;
+  private readonly shinR: Mesh;
+  private readonly upper = new Group();
+  private readonly legLength: number;
+  private readonly pose = createGaitPose();
+  private walkAmount = 0;
+  private easedSpeed = 0;
+  private speedTarget = 0;
+  private lastSetSpeed = 0;
   private readonly weapon = new Group();
   private readonly cloth: Mesh;
   private readonly fan: Mesh;
@@ -140,16 +150,24 @@ export class Samurai extends BaseEnemy {
     this.glow = new MeshStandardMaterial({ color: 0x300404, emissive: 0xff1408, emissiveIntensity: 2.4 });
     const geo = <T extends import('three').BufferGeometry>(key: string, g: T): T => shared.get(`samurai:${key}`, () => g);
 
+    // upper body (torso, arms, weapon, sash) turns and leans as one group above the hips
     const body = new Mesh(geo('body', m.body), armor);
     body.castShadow = true;
-    this.model.add(body, new Mesh(geo('bodyGlow', m.bodyGlow), this.glow));
-    this.legL = new Mesh(geo('legL', m.legL), armor);
-    this.legR = new Mesh(geo('legR', m.legR), armor);
-    this.legL.position.set(0, m.hip.y, 0);
-    this.legR.position.set(0, m.hip.y, 0);
-    this.legL.castShadow = true;
-    this.legR.castShadow = true;
-    this.model.add(this.legL, this.legR);
+    this.upper.add(body, new Mesh(geo('bodyGlow', m.bodyGlow), this.glow));
+    this.legLength = m.thighLength + m.shinLength;
+    const makeLeg = (thighGeo: import('three').BufferGeometry, shinGeo: import('three').BufferGeometry, key: string): [Mesh, Mesh] => {
+      const thigh = new Mesh(geo(`thigh${key}`, thighGeo), armor);
+      const shin = new Mesh(geo(`shin${key}`, shinGeo), armor);
+      thigh.position.set(0, m.hip.y, 0);
+      shin.position.set(0, m.knee.y, m.knee.z);
+      thigh.castShadow = true;
+      shin.castShadow = true;
+      thigh.add(shin);
+      this.model.add(thigh);
+      return [thigh, shin];
+    };
+    [this.thighL, this.shinL] = makeLeg(m.thighL, m.shinL, 'L');
+    [this.thighR, this.shinR] = makeLeg(m.thighR, m.shinR, 'R');
     const blade = new Mesh(geo('weapon', m.weapon), armor);
     blade.castShadow = true;
     // blades: mirror steel with a bright ground bevel, no paint wear
@@ -159,10 +177,11 @@ export class Samurai extends BaseEnemy {
     this.weapon.add(blade, edge, new Mesh(geo('weaponGlow', m.weaponGlow), this.glow));
     this.weapon.position.copy(m.grip);
     this.weapon.rotation.z = m.restAngle;
-    this.model.add(this.weapon);
+    this.upper.add(this.weapon);
     this.cloth = new Mesh(geo('cloth', m.cloth), clothMat);
     this.cloth.position.copy(m.clothPivot);
-    this.model.add(this.cloth);
+    this.upper.add(this.cloth);
+    this.model.add(this.upper);
     // blur disc of the spinning polearm
     this.fanMat = new MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false, blending: AdditiveBlending, side: DoubleSide, fog: false });
     this.fanMat.color.setRGB(0.55, 0.3, 0.26);
@@ -170,7 +189,7 @@ export class Samurai extends BaseEnemy {
     this.fan.position.copy(m.grip);
     this.fan.visible = false;
     this.fan.userData.noReflect = true;
-    this.model.add(this.fan);
+    this.upper.add(this.fan);
     this.root.add(this.model);
 
     // lightning trails live in the scene (they stay where the dash happened)
@@ -380,6 +399,11 @@ export class Samurai extends BaseEnemy {
     this.leapCooldown = Math.max(0, this.leapCooldown - dt);
     this.spinCooldown = Math.max(0, this.spinCooldown - dt);
     this.recentDamage = Math.max(0, this.recentDamage - (SAMURAI.spin.triggerDamage / SAMURAI.spin.window) * 0.5 * dt);
+    // ease in and out of a run instead of snapping to full speed (the brain writes the target)
+    if (this.moveSpeed !== this.lastSetSpeed) this.speedTarget = this.moveSpeed;
+    this.easedSpeed = approach(this.easedSpeed, this.speedTarget, (this.speedTarget > this.easedSpeed ? SAMURAI.acceleration : SAMURAI.deceleration) * dt);
+    this.moveSpeed = this.easedSpeed;
+    this.lastSetSpeed = this.easedSpeed;
     const t = this.fsm.timeInState;
     const { ctx } = this.deps;
     const pl = ctx.player;
@@ -573,68 +597,105 @@ export class Samurai extends BaseEnemy {
 
   override animate(dt: number, time: number): void {
     if (!this.alive) return;
-    if (dt > 0) {
-      const inst = Math.hypot(this.position.x - this.lastX, this.position.z - this.lastZ) / dt;
-      this.speedEstimate += (inst - this.speedEstimate) * Math.min(1, dt * 10);
-    }
+    const travelled = Math.hypot(this.position.x - this.lastX, this.position.z - this.lastZ);
+    if (dt > 0) this.speedEstimate += (travelled / dt - this.speedEstimate) * Math.min(1, dt * 10);
     this.lastX = this.position.x;
     this.lastZ = this.position.z;
     const state = this.brainState;
     const t = this.fsm.timeInState;
-    const f = Math.min(1.3, this.speedEstimate / SAMURAI.chaseSpeed);
-    this.gait += dt * (3 + 9 * f);
-    let stride = Math.sin(this.gait) * 0.55 * Math.min(1, f * 2.5);
+    // walk cycle driven by the ground actually covered: one cycle per stride, so feet do not slide
+    const f = Math.min(1, this.speedEstimate / SAMURAI.chaseSpeed);
+    const walking = state === 'patrol' || state === 'chase' || state === 'spin' || state === 'cutRecover' || state === 'leapRecover' || state === 'dashRecover';
+    if (walking) this.gait += (travelled / strideLength(this.legLength, f)) * Math.PI * 2;
+    const moving = walking && this.speedEstimate > 0.25 ? 1 : 0;
+    this.walkAmount += (moving - this.walkAmount) * Math.min(1, dt * 7);
+    const pose = gaitPose(this.gait, this.walkAmount, f, this.legLength, this.pose);
+    let hipL = pose.left.hip;
+    let hipR = pose.right.hip;
+    let kneeL = pose.left.knee;
+    let kneeR = pose.right.knee;
     let crouch = 0;
-    let lean = 0.12 * Math.min(1, f);
-    let weaponZ = this.restAngle + Math.sin(time * 1.4 + this.seed * 6) * 0.03;
+    let lean = 0.05 + 0.14 * f * this.walkAmount;
+    let weaponZ = this.restAngle + Math.sin(time * 1.4 + this.seed * 6) * 0.03 + pose.twist * 0.4;
     let weaponX = 0;
     let glow = 2.4;
     this.swing = Math.max(0, this.swing - dt * 4);
+    /** Both knees bent by `k` (0..1): thighs forward, shins back, pelvis lowered to keep the feet down. */
+    const squat = (k: number): void => {
+      hipL += 0.55 * k;
+      hipR += 0.55 * k;
+      kneeL -= 1.1 * k;
+      kneeR -= 1.1 * k;
+      crouch = this.legLength * 0.14 * k;
+    };
 
     switch (state) {
       case 'cutWindup': {
         const k = Math.min(1, t / SAMURAI.cut.windup);
         weaponZ = this.restAngle + 0.9 * k;
         weaponX = -0.5 * k;
-        crouch = 0.1 * k;
+        // step into the cut: front leg forward, rear leg braced
+        hipL += 0.35 * k;
+        kneeL -= 0.45 * k;
+        hipR -= 0.3 * k;
+        crouch = 0.06 * k;
         break;
       }
       case 'leapTelegraph': {
         const k = Math.min(1, t / SAMURAI.leap.telegraph);
-        crouch = 0.4 * k;
+        squat(k);
         weaponZ = this.restAngle + 0.85 * k;
-        lean = 0.2 * k;
+        lean = 0.25 * k;
         glow = 2.4 + 3 * k;
-        stride = 0;
         break;
       }
-      case 'leap':
+      case 'leap': {
+        // legs tucked on the way up, front leg reaching for the ground on the way down
+        const k = Math.min(1, t / SAMURAI.leap.airTime);
+        hipL = 0.9 - 0.5 * k;
+        kneeL = -1.3 + 0.9 * k;
+        hipR = -0.3 - 0.3 * k;
+        kneeR = -1.2 + 0.2 * k;
         weaponZ = Math.PI / 2;
         weaponX = -0.9;
         lean = 0.35;
-        stride = 0.9;
         glow = 5;
         break;
+      }
+      case 'leapRecover': {
+        // absorbs the landing
+        const k = Math.max(0, 1 - t / (SAMURAI.leap.recover * 0.7));
+        squat(k * 0.8);
+        break;
+      }
       case 'spin':
         this.spinAngle += dt * SAMURAI.spin.spinRate;
         weaponZ = this.spinAngle;
         lean = 0.05;
         glow = 4;
+        // braced stance behind the fan
+        hipL += 0.25;
+        hipR -= 0.2;
+        kneeL -= 0.3;
+        crouch += 0.05;
         break;
       case 'dashCharge': {
         const k = Math.min(1, t / SAMURAI.dash.charge);
-        crouch = 0.45 * k;
+        squat(k * 0.9);
+        hipR -= 0.5 * k;
         weaponZ = this.restAngle - 1.0 * k;
         lean = 0.3 * k;
         glow = 2.4 + 7 * k * (0.75 + 0.25 * Math.sin(time * 40));
-        stride = 0;
         break;
       }
       case 'dash':
+        hipL = 0.9;
+        kneeL = -0.7;
+        hipR = -0.8;
+        kneeR = -0.5;
         weaponZ = 0.1;
         weaponX = 0.3;
         lean = 0.5;
-        stride = 0.8;
         glow = 8;
         break;
       default:
@@ -645,13 +706,17 @@ export class Samurai extends BaseEnemy {
       weaponZ = this.restAngle - 1.5 * this.swing;
       weaponX = 0.5 * this.swing;
     }
-    this.legL.rotation.x = stride;
-    this.legR.rotation.x = -stride;
-    this.model.position.y = this.lift - crouch + Math.abs(Math.cos(this.gait)) * 0.04 * Math.min(1, f * 2);
-    this.model.rotation.x = -lean;
+    this.thighL.rotation.x = hipL;
+    this.thighR.rotation.x = hipR;
+    this.shinL.rotation.x = kneeL;
+    this.shinR.rotation.x = kneeR;
+    this.model.position.y = this.lift - crouch + pose.bob;
+    // the torso leans into the run, sways over the standing leg and twists against the legs
+    this.upper.rotation.set(-lean, pose.twist, pose.sway);
+    this.model.rotation.x = 0;
     this.weapon.rotation.z = weaponZ;
     this.weapon.rotation.x = weaponX;
-    this.cloth.rotation.x = 0.25 * Math.min(1.3, f) + Math.sin(time * 3 + this.seed * 9) * 0.06 + (state === 'leap' || state === 'dash' ? 0.6 : 0);
+    this.cloth.rotation.x = 0.25 * f * this.walkAmount + Math.abs(pose.left.hip) * 0.2 + Math.sin(time * 3 + this.seed * 9) * 0.06 + (state === 'leap' || state === 'dash' ? 0.6 : 0);
     this.glow.emissiveIntensity = glow;
     if (this.fan.visible) {
       const k = Math.min(1, t * 6) * Math.min(1, (SAMURAI.spin.seconds - t) * 6);
