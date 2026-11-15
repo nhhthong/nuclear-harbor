@@ -83,7 +83,7 @@ index.html, vite.config.ts, tsconfig.json, package.json      foundation
 scripts/        smoke.mjs, e2e.mjs, lib/harness.mjs           foundation
 tests/e2e/      T-XX-name.e2e.mjs                             one file per ticket
 specs/          T-XX-name/ (Spec Kit artifacts)               one folder per ticket
-docs/           GDD, REVIEW, PLAN, SPECKIT, tickets/          foundation (Tech Lead)
+docs/           GDD, REVIEW, PLAN, SPECKIT, tickets/          foundation (maintainer)
 src/
 ├── main.ts, modules.ts                                       foundation
 ├── config/     tunables.ts (all GDD numbers), level.ts       foundation
@@ -115,7 +115,7 @@ A ticket replaces the body of its placeholder; it never touches `src/modules.ts`
 |---|---|
 | New event | `src/<feature>/events.ts`: `declare module '@/core/events' { interface GameEvents { 'x:y': {...} } }` and import that file from your `index.ts`. The catalogue in `src/core/events.ts` already contains the events planned for every ticket; prefer those. |
 | New number | Shared/GDD numbers are already in `src/config/tunables.ts`. Feature-local numbers go in `src/<feature>/tunables.ts`. |
-| New shared type / foundation fix | Write `specs/T-XX-name/foundation-requests.md`, work around locally (local type, adapter), mention it in the hand-over. The Tech Lead applies it between waves. |
+| New shared type / foundation fix | Write `specs/T-XX-name/foundation-requests.md`, work around locally (local type, adapter), mention it in the PR description. The Tech Lead applies it between waves. |
 | Placement data | Your own file (e.g. `src/pickups/placements.ts`), derived from `src/config/level.ts`. |
 
 ## 4. Public interfaces
@@ -314,7 +314,7 @@ the other ticket for full in-level verification.
 Ticket documents: [`docs/tickets/`](tickets/README.md).
 
 Wave 1 is fully parallel: no ticket in it reads another wave-1 ticket's code. Between waves the
-Tech Lead merges, applies foundation requests and re-runs `npm run check`.
+The maintainer merges, applies foundation requests and re-runs `npm run check`.
 
 ## 10. Deviations from REVIEW.md defaults
 
