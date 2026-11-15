@@ -54,7 +54,11 @@ void main() {
   vec3 d = normalize(vDir);
   float s = max(dot(d, uSunDir), 0.0);
   // azimuthal blend: sun side warm, far side cool
-  float side = dot(normalize(d.xz + 1e-5), normalize(uSunDir.xz)) * 0.5 + 0.5;
+  // sun-side factor; it has no meaning straight up, so it fades to neutral near the zenith (otherwise the
+  // sign flip of d.xz draws a hard seam there, which the wet ground mirrors)
+  float horiz = length(d.xz);
+  float side = dot(d.xz / max(horiz, 1e-4), normalize(uSunDir.xz)) * 0.5 + 0.5;
+  side = mix(0.5, side, smoothstep(0.05, 0.45, horiz));
   vec3 horizon = mix(uAnti, uHorizon, smoothstep(0.0, 1.0, side));
   float up = smoothstep(0.0, 0.62, d.y);
   vec3 col = mix(horizon, uZenith, pow(up, 0.8));

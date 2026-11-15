@@ -32,15 +32,15 @@ const FACING_EAST = 0;
 const FACING_WEST = Math.PI;
 
 export const SHELTERS: readonly Shelter[] = [
-  // yard, north strip: the door faces the open strip (east)
-  { id: 'yard-north', zone: 'A', x: -24, z: -36, yaw: FACING_EAST },
-  // yard, south strip, close to the start
-  { id: 'yard-south', zone: 'A', x: 22, z: 16, yaw: FACING_WEST },
+  // yard, west block: the door faces the N-S lane (east)
+  { id: 'yard-north', zone: 'A', x: -24, z: -22, yaw: FACING_EAST },
+  // yard, south part, close to the start
+  { id: 'yard-south', zone: 'A', x: 24, z: 10, yaw: FACING_WEST },
   // relay court, west of the tower
-  { id: 'court-west', zone: 'B', x: -18, z: -48, yaw: FACING_EAST },
+  { id: 'court-west', zone: 'B', x: -28, z: -34, yaw: FACING_EAST },
   // quay: east side, and west of the boss arena
-  { id: 'quay-east', zone: 'D', x: 30, z: -70, yaw: FACING_WEST },
-  { id: 'quay-west', zone: 'D', x: -30, z: -78, yaw: FACING_EAST },
+  { id: 'quay-east', zone: 'D', x: 31, z: -58, yaw: FACING_WEST },
+  { id: 'quay-west', zone: 'D', x: -31, z: -56, yaw: FACING_EAST },
 ];
 
 const L = WORLD.container.length;

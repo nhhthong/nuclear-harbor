@@ -1,5 +1,5 @@
 import { Vector3 } from 'three';
-import { PLAYER_SPAWN, SPAWN_SAFE_RADIUS } from '@/config/level';
+import { BOSS_ARENA, PLAYER_SPAWN, SPAWN_SAFE_RADIUS } from '@/config/level';
 import type { GameContext } from '@/core/GameContext';
 import type { EnemyType } from '@/core/types';
 import type { EnemySpawn } from './BaseEnemy';
@@ -66,17 +66,16 @@ export interface LaneData {
  * partial boots). A unit test compares it with the real generator so drift is caught.
  */
 export const FALLBACK_LANES: readonly LaneData[] = [
-  { id: 'yard-ns-0', axis: 'z', start: { x: -9.32, z: -39 }, end: { x: -9.32, z: 19 }, width: 6.6, length: 58 },
-  { id: 'yard-ns-1', axis: 'z', start: { x: 9.5, z: -39 }, end: { x: 9.5, z: 19 }, width: 6.6, length: 58 },
-  { id: 'yard-ew-0', axis: 'x', start: { x: -35, z: -21.78 }, end: { x: 35, z: -21.78 }, width: 6.6, length: 70 },
-  { id: 'yard-ew-1', axis: 'x', start: { x: -35, z: -10 }, end: { x: 35, z: -10 }, width: 6.6, length: 70 },
-  { id: 'yard-ew-2', axis: 'x', start: { x: -35, z: 1.78 }, end: { x: 35, z: 1.78 }, width: 6.6, length: 70 },
-]
+  { id: 'yard-ns-0', axis: 'z', start: { x: -11, z: -27 }, end: { x: -11, z: 15 }, width: 6.6, length: 42 },
+  { id: 'yard-ns-1', axis: 'z', start: { x: 9, z: -27 }, end: { x: 9, z: 15 }, width: 6.6, length: 42 },
+  { id: 'yard-ew-0', axis: 'x', start: { x: -35, z: -15.5 }, end: { x: 35, z: -15.5 }, width: 6.6, length: 70 },
+  { id: 'yard-ew-1', axis: 'x', start: { x: -35, z: 2.5 }, end: { x: 35, z: 2.5 }, width: 6.6, length: 70 },
+];
 
 /** Distance kept from lane ends when placing a Duck (m). */
 const LANE_INSET = 6;
 /** Ducks on the yard aisles (zone A). */
-const YARD_DUCKS = 3;
+const YARD_DUCKS = 2;
 /** Arm length of the plus-shaped patrol at lane intersections (m). */
 const ARM = 8;
 
@@ -140,27 +139,30 @@ const duck = (patrol: XZ[]): Authored => ({ type: 'duck', at: patrol[0] ?? [0, 0
  * gate apron stays empty.
  */
 const ARMY_SPOT_POSTS: readonly Authored[] = [
-  // A Container Yard (3 army, 4 spot, 2 samurai; the south aisle is too close to the spawn)
-  army(cross(-9.32, -21.78), [-9.32, -21.78]),
-  army(cross(9.5, -10), [9.5, -10]),
-  army(line([-33, -10], [-18, -10])),
-  spot(line([-33, -21.78], [-18, -21.78])),
-  spot(line([20, -21.78], [33, -21.78])),
-  spot(line([16, -10], [30, -10])),
-  spot(line([-9.32, -36], [-9.32, -28])),
-  samurai(line([9.5, -36], [9.5, -26])),
-  samurai(line([-9.32, -8], [-9.32, -3])),
+  // A Container Yard (3 army, 4 spot, 1 duck, 2 samurai); near the start only the far ends of the
+  // south aisle are used
+  army(cross(-11, -15.5), [-11, -15.5]),
+  army(cross(9, -15.5), [9, -15.5]),
+  army(line([-33, 2.5], [-21, 2.5])),
+  spot(line([21, 2.5], [33, 2.5])),
+  spot(line([-33, -15.5], [-21, -15.5])),
+  spot(line([19, -15.5], [32, -15.5])),
+  spot(line([-11, -26], [-11, -21])),
+  duck(line([9, -24], [9, -6])),
+  samurai(line([9, -26], [9, -20])),
+  samurai(line([-11, -7], [-11, -3])),
   // B Relay Court (1 army, 2 spot, 1 duck): the tower guard
-  army(ring(0, -48, 4.5)),
-  spot(line([15, -45], [26, -45])),
-  spot(line([-26, -50], [-16, -50])),
-  duck(line([18, -53], [30, -53])),
-  // D Quay, around the boss arena (1 army, 2 spot, 1 duck, 1 samurai)
-  army(line([18, -68], [18, -90])),
-  spot(line([22, -64], [32, -64])),
-  spot(line([-30, -64], [-18, -64])),
-  duck(line([21, -80], [32, -80])),
-  samurai(line([-31, -100], [-31, -85])),
+  army(ring(0, -34, 4.5)),
+  spot(line([15, -31], [26, -31])),
+  spot(line([-16, -38.5], [-6, -38.5])),
+  duck(line([18, -38], [30, -38])),
+  // D Quay (1 army, 2 spot, 1 duck, 1 samurai): beats on the ring just outside the boss arena, which
+  // stays free of containers, plus one along the south strip
+  army(line([BOSS_ARENA.center.x - 18.5, BOSS_ARENA.center.z + 6], [BOSS_ARENA.center.x - 18.5, BOSS_ARENA.center.z - 6])),
+  spot(line([16, -44], [32, -44])),
+  spot(line([BOSS_ARENA.center.x + 18.5, BOSS_ARENA.center.z + 6], [BOSS_ARENA.center.x + 18.5, BOSS_ARENA.center.z - 6])),
+  duck(line([BOSS_ARENA.center.x - 5, BOSS_ARENA.center.z + 19], [BOSS_ARENA.center.x + 5, BOSS_ARENA.center.z + 19])),
+  samurai(line([BOSS_ARENA.center.x - 6, BOSS_ARENA.center.z - 18.5], [BOSS_ARENA.center.x + 6, BOSS_ARENA.center.z - 18.5])),
 ];
 
 function laneAlong(lane: LaneData, d: number): XZ {

@@ -59,7 +59,11 @@ describe('placement budget', () => {
 // ---- placement against the real quay geometry ------------------------------------------------------
 const layout = generateContainerLayout();
 const solids = [
-  ...layout.boxes.map((b) => ({ c: b.center, h: b.halfExtents })),
+  ...layout.boxes.map((b) => {
+    const c = Math.abs(Math.cos(b.yaw ?? 0));
+    const sn = Math.abs(Math.sin(b.yaw ?? 0));
+    return { c: b.center, h: { x: b.halfExtents.x * c + b.halfExtents.z * sn, y: b.halfExtents.y, z: b.halfExtents.x * sn + b.halfExtents.z * c } };
+  }),
   ...structureSolids().map((b) => ({ c: b.center, h: b.half })),
 ];
 

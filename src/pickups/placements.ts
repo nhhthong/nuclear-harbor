@@ -41,7 +41,8 @@ function stackTopNear(x: number, z: number): [number, number] {
   let best: [number, number] | null = null;
   let bestD = Infinity;
   for (const t of LAYOUT.stackTops) {
-    if (t.zone !== 'A' || Math.abs(t.y - WORLD.container.height) > 0.01) continue;
+    // one-high, set square on the grid (loose boxes at an angle are left out)
+    if (t.zone !== 'A' || Math.abs(t.y - WORLD.container.height) > 0.01 || Math.abs(Math.sin(2 * t.yaw)) > 1e-6) continue;
     const d = Math.hypot(t.x - x, t.z - z);
     if (d < bestD) {
       bestD = d;
@@ -64,11 +65,11 @@ export const ZONE_PLACEMENTS: readonly PickupCandidate[] = [
   c('C', -14, fromLegacyZ(30.5)),
   m('C', 16, fromLegacyZ(28.5)),
   // A Container Yard: lane and aisle crossings (always free), plus two supplies on one-high stacks
-  c('A', -9.3, 8),
-  c('A', 9.5, -16),
-  c('A', 25, -21.78),
-  c('A', ...stackTopNear(-21, -16), true), // one-high stack, west block
-  m('A', ...stackTopNear(0, -33), true), // one-high stack facing the relay court
+  c('A', -11, 9),
+  c('A', 9, -8),
+  c('A', 25, -15.5),
+  c('A', ...stackTopNear(-21, -8), true), // one-high stack, west blocks
+  m('A', ...stackTopNear(0, -24), true), // one-high stack facing the relay court
   // B Relay Court
   c('B', -4, fromLegacyZ(-16.5)),
   m('B', 24, fromLegacyZ(-15.5)),

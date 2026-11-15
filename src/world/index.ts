@@ -81,7 +81,7 @@ export function createWorldModule(): GameModule {
         scene.add(m);
       }
       for (const b of layout.boxes) {
-        addCollider(ctx.physics.addStaticBox({ center: b.center, halfExtents: b.halfExtents, meta: { kind: 'static' } }));
+        addCollider(ctx.physics.addStaticBox({ center: b.center, halfExtents: b.halfExtents, yaw: b.yaw ?? 0, meta: { kind: 'static' } }));
       }
       const containerColliderCount = layout.boxes.length;
 
@@ -137,7 +137,9 @@ export function createWorldModule(): GameModule {
       applyWeatheredPaint(quayMat, { bottomY: -3, height: 3, wear: 0.9, key: 'quay' });
       const quayBody = new Mesh(new BoxGeometry(landW, 6, landD), quayMat);
       quayBody.name = 'quay-body';
-      quayBody.position.set(landCx, -3.02, landCz);
+      // top 0.4 m below the ground: 2 cm was too close for the depth buffer at a distance, and the two
+      // surfaces fought (z-fighting) in large triangle-shaped patches
+      quayBody.position.set(landCx, -3.4, landCz);
       scope.track(quayBody);
       scene.add(quayBody);
 
@@ -252,6 +254,11 @@ export function createWorldModule(): GameModule {
         containerCount: layout.instances.length,
         colliderCount: colliders.length,
         containerColliderCount,
+        /** Debug: switch the planar reflection off (overview shots from high above). */
+        setReflection: (on: boolean) => {
+          reflection.enabled = on;
+          ground.uniforms.uReflOn.value = on ? 1 : 0;
+        },
         shelters: SHELTERS.map((sh) => ({ id: sh.id, x: sh.x, z: sh.z, yaw: sh.yaw, footprint: shelterFootprint(sh) })),
         lanes: layout.lanes,
         fogColor: new Color(WORLD_LOCAL.sky.fog).getHex(),

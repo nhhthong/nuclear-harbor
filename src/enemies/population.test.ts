@@ -116,7 +116,7 @@ describe('authored harbor population', () => {
 
   it('runs the yard Ducks along yard aisles and keeps robots out of the boss arena', () => {
     const ducks = authored.filter((p) => p.type === 'duck' && zoneAt(p.at[0], p.at[1]) === 'A');
-    for (const d of ducks) expect(layout.lanes.some((l) => l.axis === 'x' && Math.abs(l.start.z - d.at[1]) < 0.01)).toBe(true);
+    for (const d of ducks) expect(layout.lanes.some((l) => (l.axis === 'x' ? Math.abs(l.start.z - d.at[1]) : Math.abs(l.start.x - d.at[0])) < 0.01)).toBe(true);
     for (const p of authored) {
       for (const pt of [p.at, ...p.patrol]) expect(dist(pt, BOSS_ARENA.center.x, BOSS_ARENA.center.z)).toBeGreaterThan(BOSS_ARENA.radius);
     }

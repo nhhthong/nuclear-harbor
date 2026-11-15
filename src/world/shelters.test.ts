@@ -50,7 +50,11 @@ describe('safe containers', () => {
 
   it('keeps clear of containers, props, the spawn and the keep-clear discs, with room at the door', () => {
     const solids = [
-      ...layout.boxes.map((b) => ({ x: b.center.x, z: b.center.z, hx: b.halfExtents.x, hz: b.halfExtents.z })),
+      ...layout.boxes.map((b) => {
+        const c = Math.abs(Math.cos(b.yaw ?? 0));
+        const sn = Math.abs(Math.sin(b.yaw ?? 0));
+        return { x: b.center.x, z: b.center.z, hx: b.halfExtents.x * c + b.halfExtents.z * sn, hz: b.halfExtents.x * sn + b.halfExtents.z * c };
+      }),
       ...structureSolids().map((b) => ({ x: b.center.x, z: b.center.z, hx: b.half.x, hz: b.half.z })),
     ];
     for (const s of SHELTERS) {

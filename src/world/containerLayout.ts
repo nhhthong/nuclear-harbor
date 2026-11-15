@@ -4,7 +4,9 @@ import {
   type ZoneId,
 } from '@/config/level';
 import { WORLD } from '@/config/tunables';
+import { structureSolids } from '@/structures/layout';
 import { createRng } from './rng';
+import { SHELTERS, shelterFootprint, toWorld } from './shelters';
 import { WORLD_LOCAL } from './tunables';
 
 /**
@@ -33,6 +35,8 @@ export interface ColliderBox {
   /** True for the top tier box of a run (GDD 7.5). */
   grappleable: boolean;
   zone: ZoneId;
+  /** Rotation about Y (0 for grid-aligned boxes; loose boxes are set down at an angle). */
+  yaw?: number;
 }
 
 interface StackTop {
@@ -41,6 +45,8 @@ interface StackTop {
   y: number;
   z: number;
   zone: ZoneId;
+  /** Rotation of the stack (multiples of PI/2 for grid stacks). */
+  yaw: number;
 }
 
 /** A straight, obstacle-free strip for Duck runs (centre line + width). */
@@ -65,15 +71,6 @@ export interface LayoutParams {
   seed: number;
 }
 
-interface Run {
-  zone: ZoneId;
-  /** Centre of the first cell. */
-  x: number;
-  z: number;
-  cells: number;
-  alongZ: boolean;
-  height: number;
-}
 
 const L = WORLD.container.length;
 const W = WORLD.container.width;
@@ -104,91 +101,12 @@ function pickHeight(rng: () => number, weights: readonly number[]): number {
   return 1;
 }
 
-function cellCentre(run: Run, i: number): { x: number; z: number } {
-  return run.alongZ ? { x: run.x, z: run.z + i * PITCH } : { x: run.x + i * PITCH, z: run.z };
-}
-
-/** Splits a run into sub-runs of consecutive cells that stay out of the keep-clear discs. */
-function trimToKeepClear(run: Run): Run[] {
-  const { hx, hz } = cellHalf(run.alongZ);
-  const out: Run[] = [];
-  let current: Run | null = null;
-  for (let i = 0; i < run.cells; i++) {
-    const c = cellCentre(run, i);
-    if (rectHitsKeepClear(c.x, c.z, hx, hz, WORLD_LOCAL.keepClearMargin)) {
-      current = null;
-      continue;
-    }
-    if (!current) {
-      current = { ...run, x: c.x, z: c.z, cells: 0 };
-      out.push(current);
-    }
-    current.cells++;
-  }
-  return out;
-}
-
-function emitRun(run: Run, layout: ContainerLayout, rng: () => number): void {
-  const yaw = run.alongZ ? Math.PI / 2 : 0;
-  for (let i = 0; i < run.cells; i++) {
-    const c = cellCentre(run, i);
-    for (let tier = 1; tier <= run.height; tier++) {
-      layout.instances.push({
-        x: c.x,
-        y: (tier - 0.5) * H,
-        z: c.z,
-        yaw,
-        colorIndex: Math.floor(rng() * WORLD_LOCAL.containerColors.length),
-        tier,
-        isTop: tier === run.height,
-        zone: run.zone,
-      });
-    }
-    layout.stackTops.push({ x: c.x, y: run.height * H, z: c.z, zone: run.zone });
-    layout.zoneCounts[run.zone as 'A' | 'B' | 'D'] += run.height;
-  }
-  // merged boxes: span the whole run, from the first cell edge to the last cell edge
-  const first = cellCentre(run, 0);
-  const last = cellCentre(run, run.cells - 1);
-  const { hx, hz } = cellHalf(run.alongZ);
-  const cx = (first.x + last.x) / 2;
-  const cz = (first.z + last.z) / 2;
-  const halfX = hx + Math.abs(last.x - first.x) / 2;
-  const halfZ = hz + Math.abs(last.z - first.z) / 2;
-  if (run.height > 1) {
-    const lowerH = (run.height - 1) * H;
-    layout.boxes.push({
-      center: { x: cx, y: lowerH / 2, z: cz },
-      halfExtents: { x: halfX, y: lowerH / 2, z: halfZ },
-      grappleable: false,
-      zone: run.zone,
-    });
-  }
-  layout.boxes.push({
-    center: { x: cx, y: (run.height - 0.5) * H, z: cz },
-    halfExtents: { x: halfX, y: H / 2, z: halfZ },
-    grappleable: true,
-    zone: run.zone,
-  });
-}
 
 interface Rect {
   minX: number;
   maxX: number;
   minZ: number;
   maxZ: number;
-}
-
-function runRect(run: Run): Rect {
-  const first = cellCentre(run, 0);
-  const last = cellCentre(run, run.cells - 1);
-  const { hx, hz } = cellHalf(run.alongZ);
-  return {
-    minX: Math.min(first.x, last.x) - hx,
-    maxX: Math.max(first.x, last.x) + hx,
-    minZ: Math.min(first.z, last.z) - hz,
-    maxZ: Math.max(first.z, last.z) + hz,
-  };
 }
 
 function rectsOverlap(a: Rect, b: Rect, margin: number): boolean {
@@ -223,52 +141,215 @@ function clipLane(axis: 'x' | 'z', fixed: number, from: number, to: number, widt
   };
 }
 
-function generateYard(layout: ContainerLayout, rng: () => number, runs: Run[]): void {
+/** Everything containers must leave alone: props, masts, crane legs, safe containers and their doors. */
+function obstacleRects(): Rect[] {
+  const out: Rect[] = [];
+  for (const b of structureSolids()) {
+    out.push({ minX: b.center.x - b.half.x - 1, maxX: b.center.x + b.half.x + 1, minZ: b.center.z - b.half.z - 1, maxZ: b.center.z + b.half.z + 1 });
+  }
+  for (const sh of SHELTERS) {
+    const f = shelterFootprint(sh);
+    const door = toWorld(sh, WORLD.container.length / 2 + 4, 0);
+    out.push({
+      minX: Math.min(f.minX, door.x) - 1.2,
+      maxX: Math.max(f.maxX, door.x) + 1.2,
+      minZ: Math.min(f.minZ, door.z) - 1.2,
+      maxZ: Math.max(f.maxZ, door.z) + 1.2,
+    });
+  }
+  return out;
+}
+
+function cellFree(cx: number, cz: number, hx: number, hz: number, blocked: readonly Rect[]): boolean {
+  if (rectHitsKeepClear(cx, cz, hx, hz, WORLD_LOCAL.keepClearMargin)) return false;
+  const r: Rect = { minX: cx - hx, maxX: cx + hx, minZ: cz - hz, maxZ: cz + hz };
+  return !blocked.some((b) => rectsOverlap(r, b, 0));
+}
+
+function heightAround(rng: () => number, base: number): number {
+  const y = WORLD_LOCAL.yard;
+  if (rng() >= y.stepChance) return base;
+  const h = base + (rng() < 0.5 ? -1 : 1);
+  return Math.max(1, Math.min(WORLD.maxContainerStack, h));
+}
+
+/** One stack: instances for every tier and its stack top. */
+function emitStack(layout: ContainerLayout, rng: () => number, zone: ZoneId, x: number, z: number, yaw: number, height: number): void {
+  const colorBase = Math.floor(rng() * WORLD_LOCAL.containerColors.length);
+  for (let tier = 1; tier <= height; tier++) {
+    layout.instances.push({
+      x,
+      y: (tier - 0.5) * H,
+      z,
+      yaw,
+      // most stacks mix colours, some keep one line's livery colour
+      colorIndex: rng() < 0.35 ? colorBase : Math.floor(rng() * WORLD_LOCAL.containerColors.length),
+      tier,
+      isTop: tier === height,
+      zone,
+    });
+  }
+  layout.stackTops.push({ x, y: height * H, z, zone, yaw });
+  if (zone === 'A' || zone === 'B' || zone === 'D') layout.zoneCounts[zone] += height;
+}
+
+/**
+ * A row of cells along X or Z starting at (x0, z0). Each cell has its own height; consecutive cells of
+ * the same height share collider boxes (a lower box for the full tiers and the top tier box).
+ */
+function emitRow(
+  layout: ContainerLayout,
+  rng: () => number,
+  zone: ZoneId,
+  x0: number,
+  z0: number,
+  alongZ: boolean,
+  heights: readonly number[],
+): void {
+  const yaw = alongZ ? Math.PI / 2 : 0;
+  const { hx, hz } = cellHalf(alongZ);
+  const centre = (i: number): { x: number; z: number } => (alongZ ? { x: x0, z: z0 + i * PITCH } : { x: x0 + i * PITCH, z: z0 });
+  let i = 0;
+  while (i < heights.length) {
+    const h = heights[i] as number;
+    if (h <= 0) {
+      i++;
+      continue;
+    }
+    let j = i;
+    while (j + 1 < heights.length && heights[j + 1] === h) j++;
+    for (let k = i; k <= j; k++) {
+      const c = centre(k);
+      emitStack(layout, rng, zone, c.x, c.z, yaw, h);
+    }
+    const a = centre(i);
+    const b = centre(j);
+    const cx = (a.x + b.x) / 2;
+    const cz = (a.z + b.z) / 2;
+    const halfX = hx + Math.abs(b.x - a.x) / 2;
+    const halfZ = hz + Math.abs(b.z - a.z) / 2;
+    if (h > 1) {
+      layout.boxes.push({ center: { x: cx, y: ((h - 1) * H) / 2, z: cz }, halfExtents: { x: halfX, y: ((h - 1) * H) / 2, z: halfZ }, grappleable: false, zone });
+    }
+    layout.boxes.push({ center: { x: cx, y: (h - 0.5) * H, z: cz }, halfExtents: { x: halfX, y: H / 2, z: halfZ }, grappleable: true, zone });
+    i = j + 1;
+  }
+}
+
+type BlockStyle = 'rows' | 'columns' | 'dump';
+
+/** Long rows across the block, in pairs split by straddle gaps; ragged ends, steps and holes. */
+function fillRows(layout: ContainerLayout, rng: () => number, rect: Rect, alongZ: boolean, blocked: readonly Rect[]): void {
+  const y = WORLD_LOCAL.yard;
+  const across = alongZ ? rect.maxX - rect.minX : rect.maxZ - rect.minZ;
+  const along = alongZ ? rect.maxZ - rect.minZ : rect.maxX - rect.minX;
+  const maxCells = Math.floor((along + WORLD_LOCAL.containerGap) / PITCH);
+  if (maxCells < 1) return;
+  const { hx, hz } = cellHalf(alongZ);
+  let offset = 0;
+  let row = 0;
+  while (offset + W <= across + 1e-6) {
+    const base = pickHeight(rng, y.heightWeights);
+    // ragged ends: start late or stop early by a cell now and then
+    const skipStart = maxCells >= 3 && rng() < 0.35 ? 1 : 0;
+    const skipEnd = maxCells >= 3 && rng() < 0.35 ? 1 : 0;
+    const slack = along - maxCells * PITCH + WORLD_LOCAL.containerGap;
+    const shift = rng() * Math.max(0, slack);
+    const heights: number[] = [];
+    for (let c = 0; c < maxCells; c++) {
+      let h = c < skipStart || c >= maxCells - skipEnd ? 0 : heightAround(rng, base);
+      if (rng() < y.holeChance) h = 0;
+      heights.push(h);
+    }
+    const lineCoord = (alongZ ? rect.minX : rect.minZ) + offset + W / 2;
+    const startCoord = (alongZ ? rect.minZ : rect.minX) + shift + L / 2;
+    const x0 = alongZ ? lineCoord : startCoord;
+    const z0 = alongZ ? startCoord : lineCoord;
+    for (let c = 0; c < heights.length; c++) {
+      const cx = alongZ ? x0 : x0 + c * PITCH;
+      const cz = alongZ ? z0 + c * PITCH : z0;
+      if (heights[c]! > 0 && !cellFree(cx, cz, hx, hz, blocked)) heights[c] = 0;
+    }
+    emitRow(layout, rng, 'A', x0, z0, alongZ, heights);
+    row++;
+    offset += W + (row % 2 === 0 ? y.straddleGap : y.rowGap);
+  }
+}
+
+/** A loose dump: boxes set down one by one at small angles, one or two high, not overlapping. */
+function fillDump(layout: ContainerLayout, rng: () => number, rect: Rect, blocked: readonly Rect[]): void {
+  const y = WORLD_LOCAL.yard;
+  const [lo, hi] = y.dumpCount as readonly [number, number];
+  const target = lo + Math.floor(rng() * (hi - lo + 1));
+  const placed: Rect[] = [];
+  for (let attempt = 0; attempt < 120 && placed.length < target; attempt++) {
+    const quarter = rng() < 0.5 ? 0 : Math.PI / 2;
+    const yaw = quarter + (rng() - 0.5) * 2 * y.dumpYaw;
+    // axis-aligned bounds of the rotated footprint
+    const c = Math.abs(Math.cos(yaw));
+    const sn = Math.abs(Math.sin(yaw));
+    const bx = (L / 2) * c + (W / 2) * sn;
+    const bz = (L / 2) * sn + (W / 2) * c;
+    if (rect.maxX - rect.minX < 2 * bx || rect.maxZ - rect.minZ < 2 * bz) continue;
+    const x = rect.minX + bx + rng() * (rect.maxX - rect.minX - 2 * bx);
+    const z = rect.minZ + bz + rng() * (rect.maxZ - rect.minZ - 2 * bz);
+    const r: Rect = { minX: x - bx, maxX: x + bx, minZ: z - bz, maxZ: z + bz };
+    if (placed.some((p) => rectsOverlap(r, p, 0.4))) continue;
+    if (!cellFree(x, z, bx, bz, blocked)) continue;
+    placed.push(r);
+    const height = rng() < 0.45 ? 2 : 1;
+    emitStack(layout, rng, 'A', x, z, yaw, height);
+    if (height > 1) {
+      layout.boxes.push({ center: { x, y: ((height - 1) * H) / 2, z }, halfExtents: { x: L / 2, y: ((height - 1) * H) / 2, z: W / 2 }, grappleable: false, zone: 'A', yaw });
+    }
+    layout.boxes.push({ center: { x, y: (height - 0.5) * H, z }, halfExtents: { x: L / 2, y: H / 2, z: W / 2 }, grappleable: true, zone: 'A', yaw });
+  }
+}
+
+function generateYard(layout: ContainerLayout, rng: () => number, blocked: readonly Rect[]): void {
   const y = WORLD_LOCAL.yard;
   const zone = ZONES.A;
-  const blockDepth = 2 * W + y.rowGap;
-  const totalZ = y.blockRows * blockDepth + (y.blockRows - 1) * y.aisleWidth;
-  const zStart = (zone.minZ + zone.maxZ) / 2 - totalZ / 2;
+  const xs = [...y.nsLanesX].sort((a, b) => a - b);
+  const zs = [...y.ewAislesZ].sort((a, b) => a - b);
+  // block edges: zone borders (minus margins) and lane / aisle edges
+  const colEdges: Array<[number, number]> = [];
+  let left = zone.minX + y.edgeMargin;
+  for (const lx of xs) {
+    colEdges.push([left, lx - y.laneWidth / 2]);
+    left = lx + y.laneWidth / 2;
+  }
+  colEdges.push([left, zone.maxX - y.edgeMargin]);
+  const rowEdges: Array<[number, number]> = [];
+  let top = zone.minZ + 1.2;
+  for (const az of zs) {
+    rowEdges.push([top, az - y.aisleWidth / 2]);
+    top = az + y.aisleWidth / 2;
+  }
+  rowEdges.push([top, zone.maxZ - 1.2]);
 
-  // segment x origins
-  const segX: number[] = [];
-  let x = zone.minX + y.edgeMarginX;
-  const laneCentresX: number[] = [];
-  y.segmentLengths.forEach((n, i) => {
-    segX.push(x);
-    x += n * PITCH - WORLD_LOCAL.containerGap;
-    if (i < y.segmentLengths.length - 1) {
-      laneCentresX.push(x + y.laneWidth / 2);
-      x += y.laneWidth;
-    }
+  // every block gets its own style; the dealer makes sure each style appears
+  const blocks: Rect[] = [];
+  for (const [minZ, maxZ] of rowEdges) for (const [minX, maxX] of colEdges) blocks.push({ minX, maxX, minZ, maxZ });
+  const styles: BlockStyle[] = blocks.map((_, i) => (['rows', 'columns', 'dump'] as const)[i % 3] as BlockStyle);
+  for (let i = styles.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [styles[i], styles[j]] = [styles[j] as BlockStyle, styles[i] as BlockStyle];
+  }
+  blocks.forEach((rect, i) => {
+    const style = styles[i] as BlockStyle;
+    const deep = rect.maxZ - rect.minZ;
+    if (style === 'dump') fillDump(layout, rng, rect, blocked);
+    // short columns need a block deeper than one container
+    else if (style === 'columns' && deep >= L + 0.4) fillRows(layout, rng, rect, true, blocked);
+    else fillRows(layout, rng, rect, false, blocked);
   });
 
-  const aisleCentresZ: number[] = [];
-  for (let b = 0; b < y.blockRows; b++) {
-    const bz = zStart + b * (blockDepth + y.aisleWidth);
-    if (b < y.blockRows - 1) aisleCentresZ.push(bz + blockDepth + y.aisleWidth / 2);
-    for (let r = 0; r < 2; r++) {
-      const cz = bz + W / 2 + r * (W + y.rowGap);
-      y.segmentLengths.forEach((n, s) => {
-        const height = pickHeight(rng, y.heightWeights);
-        const dropped = rng() < y.dropRunChance;
-        if (dropped) return;
-        const sx = segX[s] ?? 0;
-        const run: Run = { zone: 'A', x: sx + L / 2, z: cz, cells: n, alongZ: false, height };
-        for (const piece of trimToKeepClear(run)) {
-          runs.push(piece);
-          emitRun(piece, layout, rng);
-        }
-      });
-    }
-  }
-
-  // lanes: N-S lanes between segments, E-W aisles between block rows
-  laneCentresX.forEach((lx, i) => {
+  // lanes: N-S lanes between the columns, E-W aisles between the block rows
+  xs.forEach((lx, i) => {
     const lane = clipLane('z', lx, zone.minZ + 1, zone.maxZ - 1, y.laneWidth, `yard-ns-${i}`);
     if (lane) layout.lanes.push(lane);
   });
-  aisleCentresZ.forEach((lz, i) => {
+  zs.forEach((lz, i) => {
     const lane = clipLane('x', lz, zone.minX + 1, zone.maxX - 1, y.aisleWidth, `yard-ew-${i}`);
     if (lane) layout.lanes.push(lane);
   });
@@ -279,7 +360,7 @@ function generateClusters(
   rng: () => number,
   zoneId: 'B' | 'D',
   existing: Rect[],
-  runs: Run[],
+  blocked: readonly Rect[],
 ): void {
   const zone = ZONES[zoneId];
   const cfg = WORLD_LOCAL.clusters;
@@ -287,39 +368,41 @@ function generateClusters(
   let placed = 0;
   for (let attempt = 0; attempt < cfg.attempts && placed < target; attempt++) {
     const alongZ = rng() < 0.5;
-    const cells = 2 + Math.floor(rng() * 2);
+    // the quay gets bigger staging blocks than the court
+    const cells = 1 + Math.floor(rng() * (zoneId === 'D' ? 4 : 3));
     const rows = 1 + Math.floor(rng() * 2);
-    const height = pickHeight(rng, [0.55, 0.45]);
+    const base = pickHeight(rng, [0.5, 0.35, 0.15]);
     const x = zone.minX + cfg.edgeMargin + rng() * (zone.maxX - zone.minX - 2 * cfg.edgeMargin);
     const z = zone.minZ + cfg.edgeMargin + rng() * (zone.maxZ - zone.minZ - 2 * cfg.edgeMargin);
-    const candidate: Run[] = [];
-    for (let r = 0; r < rows; r++) {
+    const { hx, hz } = cellHalf(alongZ);
+    const rowsDef: Array<{ x0: number; z0: number; heights: number[] }> = [];
+    let ok = true;
+    for (let r = 0; r < rows && ok; r++) {
       const off = r * (W + WORLD_LOCAL.yard.rowGap);
-      candidate.push({
-        zone: zoneId,
-        x: alongZ ? x + off : x,
-        z: alongZ ? z : z + off,
-        cells: cells,
-        alongZ,
-        height,
-      });
+      const x0 = alongZ ? x + off : x;
+      const z0 = alongZ ? z : z + off;
+      const heights: number[] = [];
+      for (let c = 0; c < cells; c++) {
+        const cx = alongZ ? x0 : x0 + c * PITCH;
+        const cz = alongZ ? z0 + c * PITCH : z0;
+        if (!cellFree(cx, cz, hx, hz, blocked)) ok = false;
+        heights.push(heightAround(rng, base));
+      }
+      rowsDef.push({ x0, z0, heights });
     }
-    const rects = candidate.map(runRect);
-    const bounds: Rect = {
-      minX: Math.min(...rects.map((r) => r.minX)),
-      maxX: Math.max(...rects.map((r) => r.maxX)),
-      minZ: Math.min(...rects.map((r) => r.minZ)),
-      maxZ: Math.max(...rects.map((r) => r.maxZ)),
-    };
+    if (!ok) continue;
+    const firstRow = rowsDef[0];
+    const lastRow = rowsDef[rowsDef.length - 1];
+    if (!firstRow || !lastRow) continue;
+    const endX = alongZ ? lastRow.x0 : firstRow.x0 + (cells - 1) * PITCH;
+    const endZ = alongZ ? firstRow.z0 + (cells - 1) * PITCH : lastRow.z0;
+    const bounds: Rect = { minX: firstRow.x0 - hx, maxX: endX + hx, minZ: firstRow.z0 - hz, maxZ: endZ + hz };
     if (bounds.maxX > zone.maxX - cfg.edgeMargin || bounds.maxZ > zone.maxZ - cfg.edgeMargin) continue;
-    if (candidate.some((run) => trimToKeepClear(run).length !== 1 || trimToKeepClear(run)[0]?.cells !== run.cells)) continue;
-    if (rectHitsKeepClear((bounds.minX + bounds.maxX) / 2, (bounds.minZ + bounds.maxZ) / 2, (bounds.maxX - bounds.minX) / 2 + 3, (bounds.maxZ - bounds.minZ) / 2 + 3, 0)) continue;
+    if (bounds.minZ < zone.minZ + 1 || bounds.maxZ > zone.maxZ - 1) continue;
+    if (rectHitsKeepClear((bounds.minX + bounds.maxX) / 2, (bounds.minZ + bounds.maxZ) / 2, (bounds.maxX - bounds.minX) / 2 + 2, (bounds.maxZ - bounds.minZ) / 2 + 2, 0)) continue;
     if (existing.some((e) => rectsOverlap(bounds, e, cfg.margin))) continue;
     existing.push(bounds);
-    for (const run of candidate) {
-      runs.push(run);
-      emitRun(run, layout, rng);
-    }
+    for (const row of rowsDef) emitRow(layout, rng, zoneId, row.x0, row.z0, alongZ, row.heights);
     placed++;
   }
 }
@@ -333,11 +416,12 @@ export function generateContainerLayout(params: Partial<LayoutParams> = {}): Con
     lanes: [],
     zoneCounts: { A: 0, B: 0, D: 0 },
   };
-  const runs: Run[] = [];
-  generateYard(layout, rng, runs);
+  const blocked = obstacleRects();
+  generateYard(layout, rng, blocked);
   const taken: Rect[] = [];
-  generateClusters(layout, rng, 'B', taken, runs);
-  generateClusters(layout, rng, 'D', taken, runs);
+  const clusterBlocked = [...blocked, ...WORLD_LOCAL.clusters.reserved];
+  generateClusters(layout, rng, 'B', taken, clusterBlocked);
+  generateClusters(layout, rng, 'D', taken, clusterBlocked);
   return layout;
 }
 
