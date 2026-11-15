@@ -8,7 +8,7 @@ import { EnemyProjectiles } from './EnemyProjectiles';
 import { ENEMY_FACTORIES } from './factories';
 import { bakeNav, registerNav } from './nav/bakeNav';
 import type { NavGrid } from './nav/NavGrid';
-import { ZONES, zoneAt, type ZoneId } from '@/config/level';
+import { PLAYER_SPAWN, SPAWN_SAFE_RADIUS, ZONES, zoneAt, type ZoneId } from '@/config/level';
 import { AreaSpawner } from './areaSpawner';
 import { getPopulation } from './population';
 import { ENEMY_LOCAL } from './tunables';
@@ -51,6 +51,9 @@ export class EnemyManager {
   start(): void {
     const { nav, ms } = bakeNav(this.ctx);
     this.nav = nav;
+    // safe containers: the room (and half a metre in front of its door) is closed to robots
+    const world = this.ctx.testHooks.world as { shelters?: Array<{ footprint: { minX: number; maxX: number; minZ: number; maxZ: number } }> } | undefined;
+    for (const sh of world?.shelters ?? []) nav.blockRect(sh.footprint.minX, sh.footprint.minZ, sh.footprint.maxX, sh.footprint.maxZ);
     registerNav(this.ctx, nav);
     console.info(`[enemies] nav grid ${nav.cols}x${nav.rows}, ${nav.walkableCount} walkable cells, baked in ${ms.toFixed(1)} ms`);
     const population = getPopulation(this.ctx, nav);
@@ -68,7 +71,7 @@ export class EnemyManager {
         return e;
       },
       despawn: (e) => this.despawn(e),
-    });
+    }, [{ x: PLAYER_SPAWN.position.x, z: PLAYER_SPAWN.position.z, radius: SPAWN_SAFE_RADIUS }]);
   }
 
   /** Robots still to be destroyed in the harbor roster (live or not yet spawned). */

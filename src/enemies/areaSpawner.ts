@@ -20,8 +20,10 @@ export interface AreaSpawnerConfig {
   exitDelay: number;
   /** Robots of a sleeping area are removed once the player is this far away (m). */
   despawnDistance: number;
-  /** Nothing appears closer to the player than this (m). */
+  /** Nothing appears closer to the player than this (m)... */
   minSpawnDistance: number;
+  /** ...nor farther than this: an area is filled bit by bit as the player walks through it (m). */
+  spawnRadius: number;
   /** One spawn or despawn pass per interval (s): spreads the cost over frames. */
   interval: number;
 }
@@ -31,6 +33,13 @@ export interface LiveRobot {
   readonly id: string;
   readonly alive: boolean;
   readonly position: { x: number; z: number };
+}
+
+/** A disc where nothing is ever spawned (the player spawn). */
+export interface SafeDisc {
+  x: number;
+  z: number;
+  radius: number;
 }
 
 export interface AreaIo<R extends LiveRobot> {
@@ -67,6 +76,7 @@ export class AreaSpawner<R extends LiveRobot> {
     private readonly areas: Readonly<Record<ZoneId, AreaRect>>,
     private readonly cfg: AreaSpawnerConfig,
     private readonly io: AreaIo<R>,
+    private readonly safe: readonly SafeDisc[] = [],
   ) {
     this.entries = roster.map((r) => ({ spawn: r.spawn, zone: r.zone, state: 'waiting', robot: null }));
   }
@@ -132,7 +142,8 @@ export class AreaSpawner<R extends LiveRobot> {
     for (const e of this.entries) {
       if (e.state !== 'waiting' || !this.active.get(e.zone)) continue;
       const d = Math.hypot(e.spawn.position.x - px, e.spawn.position.z - pz);
-      if (d < cfg.minSpawnDistance || d >= bestD) continue;
+      if (d < cfg.minSpawnDistance || d > cfg.spawnRadius || d >= bestD) continue;
+      if (this.safe.some((s) => Math.hypot(e.spawn.position.x - s.x, e.spawn.position.z - s.z) < s.radius)) continue;
       best = e;
       bestD = d;
     }

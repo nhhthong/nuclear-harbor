@@ -1,5 +1,5 @@
 import { Vector3 } from 'three';
-import { PLAYER_SPAWN } from '@/config/level';
+import { PLAYER_SPAWN, SPAWN_SAFE_RADIUS } from '@/config/level';
 import type { GameContext } from '@/core/GameContext';
 import type { EnemyType } from '@/core/types';
 import type { EnemySpawn } from './BaseEnemy';
@@ -66,11 +66,12 @@ export interface LaneData {
  * partial boots). A unit test compares it with the real generator so drift is caught.
  */
 export const FALLBACK_LANES: readonly LaneData[] = [
-  { id: 'yard-ns-0', axis: 'z', start: { x: -9.32, z: -9 }, end: { x: -9.32, z: 19 }, width: 6.6, length: 28 },
-  { id: 'yard-ns-1', axis: 'z', start: { x: 9.5, z: -9 }, end: { x: 9.5, z: 19 }, width: 6.6, length: 28 },
-  { id: 'yard-ew-0', axis: 'x', start: { x: -35, z: -0.89 }, end: { x: 35, z: -0.89 }, width: 6.6, length: 70 },
-  { id: 'yard-ew-1', axis: 'x', start: { x: -35, z: 10.89 }, end: { x: 35, z: 10.89 }, width: 6.6, length: 70 },
-];
+  { id: 'yard-ns-0', axis: 'z', start: { x: -9.32, z: -39 }, end: { x: -9.32, z: 19 }, width: 6.6, length: 58 },
+  { id: 'yard-ns-1', axis: 'z', start: { x: 9.5, z: -39 }, end: { x: 9.5, z: 19 }, width: 6.6, length: 58 },
+  { id: 'yard-ew-0', axis: 'x', start: { x: -35, z: -21.78 }, end: { x: 35, z: -21.78 }, width: 6.6, length: 70 },
+  { id: 'yard-ew-1', axis: 'x', start: { x: -35, z: -10 }, end: { x: 35, z: -10 }, width: 6.6, length: 70 },
+  { id: 'yard-ew-2', axis: 'x', start: { x: -35, z: 1.78 }, end: { x: 35, z: 1.78 }, width: 6.6, length: 70 },
+]
 
 /** Distance kept from lane ends when placing a Duck (m). */
 const LANE_INSET = 6;
@@ -133,30 +134,33 @@ const spot = (patrol: XZ[]): Authored => ({ type: 'spot', at: patrol[0] ?? [0, 0
 const samurai = (patrol: XZ[]): Authored => ({ type: 'samurai', at: patrol[0] ?? [0, 0], patrol });
 const duck = (patrol: XZ[]): Authored => ({ type: 'duck', at: patrol[0] ?? [0, 0], patrol });
 
-/** Army loops (tower, lane crossings), spot beats and the Ducks outside the yard; the yard Ducks come from its aisles. */
+/**
+ * Army loops (tower, lane crossings), spot beats, samurai beats and the Ducks outside the yard; the
+ * yard Ducks come from its aisles. Nothing within SPAWN_SAFE_RADIUS of the player spawn, and the
+ * gate apron stays empty.
+ */
 const ARMY_SPOT_POSTS: readonly Authored[] = [
-  // A Container Yard (3 army, 4 spot)
-  army(cross(-9.32, -0.89), [-9.32, -0.89]),
-  army(cross(9.5, 10.89), [9.5, 10.89]),
-  army(line([-30, 10.89], [-16, 10.89])),
-  spot(line([-28, -0.89], [-16, -0.89])),
-  spot(line([20, 10.89], [30, 10.89])),
-  spot(line([16, -0.89], [30, -0.89])),
-  spot(line([-9.32, 4], [-9.32, 9])),
+  // A Container Yard (3 army, 4 spot, 2 samurai; the south aisle is too close to the spawn)
+  army(cross(-9.32, -21.78), [-9.32, -21.78]),
+  army(cross(9.5, -10), [9.5, -10]),
+  army(line([-33, -10], [-18, -10])),
+  spot(line([-33, -21.78], [-18, -21.78])),
+  spot(line([20, -21.78], [33, -21.78])),
+  spot(line([16, -10], [30, -10])),
+  spot(line([-9.32, -36], [-9.32, -28])),
+  samurai(line([9.5, -36], [9.5, -26])),
+  samurai(line([-9.32, -8], [-9.32, -3])),
   // B Relay Court (1 army, 2 spot, 1 duck): the tower guard
-  army(ring(0, -14, 4.5)),
-  spot(line([15, -12.5], [26, -12.5])),
-  spot(line([-26, -15], [-16, -15])),
-  duck(line([18, -16.5], [30, -16.5])),
-  // D Quay, east of the boss arena (1 army, 2 spot, 1 duck)
-  army(line([17, -22], [17, -33])),
-  spot(line([22, -22], [32, -22])),
-  spot(line([10, -47], [10, -39])),
-  duck(line([21, -30], [32, -30])),
-  // cyber samurai: one per area, none in the relay court
-  samurai(line([9.5, -7], [9.5, 4])),
-  samurai(line([-19.5, 28], [-26.5, 28.5])),
-  samurai(line([26, -25], [26, -34])),
+  army(ring(0, -48, 4.5)),
+  spot(line([15, -45], [26, -45])),
+  spot(line([-26, -50], [-16, -50])),
+  duck(line([18, -53], [30, -53])),
+  // D Quay, around the boss arena (1 army, 2 spot, 1 duck, 1 samurai)
+  army(line([18, -68], [18, -90])),
+  spot(line([22, -64], [32, -64])),
+  spot(line([-30, -64], [-18, -64])),
+  duck(line([21, -80], [32, -80])),
+  samurai(line([-31, -100], [-31, -85])),
 ];
 
 function laneAlong(lane: LaneData, d: number): XZ {
@@ -164,10 +168,17 @@ function laneAlong(lane: LaneData, d: number): XZ {
   return lane.axis === 'z' ? [lane.start.x, lane.start.z + t] : [lane.start.x + t, lane.start.z];
 }
 
+/** True when the whole lane keeps SPAWN_SAFE_RADIUS (plus the Duck's end inset) from the player spawn. */
+function laneClearOfSpawn(lane: LaneData): boolean {
+  const sp = PLAYER_SPAWN.position;
+  const along = lane.axis === 'x' ? Math.abs(lane.start.z - sp.z) : Math.abs(lane.start.x - sp.x);
+  return along > SPAWN_SAFE_RADIUS;
+}
+
 /** Yard Ducks: one per yard lane, longest first; further Ducks reuse the lanes from the other end. */
 export function yardDucks(lanes: readonly LaneData[]): Authored[] {
   const yard = lanes
-    .filter((l) => l.id.startsWith('yard') && l.axis === 'x')
+    .filter((l) => l.id.startsWith('yard') && l.axis === 'x' && laneClearOfSpawn(l))
     .sort((a, b) => b.length - a.length || a.id.localeCompare(b.id));
   const out: Authored[] = [];
   for (let i = 0; i < YARD_DUCKS && yard.length > 0; i++) {

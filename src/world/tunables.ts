@@ -7,7 +7,7 @@ export const WORLD_LOCAL = {
   /** Container yard (zone A) grid. */
   yard: {
     /** Number of block rows (each block row = two touching container rows). */
-    blockRows: 3,
+    blockRows: 4,
     /** Containers per run (one run per block segment and row); segments are separated by N-S lanes. */
     segmentLengths: [3, 2, 3] as readonly number[],
     /** E-W aisle width between block rows and N-S lane width between segments (m). */
@@ -62,7 +62,7 @@ export const WORLD_LOCAL = {
     environmentIntensity: 1.25,
   },
   /** The sun is the only real light in the level (performance): one shadow map, no spot lights. */
-  sun: { color: 0xffa868, intensity: 3.4, elevationDeg: 11, azimuthDeg: 248, distance: 220, frustumHalf: 66 },
+  sun: { color: 0xffa868, intensity: 3.4, elevationDeg: 11, azimuthDeg: 248, distance: 220, frustumHalf: 98, frustumHalfHeight: 45, centerZ: -38 },
   hemi: { sky: 0x9aa2d0, ground: 0x6a4a38, intensity: 1.35 },
   ground: {
     asphalt: 0x2a2c30,

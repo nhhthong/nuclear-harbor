@@ -86,8 +86,10 @@ describe('authored harbor population', () => {
     }
   });
 
-  it('keeps every robot away from the player spawn', () => {
-    for (const p of authored) expect(dist(p.at, PLAYER_SPAWN.position.x, PLAYER_SPAWN.position.z)).toBeGreaterThan(ENEMY_LOCAL.minDistanceFromSpawn);
+  it('keeps every robot, and every point of its patrol, away from the player spawn', () => {
+    for (const p of authored) {
+      for (const pt of [p.at, ...p.patrol]) expect(dist(pt, PLAYER_SPAWN.position.x, PLAYER_SPAWN.position.z), `${p.type} ${pt.join(', ')}`).toBeGreaterThan(ENEMY_LOCAL.minDistanceFromSpawn);
+    }
   });
 
   it('puts every spawn and patrol point on a walkable cell of the real layout', () => {

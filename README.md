@@ -49,7 +49,7 @@ a four-legged spherical war machine that can only be hurt through its lights, dr
 The game runs entirely in the browser on **Three.js + TypeScript**, with **Rapier** physics, a fixed 60 Hz
 simulation, procedural audio and procedurally built models. There is no backend and no network access at runtime.
 
-> **Honest scope note.** One small level (72 x 86 m), built to look as good as code-generated content can:
+> **Honest scope note.** One small level (72 x 172 m), built to look as good as code-generated content can:
 > modelled containers, wet ground with a real planar reflection, a low sun with one shadow map, a procedural
 > sunset sky, bloom, ambient occlusion and a film grade. There are no scanned or sculpted assets, so it does not match a
 > AAA production; see [Project status](#project-status).
@@ -98,7 +98,7 @@ simulation, procedural audio and procedurally built models. There is no backend 
 - **TITAN-04 final boss** (about 9 m tall): falls from the sky after the tower is activated, four knee-light weak points, then an exposed core.
 
 **World and rendering**
-- One quay at sunset (72 x 86 m): gate apron, container yard, relay court and the quay with a gantry crane, from a seeded layout.
+- One quay at sunset (72 x 172 m): gate apron, container yard, relay court and the quay with a gantry crane, from a seeded layout, plus five **safe containers** with open doors where you can hide and heal (green crosses on the radar).
 - **Containers as geometry**, not textured boxes: corrugated walls and roof, frame, doors with locking bars, corner castings, livery decals; one shader adds chipped paint, rust and grime.
 - **Wet ground shader**: asphalt and concrete slabs, cracks, worn paint, crane rails, still puddles and a **planar reflection** of the whole scene (a third of the resolution and every other frame on medium, half resolution every frame on high).
 - **Lighting**: the low sun is the only real light (one shadow map), plus a hemisphere fill, a procedural sunset sky with drifting cloud, light haze and a sky reflection probe. Lamp heads are emissive only.

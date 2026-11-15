@@ -109,15 +109,15 @@ export function createLighting(ctx: GameContext): Lighting {
 
   const sun = new DirectionalLight(cfg.sun.color, cfg.sun.intensity);
   sun.name = 'sun';
-  sun.target.position.set(0, 0, -9);
+  // the shadow box covers the whole quay (72 x 172 m): wide across the sun's direction, low in height
+  sun.target.position.set(0, 0, cfg.sun.centerZ);
   sun.position.copy(sun.target.position).addScaledVector(sunDir, cfg.sun.distance);
   sun.castShadow = true;
   const cam = sun.shadow.camera;
-  const h = cfg.sun.frustumHalf;
-  cam.left = -h;
-  cam.right = h;
-  cam.top = h;
-  cam.bottom = -h;
+  cam.left = -cfg.sun.frustumHalf;
+  cam.right = cfg.sun.frustumHalf;
+  cam.top = cfg.sun.frustumHalfHeight;
+  cam.bottom = -cfg.sun.frustumHalfHeight;
   cam.near = 10;
   cam.far = cfg.sun.distance * 2;
   cam.updateProjectionMatrix();

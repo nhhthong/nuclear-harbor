@@ -2,11 +2,12 @@ import { BoxGeometry, Color, Group, InstancedMesh, Mesh, MeshBasicMaterial, Mesh
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { Collider } from '@dimforge/rapier3d-compat';
 import { LAND, SHIP_BACKDROP } from '@/config/level';
-import { PERFORMANCE } from '@/config/tunables';
+import { PERFORMANCE, WORLD } from '@/config/tunables';
 import type { GameContext } from '@/core/GameContext';
 import type { GameModule } from '@/core/GameModule';
 import { buildBarriers } from './barriers';
-import { applyWeatheredPaint, createContainerMeshes } from './containerModel';
+import { applyWeatheredPaint, buildShelterGeometry, createContainerMeshes } from './containerModel';
+import { SHELTERS, shelterBoxes, shelterFootprint } from './shelters';
 import { generateContainerLayout } from './containerLayout';
 import { PlanarReflection, createWetGround } from './ground';
 import { createLighting } from './lighting';
@@ -83,6 +84,35 @@ export function createWorldModule(): GameModule {
         addCollider(ctx.physics.addStaticBox({ center: b.center, halfExtents: b.halfExtents, meta: { kind: 'static' } }));
       }
       const containerColliderCount = layout.boxes.length;
+
+      // ---- safe containers (doors open, hollow inside) --------------------------------------------
+      const shelterGeo = buildShelterGeometry();
+      scope.track(shelterGeo.body);
+      scope.track(shelterGeo.hardware);
+      scope.track(shelterGeo.glow);
+      const shelterPaint = scope.track(new MeshStandardMaterial({ color: 0xd9e2dc, roughness: 0.42, metalness: 0.25 }));
+      applyWeatheredPaint(shelterPaint, { bottomY: -1.3, height: 2.6, wear: 0.8, key: 'shelter' });
+      const shelterHardware = scope.track(new MeshStandardMaterial({ color: 0x8b8f92, roughness: 0.38, metalness: 0.85 }));
+      applyWeatheredPaint(shelterHardware, { bottomY: -1.3, height: 2.6, wear: 0.7, key: 'shelter-hw' });
+      const shelterGlow = scope.track(new MeshBasicMaterial({ color: 0xffffff }));
+      shelterGlow.color.setRGB(0.25, 2.6, 0.9);
+      for (const sh of SHELTERS) {
+        const group = new Group();
+        group.name = `shelter-${sh.id}`;
+        group.position.set(sh.x, WORLD.container.height / 2, sh.z);
+        group.rotation.y = sh.yaw;
+        const bodyMesh = new Mesh(shelterGeo.body, shelterPaint);
+        bodyMesh.castShadow = true;
+        bodyMesh.receiveShadow = true;
+        const hardwareMesh = new Mesh(shelterGeo.hardware, shelterHardware);
+        hardwareMesh.castShadow = true;
+        group.add(bodyMesh, hardwareMesh, new Mesh(shelterGeo.glow, shelterGlow));
+        scope.track(group);
+        scene.add(group);
+        for (const b of shelterBoxes(sh)) {
+          addCollider(ctx.physics.addStaticBox({ center: b.center, halfExtents: b.halfExtents, yaw: b.yaw, meta: { kind: 'static' } }));
+        }
+      }
 
       // ---- wet ground with planar reflection -----------------------------------------------------
       const landW = LAND.maxX - LAND.minX;
@@ -222,6 +252,7 @@ export function createWorldModule(): GameModule {
         containerCount: layout.instances.length,
         colliderCount: colliders.length,
         containerColliderCount,
+        shelters: SHELTERS.map((sh) => ({ id: sh.id, x: sh.x, z: sh.z, yaw: sh.yaw, footprint: shelterFootprint(sh) })),
         lanes: layout.lanes,
         fogColor: new Color(WORLD_LOCAL.sky.fog).getHex(),
       };
