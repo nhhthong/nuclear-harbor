@@ -1,5 +1,7 @@
 # Performance (T-17)
 
+> **Historical: measured on the first version (240 x 220 m, 30 robots, rain, grapple).** Counts, budgets and findings may not match the current game. Current state: `docs/PLAN.md` "Current state".
+
 Scope statement: all numbers below come from headless Chromium with software WebGL (SwiftShader) in a container.
 Draw calls, triangles and resource counts are exact and comparable. FPS and frame times are NOT representative of
 real hardware (about 2 to 20 fps here) and are listed only for completeness. **No real low-end or mid-range device

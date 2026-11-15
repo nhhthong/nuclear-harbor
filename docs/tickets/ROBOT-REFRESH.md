@@ -1,5 +1,7 @@
 # Robot refresh (T-19 .. T-23)
 
+> **Historical brief, executed.** Ids were renamed to `army` / `spot` / `duck` (T-23). The 14 / 10 / 6 = 30 totals are obsolete: the roster is now 21 robots (army 5, spot 8, duck 5, samurai 3). The dinosaur (T-21) was replaced by the scorpion. See `docs/PLAN.md` "Current state".
+
 Owner request: replace the placeholder enemies with the five reference models in `docs/reference-models/*.html`
 (Three.js demos loading three from a CDN; they are VISUAL + BEHAVIOUR references only) and upgrade their behaviour.
 Four agents build, one agent cleans. Spec Kit is mandatory for T-19..T-22 (see docs/SPECKIT.md "Enforcement"); spec dirs below.

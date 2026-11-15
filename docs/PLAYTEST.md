@@ -1,5 +1,7 @@
 # Playtest notes: vertical slice and full run (T-16)
 
+> **Historical: measured on the first version (240 x 220 m, 30 robots, rain, grapple).** Counts, budgets and findings may not match the current game. Current state: `docs/PLAN.md` "Current state".
+
 Honest scope statement: no human played this build. Everything below comes from (a) scripted runs in headless
 Chromium with software WebGL (`tests/e2e/T-16-*.e2e.mjs`), (b) one-off probe scripts driving the real game
 through `window.__NH__.game`, (c) static numbers from `src/config/tunables.ts`, and (d) four screenshots I

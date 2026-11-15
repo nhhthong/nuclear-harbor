@@ -14,7 +14,42 @@ Inputs: [`docs/GDD.md`](GDD.md) (design spec), [`docs/REVIEW.md`](REVIEW.md) (ac
 
 ---
 
-## 1. Evaluation
+> **STATUS: sections 1 to 9 below are the ORIGINAL plan (first version of the game) and are partly stale. Read "Current state" first; it wins on any conflict.**
+> Stale in the original text: grapple (A4, A8, A12, 4.1, 4.4, 4.5, ticket T-12), four towers, 240 x 220 m map and per-zone robot counts (4.6),
+> 30 robots, dinosaur, `anchors` / `viewmodel=glb` params (4.7), the smoke/e2e requirement and wave tables (6 to 9), "no streaming" (A11).
+
+## Current state (authoritative, matches the code)
+
+**Game:** one 72 x 122 m quay at sunset, no rain, the sun is the only real light. Objective: activate 1 tower (guarded by the mecha scorpion STINGER-7), survive the nuclear countdown, defeat the half-size final boss. No grapple.
+
+**Modules** (registration order in `src/modules.ts`): sandbox, world, structures, player, weapon, enemies, boss, scorpion, objectives, pickups, shelters, vfx, audio, ui, flow, debug. `GameContext` still has `grappleAnchors` (legacy, unused).
+
+**Level contract** (`src/config/level.ts`: `ZONES`, `LAND`, `fromLegacyZ`, `SPAWN_SAFE_RADIUS` = 32 m):
+zones by z: A [-28, 16], B [-40, -28], C [16, 34], D [-88, -40]. Spawn (0, 0, 29), tower (0, -34), boss arena center (-10, -66) r 17, crane (25, -75), ship (-34, -2, -148).
+Container yard: seeded generator `src/world/containerLayout.ts`. Five safe containers heal the player (`src/world/shelters.ts`, `src/shelters`).
+
+**Enemies:** 21 robots = army 5, spot 8, duck 5 (regular, 18) + 3 cyber samurai elites (`src/enemies/samurai`). Distribution per zone (`ENEMY_DISTRIBUTION`), samurai included: A {3,4,3,2}, B {1,2,1,0}, C none, D {1,2,1,1} (army, spot, duck, samurai). The spawn area is empty. Robots are streamed by area (`src/enemies/areaSpawner.ts`, 10 alive at most). All robots walk with stepping legs paced by distance (`src/enemies/gait.ts`).
+Scorpion (`src/scorpion`): charge, venom, tail slam, hex shield blocks 80% of frontal damage. Samurai: leap cleave, spinning polearm deflect, two lightning dashes.
+
+**Economy:** crates 10 + 6, medkits 4 + 2 (see `ECONOMY`). Ammo budget now 345 hits / 690 rounds.
+
+**Player:** `PLAYER.gravity` -15 (own gravity, higher jumps). Fixed 60 Hz sim.
+
+**Tunables sections** (`src/config/tunables.ts`): SIM, PLAYER, WEAPON, ECONOMY, ENEMY_COUNTS, ENEMY_DISTRIBUTION, ARMY_ROBOT, AI_SCHEDULING, OBJECTIVES, BOSS, PERFORMANCE, WORLD, CAMERA (GRAPPLE section may remain as dead data). Feature-local numbers stay in `src/<feature>/tunables.ts`.
+
+**Events:** catalogue in `src/core/events.ts` plus per-feature `events.ts` (declaration merging). Newer additions: `player:jumped`, `scorpion:*`. Grapple events are legacy.
+
+**Query params:** `autostart`, `sandbox`, `debug`, `colliders`, `enemies=army,spot,duck|none` (sandbox), `countdown`, `towers`, `boss`, `bossphase`, `scorpion` (sandbox), `viewmodel=procedural`, `bench`, `seed`, `vfxtest`, `audiotest`.
+
+**Verification policy (owner):** run `npx tsc --noEmit`, unit tests (437 in 67 files) and `npm run build`. Do NOT run `npm run smoke` / `npm run e2e` unless the owner asks. All `tests/e2e/*.mjs` are stale (old coordinates, four towers, grapple); rewrite before use. CI (`.github/workflows/pages.yml`) runs typecheck + unit tests + build only; deploys to GitHub Pages on `main`.
+
+**Process:** Spec Kit was used for T-01..T-22 only (`specs/README.md`). Later reworks were done without it. Rules: `docs/SPECKIT.md`.
+
+**Not verified:** a full run, balance, the scorpion fight beyond forced skills, frame rate on a real GPU.
+
+---
+
+## 1. Evaluation (ORIGINAL, historical)
 
 | Area | Assessment |
 |---|---|

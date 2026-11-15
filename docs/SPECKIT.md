@@ -22,7 +22,7 @@ Set these in every Bash call that runs `.specify/scripts/bash/*` (shell env does
 Keep spec artifacts short (one screen each where possible). Commit `specs/T-XX-name/` with the code.
 
 ## Rules
-- Constitution: `.specify/memory/constitution.md` (owned by Tech Lead). Do not edit.
+- Constitution: `.specify/memory/constitution.md` (owned by the owner/Tech Lead; amend only on request with a version bump). Last amendment 1.0.1 removed stale scope lines.
 - Spec Kit scripts do not create git branches here; stay on the branch you were given.
 - Do not edit `.specify/templates`, `.specify/scripts`, `.claude/skills`.
 
@@ -34,6 +34,8 @@ Run each phase through the Skill tool (`speckit-specify`, `speckit-plan`, `speck
 The final report must state, per phase, how it was run (Skill tool / SKILL.md steps) and list any step skipped and why.
 
 ## Current policy (owner decisions, latest wins)
+- **Scope of the existing `specs/`:** T-01..T-22 are historical (first version of the game). See `specs/README.md` for what happened to each. After T-22 the owner requested reworks (sunset quay, scorpion, samurai, area streaming, HUD/radar, gaits, shelters, jump) that were done WITHOUT Spec Kit and without e2e; they are documented in `docs/DEVIATIONS.md` and `docs/PLAN.md` "Current state". For new feature tickets Spec Kit is still the default; ask the owner when a request is a quick rework.
+- **Legacy wording below:** "wave 2 enforcement" and `npm run smoke` in step 6 describe the original process; the Tests bullet below overrides them.
 - **Spec Kit stays required for feature tickets, including the upcoming UI work.** Cleanup/rename tickets (T-23) are exempt and keep a deletion log instead (`docs/CLEANUP-LOG.md`).
 - **Models:** Sonnet 5.5 writes both the Spec Kit artifacts and the code, inside the same agent. Do not delegate Spec Kit to Haiku.
 - **Tests:** the owner asked for code only: do NOT run `npm run smoke` / `npm run e2e` unless the owner asks. Always run `npx tsc --noEmit`, the unit tests of the files you own, and `npm run build` when types alone are not enough. If you skip a verification, write "skipped per owner" in `tasks.md` and say so in the report; never tick a task you did not run.

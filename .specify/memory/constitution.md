@@ -19,7 +19,7 @@ Performance is an architectural requirement, not a final optimisation pass (GDD 
 - Every GPU resource MUST be owned by a `ResourceTracker` scope and released in `dispose()`,
   together with event listeners, timers and DOM nodes.
 
-Rationale: the target is 60 FPS on a desktop browser with 30 robots, a boss and a large harbor;
+Rationale: the target is 60 FPS on a desktop browser with up to 10 streamed robots alive, a boss and a 72 x 122 m quay;
 retrofitting pooling, instancing and disposal is far more expensive than building with them.
 
 ### II. Strict, Typed Contracts Between Modules
@@ -99,8 +99,9 @@ build environment cannot reach asset hosts.
   meets the acceptance criteria. No speculative abstraction, no framework inside a module.
 - Decisions recorded in `docs/REVIEW.md` and `docs/PLAN.md` are binding defaults. A deviation
   MUST be justified in the ticket's `plan.md` and reported in the hand-over summary.
-- When time runs short, cut in the order of the GDD cut list (15.2). Grapple, four towers,
-  Charger, and the boss's four weak points plus core MUST NOT be cut.
+- When time runs short, cut in the order of the GDD cut list (15.2). The boss's four weak points
+  plus core MUST NOT be cut. (Amendment 1.0.1: grapple, four towers and the Charger were
+  removed or replaced by owner decision; see `docs/DEVIATIONS.md`.)
 
 Rationale: a small, working vertical slice that is fun beats a broad, half-finished feature set.
 
@@ -145,4 +146,4 @@ Rationale: a small, working vertical slice that is fun beats a broad, half-finis
 - Runtime guidance for developers lives in `docs/PLAN.md`, `docs/SPECKIT.md` and the ticket
   documents.
 
-**Version**: 1.0.0 | **Ratified**: 2026-11-12 | **Last Amended**: 2026-11-12
+**Version**: 1.0.1 | **Ratified**: 2026-11-12 | **Last Amended**: 2026-11-15
