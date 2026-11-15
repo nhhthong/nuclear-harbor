@@ -5,16 +5,21 @@
 **A single-player browser FPS on a container quay at sunset, still wet from the rain and taken over by military robots.**
 Fight through the yard, bring down STINGER-7, the mecha scorpion that guards the relay tower, then TITAN-04, before the countdown ends.
 
+### [▶ Play the live demo](https://nhhthong.github.io/nuclear-harbor/)
+
+[![Live demo](https://img.shields.io/badge/Live%20demo-GitHub%20Pages-2ea44f?logo=github&logoColor=white)](https://nhhthong.github.io/nuclear-harbor/)
+[![CI](https://github.com/nhhthong/nuclear-harbor/actions/workflows/pages.yml/badge.svg)](https://github.com/nhhthong/nuclear-harbor/actions/workflows/pages.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Three.js](https://img.shields.io/badge/Three.js-r187-000000?logo=threedotjs&logoColor=white)](https://threejs.org/)
 [![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white)](https://vite.dev/)
 [![Rapier](https://img.shields.io/badge/Physics-Rapier-F2780C)](https://rapier.rs/)
-[![Node](https://img.shields.io/badge/Node-%E2%89%A520-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
 [![Platform](https://img.shields.io/badge/Platform-Web%20(offline%20capable)-blue)](#offline-play)
 [![Status](https://img.shields.io/badge/Status-prototype-orange)](#project-status)
 
-<img src="docs/media/sunset-apron.jpg" alt="Gate apron at sunset: wet asphalt reflecting the sky and the weathered containers" width="920">
+<a href="https://nhhthong.github.io/nuclear-harbor/"><img src="docs/media/hero.jpg" alt="Gate apron at sunset: wet asphalt reflecting the sky, port-style container stacks, a safe container with a green cross, and the in-game HUD with radar" width="920"></a>
+
+<sub>No install, no account, no network after the first load. Desktop browser with WebGL2 and a GPU recommended; pick the Low preset on integrated graphics.</sub>
 
 </div>
 
@@ -28,6 +33,7 @@ Fight through the yard, bring down STINGER-7, the mecha scorpion that guards the
 - [Gameplay](#gameplay)
 - [Controls](#controls)
 - [Getting started](#getting-started)
+- [Publishing to GitHub Pages](#publishing-to-github-pages)
 - [URL parameters](#url-parameters)
 - [Architecture](#architecture)
 - [Performance](#performance)
@@ -41,7 +47,7 @@ Fight through the yard, bring down STINGER-7, the mecha scorpion that guards the
 ## Overview
 
 You are the only survivor of a container quay whose defence robots have been hijacked. The rain has just stopped, the sun is going
-down, and the nuclear control system is counting down from **08:00**. Push through the container yard, reach
+down, and the nuclear control system is counting down from **08:00**. Push through the port-style container yard, reach
 the relay tower in the court behind it, where **STINGER-7** (a mecha scorpion) rises out of the ground, and hold **E**
 to activate the tower while the robots close in. Then **TITAN-04**,
 a four-legged spherical war machine that can only be hurt through its lights, drops onto the quay.
@@ -56,26 +62,54 @@ simulation, procedural audio and procedurally built models. There is no backend 
 
 ## Screenshots
 
+### The level from above
+
+<div align="center">
+  <img src="docs/media/map-overhead.jpg" alt="Overhead view of the whole quay: gate apron at the bottom, the irregular container yard, the relay court, and the quay with the gantry crane at the top" width="460">
+</div>
+
+<sub>Straight down, north at the top: the gate apron (spawn, no robots) at the bottom, then the container yard, the relay court around the tower, and the quay with the gantry crane and the boss arena. White boxes are the safe containers.</sub>
+
+### Zone tour
+
 <table>
   <tr>
-    <td width="50%"><img src="docs/media/sunset-menu.jpg" alt="Main menu over a crane shot of the quay"><br><sub>Main menu: live crane shot of the level, mission briefing</sub></td>
-    <td width="50%"><img src="docs/media/sunset-yard.jpg" alt="Lane through the container yard with a robot and the gantry crane"><br><sub>Container yard with the HUD: radar, countdown, heading tape, health and magazine bars</sub></td>
+    <td width="50%"><img src="docs/media/zone-c-gate-apron.jpg" alt="Gate apron seen from above at an angle"><br><sub><b>C, gate apron.</b> Spawn, site office, barriers; no robots within 32 m.</sub></td>
+    <td width="50%"><img src="docs/media/zone-a-container-yard.jpg" alt="Container yard seen from above at an angle"><br><sub><b>A, container yard.</b> Rows, columns and loose dumps between off-centre lanes.</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/media/sunset-court.jpg" alt="Relay court at sunset with an army mech"><br><sub>Relay court, looking into the sun</sub></td>
-    <td width="50%"><img src="docs/media/sunset-quay.jpg" alt="Quay with the moored ship and the gantry crane"><br><sub>Quay: gantry crane, concrete slabs, the moored ship</sub></td>
-  </tr>
-  <tr>
-    <td width="50%"><img src="docs/media/sunset-scorpion.jpg" alt="STINGER-7, the mecha scorpion semi-boss, seen from the side"><br><sub>STINGER-7, the relay guardian</sub></td>
-    <td width="50%"><img src="docs/media/sunset-scorpion-venom.jpg" alt="Green venom pool left by the scorpion's venom shot"><br><sub>Venom shot: the pool keeps hurting for five seconds</sub></td>
-  </tr>
-  <tr>
-    <td width="50%"><img src="docs/media/sunset-samurai.jpg" alt="Cyber samurai with a gold crest, red sash and a double-bladed polearm"><br><sub>Cyber samurai, the elite</sub></td>
-    <td width="50%"><img src="docs/media/sunset-samurai-dash.jpg" alt="Faint lightning left behind by the samurai's dashes"><br><sub>Lightning dashes leave a fading trail</sub></td>
+    <td width="50%"><img src="docs/media/zone-b-relay-court.jpg" alt="Relay court with the tower, STINGER-7 and army mechs"><br><sub><b>B, relay court.</b> The tower and its guardian, STINGER-7.</sub></td>
+    <td width="50%"><img src="docs/media/zone-d-quay.jpg" alt="Quay with the gantry crane, staged containers and the moored ship"><br><sub><b>D, quay.</b> Gantry crane, staged boxes, the boss arena and the moored ship.</sub></td>
   </tr>
 </table>
 
-<sub>Captured from the production build with software rendering (no GPU), quality preset "medium".</sub>
+### In the game
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/media/menu.jpg" alt="Main menu over a crane shot of the quay"><br><sub>Main menu: live crane shot of the level, mission briefing</sub></td>
+    <td width="50%"><img src="docs/media/yard.jpg" alt="A lane through the container yard with a samurai at the far end"><br><sub>Container yard: a cyber samurai at the end of the lane; HUD with radar, heading tape, health and magazine bars</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/media/court.jpg" alt="Relay court at sunset with the tower beam"><br><sub>Relay court, looking into the low sun</sub></td>
+    <td width="50%"><img src="docs/media/quay.jpg" alt="Gantry crane on the quay between stacks of containers"><br><sub>Quay: gantry crane, concrete slabs, a safe container on the right</sub></td>
+  </tr>
+</table>
+
+### The robots
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/media/scorpion.jpg" alt="STINGER-7, the mecha scorpion semi-boss, seen from the side"><br><sub>STINGER-7, the relay guardian</sub></td>
+    <td width="50%"><img src="docs/media/scorpion-venom.jpg" alt="Green venom pool left by the scorpion's venom shot"><br><sub>Venom shot: the pool keeps hurting for five seconds</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/media/samurai.jpg" alt="Cyber samurai with a gold crest, red sash and a double-bladed polearm"><br><sub>Cyber samurai, the elite</sub></td>
+    <td width="50%"><img src="docs/media/samurai-dash.jpg" alt="Faint lightning left behind by the samurai's dashes"><br><sub>Lightning dashes leave a fading trail</sub></td>
+  </tr>
+</table>
+
+<sub>All images were captured from the production build with software rendering (no GPU), quality preset "medium"; the overhead and zone shots use a free camera, the others show the real first-person view.</sub>
 
 ## Features
 
@@ -85,20 +119,27 @@ simulation, procedural audio and procedurally built models. There is no backend 
 - Pickups: ammo crates and medkits placed around towers and lanes, plus a chance of an ammo drop from destroyed robots.
 
 **Movement**
-- Rapier kinematic capsule controller: walk, sprint, **jump and double jump**, step-up, coyote time and jump buffering.
-- Level boundaries and blast walls that seal off side passages so every run follows one readable route.
+- Rapier kinematic capsule controller: walk, sprint, **high jump and double jump** (3.9 m, 7.2 m chained: two-high stacks are climbable, three-high ones are not), step-up, coyote time and jump buffering.
+- **Safe containers**: five containers with the doors open. Step inside and the walls stop bullets; standing there heals 12 HP/s once nothing has hit you for a moment. Robots cannot enter.
+- Level boundaries and invisible walls so every run stays inside the quay.
 
-**Enemies** (8 regular robots, all procedural models with LOD)
-- **Vanguard army mech** (3): slow patrols, then smooth, disciplined advance and rocket salvos.
+**Interface**
+- Segmented health bar with a lagging damage ghost, magazine bar with reload progress, countdown with a remaining-time bar, heading tape, hit marker and lower-third toasts.
+- **Radar** (top left, 42 m, up is where you look): robots, elites and bosses, the relay tower and the safe containers.
+- Cinematic main menu over a live crane shot of the quay, with mission briefing and key chips.
+
+**Enemies** (a roster of 21 robots plus two bosses; all procedural models with LOD and walk cycles paced by the ground covered, so feet do not slide)
+- **Vanguard army mech** (5): slow patrols, then smooth, disciplined advance and rocket salvos.
 - **Spot dog** (8): weak and fast, lunges and rams.
 - **Bomber Duck** (5): hops toward you, arms a **3-2-1** countdown and blows up for 15 damage.
 - **Cyber samurai** (3, elite): 300 HP, twice a regular robot. One per area (yard, gate apron, quay), never in the scorpion's court. A quick cut up close, a **leap and cleave** from up to 17 m, a **spinning polearm** that deflects 85% of frontal fire for 3 s when it is being shot, and twice per life (below 70% and 35% HP) a burst of six **lightning dashes** across an 8.5 m area that leaves faint lightning behind.
 - **STINGER-7 semi-boss** (mecha scorpion, about 6 m long, 1300 HP): rises behind the relay tower when you approach it. Three telegraphed skills: a **charge** that throws you straight back, a **venom shot** (green glob, burst damage and a pool that hurts for 5 s) and a **tail slam** whose blasts run out in a fan in front of it. Under sustained fire it crosses its claws and raises a **hexagon shield** that blocks 80% of frontal damage for a few seconds, so flank it or wait. It is stunned after ramming a wall and enrages below 40% HP. Weak spots: head sensors and the stinger bulb.
-- **Area streaming**: no robot exists at load. An area's robots appear when you approach it (never closer than 13 m), at most 10 are alive at once, and survivors are removed again after you leave.
+- **Area streaming**: no robot exists at load. Posts around you wake up as you walk (within 46 m, never closer than 18 m, never within 32 m of the spawn), at most 10 are alive at once, and survivors far behind you are removed again.
 - **TITAN-04 final boss** (about 9 m tall): falls from the sky after the tower is activated, four knee-light weak points, then an exposed core.
 
 **World and rendering**
-- One quay at sunset (72 x 122 m): gate apron, an irregular port-style container yard (rows, columns and loose dumps between off-centre lanes), relay court and the quay with a gantry crane, from a seeded layout, plus five **safe containers** with open doors where you can hide and heal (green crosses on the radar).
+- One quay at sunset (72 x 122 m): gate apron, container yard, relay court and the quay with a gantry crane.
+- **Port-style yard**: fixed off-centre lanes, and every block between them is filled in its own style (long rows, short columns or a loose dump with boxes set down at an angle) with uneven stacks, holes and ragged ends, all from a seeded generator.
 - **Containers as geometry**, not textured boxes: corrugated walls and roof, frame, doors with locking bars, corner castings, livery decals; one shader adds chipped paint, rust and grime.
 - **Wet ground shader**: asphalt and concrete slabs, cracks, worn paint, crane rails, still puddles and a **planar reflection** of the whole scene (a third of the resolution and every other frame on medium, half resolution every frame on high).
 - **Lighting**: the low sun is the only real light (one shadow map), plus a hemisphere fill, a procedural sunset sky with drifting cloud, light haze and a sky reflection probe. Lamp heads are emissive only.
@@ -114,7 +155,7 @@ simulation, procedural audio and procedurally built models. There is no backend 
 ## Gameplay
 
 ```
-Gate apron -> container yard (10 robots) -> relay court: STINGER-7, hold the tower
+Gate apron (empty) -> container yard -> relay court: STINGER-7, hold the tower
            -> TITAN-04 drops onto the quay -> destroy 4 weak points -> shoot the exposed core -> victory
 ```
 
@@ -123,9 +164,11 @@ Gate apron -> container yard (10 robots) -> relay court: STINGER-7, hold the tow
 | Countdown | 8 minutes; reaching zero is a failure |
 | Tower | 1; stand within range and hold `E` (5 s). Leaving range or dying cancels the progress |
 | Death | Respawn at the last checkpoint when one exists (the activated tower, the boss start); the countdown keeps running |
-| Regular robots | 8 in total: 3 army mechs, 3 Spot dogs, 2 Bomber Ducks |
+| Robots | roster of 21, streamed in around you (10 alive at most): 5 army mechs, 8 Spot dogs, 5 Bomber Ducks, 3 cyber samurai |
+| Semi-boss | STINGER-7, 1300 HP, guards the relay tower |
 | Final boss | TITAN-04: 4 weak points x 500 HP, then core 4000 HP; Heavy Cannon, Ground Slam and Missile Barrage |
-| Supplies | 12 ammo crates and 5 medkits; two of them on container tops (double jump) |
+| Supplies | 16 ammo crates and 6 medkits (6 + 2 of them around the boss arena); two on container tops (double jump) |
+| Recovery | Five safe containers heal 12 HP/s while you stand inside |
 
 Enemy and weapon numbers are starting values and have **not** been balanced by play-testing.
 
@@ -182,7 +225,13 @@ The first click on the canvas locks the pointer. Add `?autostart` to skip the me
 
 ## Publishing to GitHub Pages
 
-`.github/workflows/pages.yml` runs on every push and pull request (typecheck, unit tests, production build). Pushes to `main` also deploy `dist/` to GitHub Pages. One-time setup: repository **Settings, Pages, Source: GitHub Actions**. The game is then served from `https://<user>.github.io/<repository>/`; the build uses relative paths, so no `base` change is needed.
+The **[live demo](https://nhhthong.github.io/nuclear-harbor/)** is built and deployed by `.github/workflows/pages.yml`:
+
+- every push and pull request runs the checks (typecheck, unit tests, production build);
+- pushes to `main` also deploy `dist/` to GitHub Pages.
+
+One-time setup: repository **Settings, Pages, Source: GitHub Actions**. The build uses relative paths, so it works under
+`https://<user>.github.io/<repository>/` without changing `base`.
 
 ## URL parameters
 
@@ -210,11 +259,12 @@ src/
   physics/     Rapier wrapper: character controller, static boxes, ray and shape queries, collision groups
   world/       wet ground + planar reflection, modelled containers, sunset sky, sun, haze, ocean, ship, kerb
   structures/  gantry crane, flood-light masts (emissive lamps), fence, props
+  shelters/    safe containers: heal while the player stands inside
   player/      first-person controller (walk, sprint, jump, double jump)
   weapon/      rifle logic, recoil, procedural and GLB view models, pooled weapon effects
   combat/      damage and hit resolution
   scorpion/    STINGER-7 semi-boss: model, skills, telegraph shaders, drops
-  enemies/     framework, army mech, Spot, Bomber Duck, nav grid, AI scheduler, population
+  enemies/     framework, army mech, Spot, Bomber Duck, cyber samurai, nav grid, AI scheduler, area streaming, gait
   boss/        TITAN-04: model, attacks, weak points, landing cinematic
   objectives/  towers and nuclear countdown
   pickups/     ammo, medkits and drops
@@ -241,7 +291,7 @@ Design rules (full text in [`.specify/memory/constitution.md`](.specify/memory/c
 |---|---|
 | Target | 60 FPS desktop, 30 FPS low-end fallback |
 | Draw calls | at most 350 per frame; measured about 100 to 180 including the reflection pass |
-| Triangles | about 0.45 to 0.56 million per frame with shadow and reflection passes (measured) |
+| Triangles | about 0.45 to 0.6 million per frame with shadow and reflection passes (measured) |
 | Enemies | roster of 21 robots (18 regular, 3 samurai) streamed by area (10 alive at most), STINGER-7 and the boss |
 | Shadows | one sun shadow map, static content refreshed at 6 Hz (medium) or 12 Hz (high) for moving casters |
 | Presets | low: no shadows, reflection or bloom; medium: shadows, reflection, bloom; high: adds ambient occlusion |
@@ -260,8 +310,8 @@ The service worker is not registered by `npm run dev`.
 
 ## Quality assurance
 
-- `npm run typecheck`, `npm test` (**397 unit tests in 59 files**) and `npm run build` pass on the current branch.
-- `npm run smoke` and `npm run offline` passed on the previous map before the latest rework.
+- `npm run typecheck`, `npm test` (**437 unit tests in 67 files**) and `npm run build` pass on the current branch and run in CI on every push.
+- `npm run smoke` and `npm run offline` passed on an earlier map and were not re-run after the later reworks.
 - **The `tests/e2e/` files are out of date.** They still contain old-map coordinates, four towers and steps for the removed grappling hook, so they were not run after the level rework. Update them before relying on them.
 - Nobody has play-tested a full run (tower, boss, victory) yet, so difficulty and pacing are unverified.
 - The look was checked on still screenshots from software rendering only; frame rate on a real GPU is unmeasured.
@@ -274,7 +324,7 @@ Known limitations:
 
 - Visuals are procedural; there is no authored art, so realism is limited by design. The robots and the scorpion are built from primitives and read as low-poly next to the environment.
 - The heavy shaders (planar reflection, shadow map, bloom, AO) target a desktop GPU; use the low preset on integrated graphics.
-- Gameplay balance (damage, enemy density on the compact map, countdown length) is untested.
+- Gameplay balance (damage, robot density, walking distances, countdown length, the heal rate of the safe containers) is untested.
 - The boss attacks were checked by unit tests and short scripted runs only.
 - The in-game Restart button reloads the page.
 - Optional boss attacks from the GDD (Shockwave, Target Lock, EMP Pulse) are not implemented.
