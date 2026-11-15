@@ -19,7 +19,7 @@ Performance is an architectural requirement, not a final optimisation pass (GDD 
 - Every GPU resource MUST be owned by a `ResourceTracker` scope and released in `dispose()`,
   together with event listeners, timers and DOM nodes.
 
-Rationale: the target is 60 FPS on a desktop browser with 30 robots, a boss and a large harbor;
+Rationale: the target is 60 FPS on a desktop browser with up to 10 streamed robots alive, a boss and a 72 x 122 m quay;
 retrofitting pooling, instancing and disposal is far more expensive than building with them.
 
 ### II. Strict, Typed Contracts Between Modules
@@ -33,7 +33,7 @@ retrofitting pooling, instancing and disposal is far more expensive than buildin
 - Existing events and shared types are a published contract: they MUST NOT be renamed, removed or
   have their meaning changed by a feature ticket. Additions follow the rules of Principle V.
 
-Rationale: many agents build modules in parallel; compile-time contracts are the only cheap way
+Rationale: several contributors build modules in parallel; compile-time contracts are the only cheap way
 to keep independently written code compatible.
 
 ### III. Tunables Live in Config
@@ -69,14 +69,14 @@ parallel work from silently breaking the game loop.
 - Foundation-owned files (`src/core/**`, `src/config/**`, `src/physics/**`, `src/combat/**`,
   `src/assets/**`, `src/sandbox/**`, `src/modules.ts`, `src/main.ts`, `index.html`, `scripts/**`,
   build and tool configuration, `.specify/**`, `.claude/**`, `docs/PLAN.md`, `docs/tickets/**`)
-  MUST NOT be edited by feature tickets. A needed change is requested from the Tech Lead by
+  MUST NOT be edited by feature tickets. A needed change is requested from the maintainer by
   recording it in the ticket's spec folder (`specs/T-XX-name/foundation-requests.md`) and worked
   around locally until it lands.
 - New events are added by TypeScript declaration merging in the feature's own `events.ts`; new
   feature-local numbers go in the feature's own `tunables.ts`. Neither requires editing a shared
   file.
 
-Rationale: developers work in separate git worktrees at the same time; disjoint file sets are
+Rationale: contributors work on separate branches at the same time; disjoint file sets are
 what makes their branches merge without conflicts.
 
 ### VI. Offline, Self-Contained, Procedural
@@ -84,10 +84,10 @@ what makes their branches merge without conflicts.
 - The game MUST run with no backend and no network after the first load. Runtime requests to
   CDNs or any third-party origin are forbidden; all code and data ship in the build output.
 - All v1 content MUST be procedural: primitive or generated geometry, generated textures, Web
-  Audio synthesis. Binary art or audio assets MUST NOT be added without Tech Lead approval.
+  Audio synthesis. Binary art or audio assets MUST NOT be added without maintainer approval.
 - Third-party assets of unverified licence (including the GameBanana weapon mod referenced by the
   GDD) MUST NOT be committed. The procedural weapon view model is the shipping default.
-- New runtime dependencies beyond `three` and `@dimforge/rapier3d-compat` require Tech Lead
+- New runtime dependencies beyond `three` and `@dimforge/rapier3d-compat` require maintainer
   approval.
 
 Rationale: GDD section 14 requires offline play; the project has no licensed assets and the
@@ -99,8 +99,9 @@ build environment cannot reach asset hosts.
   meets the acceptance criteria. No speculative abstraction, no framework inside a module.
 - Decisions recorded in `docs/REVIEW.md` and `docs/PLAN.md` are binding defaults. A deviation
   MUST be justified in the ticket's `plan.md` and reported in the hand-over summary.
-- When time runs short, cut in the order of the GDD cut list (15.2). Grapple, four towers,
-  Charger, and the boss's four weak points plus core MUST NOT be cut.
+- When time runs short, cut in the order of the GDD cut list (15.2). The boss's four weak points
+  plus core MUST NOT be cut. (Amendment 1.0.1: grapple, four towers and the Charger were
+  removed or replaced by owner decision; see `docs/DEVIATIONS.md`.)
 
 Rationale: a small, working vertical slice that is fun beats a broad, half-finished feature set.
 
@@ -127,16 +128,16 @@ Rationale: a small, working vertical slice that is fun beats a broad, half-finis
   `docs/tickets/` is the input to the specify step.
 - Spec Kit steps run non-interactively: open questions are resolved with the defaults in the
   ticket, `docs/PLAN.md` and `docs/REVIEW.md`, and recorded as assumptions.
-- Work happens on the branch or worktree assigned to the ticket. Developers do not create pull
-  requests or push to `main`.
+- Work happens on a feature branch and is merged into `main` through a pull request; do not push
+  to `main` directly.
 - Definition of Done is the one in `docs/PLAN.md`; the hand-over summary lists acceptance
   criteria status, deviations, and any foundation requests.
 
 ## Governance
 
 - This constitution supersedes other practice documents. Where it conflicts with a ticket, the
-  constitution wins and the conflict is reported to the Tech Lead.
-- The Tech Lead owns this file. Amendments are made only by the Tech Lead, recorded with a
+  constitution wins and the conflict is reported to the maintainer.
+- The maintainer owns this file. Amendments are made only by the maintainer, recorded with a
   version bump: MAJOR for removing or redefining a principle, MINOR for a new or materially
   expanded principle or section, PATCH for clarifications.
 - Every spec, plan and review MUST check compliance with the principles above (the "Constitution
@@ -145,4 +146,4 @@ Rationale: a small, working vertical slice that is fun beats a broad, half-finis
 - Runtime guidance for developers lives in `docs/PLAN.md`, `docs/SPECKIT.md` and the ticket
   documents.
 
-**Version**: 1.0.0 | **Ratified**: 2026-11-12 | **Last Amended**: 2026-11-12
+**Version**: 1.0.2 | **Ratified**: 2026-11-12 | **Last Amended**: 2026-11-15
