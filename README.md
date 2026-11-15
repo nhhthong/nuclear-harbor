@@ -180,6 +180,10 @@ The first click on the canvas locks the pointer. Add `?autostart` to skip the me
 | `npm run bench` | Benchmark scenes x quality presets (relative numbers on software GL) |
 | `npm run check` | typecheck + tests + build + smoke |
 
+## Publishing to GitHub Pages
+
+`.github/workflows/pages.yml` runs on every push and pull request (typecheck, unit tests, production build). Pushes to `main` also deploy `dist/` to GitHub Pages. One-time setup: repository **Settings, Pages, Source: GitHub Actions**. The game is then served from `https://<user>.github.io/<repository>/`; the build uses relative paths, so no `base` change is needed.
+
 ## URL parameters
 
 Handy for development and testing; none are required to play.

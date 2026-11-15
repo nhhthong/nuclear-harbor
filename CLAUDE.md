@@ -31,4 +31,5 @@ npm run smoke / npm run e2e -- T-XX    # browser checks, see policy below
 - Docs that describe older versions: `docs/PLAN.md` (module table), `docs/PLAYTEST.md`, `docs/PERFORMANCE.md`, tickets and `specs/`.
 - Known limits: robots and the scorpion are primitive-built and read as low-poly; no ambient audio; bundle ~5.3 MB (Rapier 82%); in-game Restart reloads the page.
 - CC0 asset sites are blocked from the cloud sandbox (polyhaven, ambientcg); everything is procedural except the G36C GLB.
+- CI: `.github/workflows/pages.yml` (typecheck + unit tests + build on every push and PR; deploy to GitHub Pages on `main`). No smoke or e2e in CI.
 - **Next**: owner playtest on a real GPU (lag, black screen, balance), then follow-ups from it.
