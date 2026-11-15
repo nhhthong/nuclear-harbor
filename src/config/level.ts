@@ -104,12 +104,12 @@ export function isKeepClear(x: number, z: number, margin = 0): boolean {
 /** Decorative cargo ship, static, moored out in the dark. */
 export const SHIP_BACKDROP = { position: { x: -34, y: SEA_LEVEL_Y, z: -112 } as Vec3Like, yaw: 0.1 } as const;
 
-/** Enemy distribution per zone; sums to ENEMY_COUNTS (3 army / 3 spot / 2 duck). */
+/** Enemy roster per zone; sums to ENEMY_COUNTS. The gate apron (player spawn) stays empty. */
 export const ENEMY_DISTRIBUTION: Readonly<Record<ZoneId, { army: number; spot: number; duck: number }>> = {
-  A: { army: 2, spot: 2, duck: 2 },
-  B: { army: 1, spot: 1, duck: 0 },
+  A: { army: 3, spot: 4, duck: 3 },
+  B: { army: 1, spot: 2, duck: 1 },
   C: { army: 0, spot: 0, duck: 0 },
-  D: { army: 0, spot: 0, duck: 0 },
+  D: { army: 1, spot: 2, duck: 1 },
 };
 
 export function zoneAt(x: number, z: number): ZoneId | null {

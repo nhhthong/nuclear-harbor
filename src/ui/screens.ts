@@ -1,7 +1,7 @@
 import type { GameContext } from '@/core/GameContext';
 import { ALL_ACTIONS, type Action } from '@/core/InputManager';
 import type { GameOverReason } from '@/core/types';
-import type { QualityPreset } from '@/config/tunables';
+import { OBJECTIVES, type QualityPreset } from '@/config/tunables';
 import { CREDITS } from './credits';
 import { codeLabel, formatCountdown } from './format';
 import { el } from './hud';
@@ -80,23 +80,45 @@ export function createScreens(ctx: GameContext, parent: HTMLElement): Screens {
     if (ctx.state.is('playing')) ctx.input.requestPointerLock();
   };
 
-  // ---- main menu ----
-  const menu = screen('menu');
-  el(menu, 'div', 'nh-title', 'Last Stand');
-  el(menu, 'div', 'nh-sub', 'Nuclear Harbor');
-  button(menu, 'Play', resumeGame, 'play');
-  button(menu, 'Settings', () => openSettings(), 'settings');
-  button(menu, 'Credits', () => show('credits'), 'credits');
+  // ---- main menu: title block and actions on the left, briefing card on the right, live scene behind ----
+  const menu = screen('menu', 'nh-menu');
+  el(menu, 'div', 'nh-menu-shade');
+  el(menu, 'div', 'nh-menu-bars');
+  const left = el(menu, 'div', 'nh-menu-left');
+  el(left, 'div', 'nh-eyebrow', 'Single-player operation // Dusk');
+  el(left, 'div', 'nh-title', 'Last Stand');
+  el(left, 'div', 'nh-sub', 'Nuclear Harbor');
+  const nav = el(left, 'div', 'nh-nav');
+  button(nav, 'Deploy', resumeGame, 'play');
+  button(nav, 'Settings', () => openSettings(), 'settings');
+  button(nav, 'Credits', () => show('credits'), 'credits');
+  const brief = el(menu, 'div', 'nh-brief');
+  el(brief, 'div', 'nh-brief-head', 'Mission briefing');
+  const briefLine = (index: string, title: string, text: string): void => {
+    const row = el(brief, 'div', 'nh-brief-row');
+    el(row, 'i', '', index);
+    const body = el(row, 'div');
+    el(body, 'b', '', title);
+    el(body, 'span', '', text);
+  };
+  briefLine('01', 'Cross the yard', 'Machines patrol the container lanes. Cover is everywhere, so are they.');
+  briefLine('02', 'Power the relay', 'Hold the relay tower until it comes online.');
+  briefLine('03', 'Clear the quay', 'Something large answers the signal. Break its weak points, then the core.');
+  const clock = el(brief, 'div', 'nh-brief-clock');
+  el(clock, 'span', '', 'Reactor countdown');
+  el(clock, 'b', '', formatCountdown(OBJECTIVES.countdownSeconds));
   const controls = el(menu, 'div', 'nh-controls');
   const renderControls = (): void => {
     controls.textContent = '';
     const b = ctx.input.getBindings();
     for (const action of ALL_ACTIONS) {
       if (action === 'debugToggle') continue;
-      el(controls, 'span', '', ACTION_LABELS[action]);
-      el(controls, 'b', '', b[action].map(codeLabel).join(' / '));
+      const chip = el(controls, 'span', 'nh-chip');
+      el(chip, 'b', '', b[action].map(codeLabel).join(' / '));
+      el(chip, 'span', '', ACTION_LABELS[action]);
     }
   };
+  el(menu, 'div', 'nh-menu-foot', 'Runs offline in the browser · Three.js · procedural world');
 
   // ---- pause ----
   const pause = screen('pause');

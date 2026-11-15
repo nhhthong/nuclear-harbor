@@ -26,19 +26,19 @@ describe('resolveDamage', () => {
 });
 
 describe('ammo budget (GDD 5.4)', () => {
-  it('needs about 273 hits (3 army, 3 Spot, 2 Duck, boss) and the supply covers 50% accuracy', () => {
+  it('needs about 309 hits (whole roster and the boss) and the supply covers 50% accuracy', () => {
     const hits =
       ENEMY_COUNTS.army * shotsToKill(ARMY_ROBOT.hp) +
       ENEMY_COUNTS.spot * shotsToKill(SPOT.hp) +
       ENEMY_COUNTS.duck * shotsToKill(DUCK.hp) +
       BOSS.weakPointCount * shotsToKill(BOSS.weakPointHp) +
       shotsToKill(BOSS.coreHp);
-    expect(hits).toBe(273);
+    expect(hits).toBe(309);
     const supply =
       WEAPON.magazineSize +
       WEAPON.reserveAmmo +
       (ECONOMY.ammoCratesInZones + ECONOMY.ammoCratesInBossArena) * ECONOMY.ammoCrateAmount;
-    expect(supply).toBe(570);
+    expect(supply).toBe(660);
     expect(supply).toBeGreaterThanOrEqual(hits / ECONOMY.assumedAccuracy);
   });
 });

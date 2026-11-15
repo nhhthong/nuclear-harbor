@@ -75,7 +75,25 @@ export function createUiModule(): GameModule {
         ctx.events.on('game:stateChanged', ({ to }) => applyState(to)),
         () => document.removeEventListener('keydown', onKeyDown),
         () => ctx.canvas.removeEventListener('click', onCanvasClick),
+        () => {
+          const i = ctx.renderer.preRender.indexOf(menuCamera);
+          if (i >= 0) ctx.renderer.preRender.splice(i, 1);
+        },
       ];
+
+      // Main menu backdrop: a slow crane shot over the quay instead of a frozen first-person view.
+      const menuCamera = (): void => {
+        if (!ctx.state.is('menu') || ctx.flags.sandbox) return;
+        const t = performance.now() / 1000;
+        const a = 0.62 + Math.sin(t * 0.05) * 0.5;
+        const cam = ctx.camera;
+        cam.position.set(Math.sin(a) * 46 - 4, 13.5 + Math.sin(t * 0.11) * 1.5, Math.cos(a) * 46 - 6);
+        cam.lookAt(-2, 3, -12);
+        // the first-person rig (weapon, hands) does not belong in the crane shot; the weapon module
+        // turns it back on as soon as the game is playing
+        for (const child of cam.children) child.visible = false;
+      };
+      ctx.renderer.preRender.unshift(menuCamera);
 
       ctx.testHooks.ui = {
         getHudText: (): Record<string, string> => hud?.getText() ?? {},

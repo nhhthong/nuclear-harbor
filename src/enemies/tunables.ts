@@ -22,6 +22,8 @@ export const ENEMY_LOCAL = {
   /** Harbor population. */
   /** Authored population keeps robots at least this far from the player spawn (checked in population.ts). */
   minDistanceFromSpawn: 18,
+  /** Area streaming (see `areaSpawner.ts`): robots appear when the player nears an area and are removed after they left. */
+  area: { liveCap: 10, enterMargin: 5, exitMargin: 12, exitDelay: 3, despawnDistance: 28, minSpawnDistance: 13, interval: 0.25 },
   // T-17: populationSeed, patrolPoints, patrolRadius and sampleAttempts were removed (unused since the
   // harbor population became authored, T-16).
 } as const;

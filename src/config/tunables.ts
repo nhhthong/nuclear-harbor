@@ -122,10 +122,10 @@ export const WEAPON = {
 /** GDD 5.4 */
 export const ECONOMY = {
   ammoCrateAmount: 30,
-  ammoCratesInZones: 6,
+  ammoCratesInZones: 9,
   ammoCratesInBossArena: 6,
   medkitHeal: 40,
-  medkitsInZones: 3,
+  medkitsInZones: 4,
   medkitsInBossArena: 2,
   /** GDD 5.4: chance for a destroyed robot to drop ammo. */
   enemyAmmoDropChance: 0.15,
@@ -142,11 +142,11 @@ export const ECONOMY = {
 } as const;
 
 export const ENEMY_COUNTS = {
-  /** GDD 6 */
-  army: 3,
-  spot: 3,
-  duck: 2,
-  total: 8,
+  /** Whole roster over all areas. Robots are streamed by area, see `ENEMY_LOCAL.area` (live cap). */
+  army: 5,
+  spot: 8,
+  duck: 5,
+  total: 18,
 } as const;
 
 /**

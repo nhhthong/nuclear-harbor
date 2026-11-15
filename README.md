@@ -2,8 +2,8 @@
 
 # LAST STAND: NUCLEAR HARBOR
 
-**A single-player browser FPS on a rain-soaked container quay at night, taken over by military robots.**
-Fight through the yard, hold the relay tower before the countdown ends, then bring down TITAN-04.
+**A single-player browser FPS on a container quay at sunset, still wet from the rain and taken over by military robots.**
+Fight through the yard, bring down STINGER-7, the mecha scorpion that guards the relay tower, then TITAN-04, before the countdown ends.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -14,7 +14,7 @@ Fight through the yard, hold the relay tower before the countdown ends, then bri
 [![Platform](https://img.shields.io/badge/Platform-Web%20(offline%20capable)-blue)](#offline-play)
 [![Status](https://img.shields.io/badge/Status-prototype-orange)](#project-status)
 
-<img src="docs/media/night-apron.jpg" alt="Night view of the gate apron: wet asphalt with rain ripples and reflections, weathered containers, a flood light beam and the perimeter fence" width="920">
+<img src="docs/media/sunset-apron.jpg" alt="Gate apron at sunset: wet asphalt reflecting the sky and the weathered containers" width="920">
 
 </div>
 
@@ -40,29 +40,34 @@ Fight through the yard, hold the relay tower before the countdown ends, then bri
 
 ## Overview
 
-You are the only survivor of a container quay whose defence robots have been hijacked. It is night, it is
-raining, and the nuclear control system is counting down from **08:00**. Push through the container yard, reach
-the relay tower in the court behind it and hold **E** to activate it while the robots close in. Then **TITAN-04**,
+You are the only survivor of a container quay whose defence robots have been hijacked. The rain has just stopped, the sun is going
+down, and the nuclear control system is counting down from **08:00**. Push through the container yard, reach
+the relay tower in the court behind it, where **STINGER-7** (a mecha scorpion) rises out of the ground, and hold **E**
+to activate the tower while the robots close in. Then **TITAN-04**,
 a four-legged spherical war machine that can only be hurt through its lights, drops onto the quay.
 
 The game runs entirely in the browser on **Three.js + TypeScript**, with **Rapier** physics, a fixed 60 Hz
 simulation, procedural audio and procedurally built models. There is no backend and no network access at runtime.
 
 > **Honest scope note.** One small level (72 x 86 m), built to look as good as code-generated content can:
-> modelled containers, wet ground with a real planar reflection, flood lights with shadows and light beams,
-> rain, bloom, ambient occlusion and a film grade. There are no scanned or sculpted assets, so it does not match a
+> modelled containers, wet ground with a real planar reflection, a low sun with one shadow map, a procedural
+> sunset sky, bloom, ambient occlusion and a film grade. There are no scanned or sculpted assets, so it does not match a
 > AAA production; see [Project status](#project-status).
 
 ## Screenshots
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/media/night-yard.jpg" alt="Lane through the container yard with an army mech and the gantry crane"><br><sub>Container yard: liveries, corrugated steel, lane paint, reflections</sub></td>
-    <td width="50%"><img src="docs/media/night-quay-crane.jpg" alt="Gantry crane on the concrete quay with flood lights and the moored ship"><br><sub>Quay: gantry crane, concrete slabs, the moored ship</sub></td>
+    <td width="50%"><img src="docs/media/sunset-menu.jpg" alt="Main menu over a crane shot of the quay"><br><sub>Main menu: live crane shot of the level, mission briefing</sub></td>
+    <td width="50%"><img src="docs/media/sunset-yard.jpg" alt="Lane through the container yard with a robot and the gantry crane"><br><sub>Container yard with the HUD: radar, countdown, heading tape, health and magazine bars</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/media/night-relay-court.jpg" alt="Relay tower with an army mech next to it under flood light beams"><br><sub>Relay court: the tower and its guard</sub></td>
-    <td width="50%"><img src="docs/media/night-boss-titan-04.jpg" alt="TITAN-04 on the quay in the rain with the boss HUD"><br><sub>TITAN-04 and the boss HUD (four weak points, locked core)</sub></td>
+    <td width="50%"><img src="docs/media/sunset-court.jpg" alt="Relay court at sunset with an army mech"><br><sub>Relay court, looking into the sun</sub></td>
+    <td width="50%"><img src="docs/media/sunset-quay.jpg" alt="Quay with the moored ship and the gantry crane"><br><sub>Quay: gantry crane, concrete slabs, the moored ship</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/media/sunset-scorpion.jpg" alt="STINGER-7, the mecha scorpion semi-boss, seen from the side"><br><sub>STINGER-7, the relay guardian</sub></td>
+    <td width="50%"><img src="docs/media/sunset-scorpion-venom.jpg" alt="Green venom pool left by the scorpion's venom shot"><br><sub>Venom shot: the pool keeps hurting for five seconds</sub></td>
   </tr>
 </table>
 
@@ -81,17 +86,18 @@ simulation, procedural audio and procedurally built models. There is no backend 
 
 **Enemies** (8 regular robots, all procedural models with LOD)
 - **Vanguard army mech** (3): slow patrols, then smooth, disciplined advance and rocket salvos.
-- **Spot dog** (3): weak and fast, lunges and rams.
-- **Bomber Duck** (2): hops toward you, arms a **3-2-1** countdown and blows up for 15 damage.
+- **Spot dog** (8): weak and fast, lunges and rams.
+- **Bomber Duck** (5): hops toward you, arms a **3-2-1** countdown and blows up for 15 damage.
+- **STINGER-7 semi-boss** (mecha scorpion, about 6 m long, 1300 HP): rises behind the relay tower when you approach it. Three telegraphed skills: a **charge** that throws you straight back, a **venom shot** (green glob, burst damage and a pool that hurts for 5 s) and a **tail slam** whose blasts run out in a fan in front of it. Under sustained fire it crosses its claws and raises a **hexagon shield** that blocks 80% of frontal damage for a few seconds, so flank it or wait. It is stunned after ramming a wall and enrages below 40% HP. Weak spots: head sensors and the stinger bulb.
+- **Area streaming**: no robot exists at load. An area's robots appear when you approach it (never closer than 13 m), at most 10 are alive at once, and survivors are removed again after you leave.
 - **TITAN-04 final boss** (about 9 m tall): falls from the sky after the tower is activated, four knee-light weak points, then an exposed core.
 
 **World and rendering**
-- One night quay (72 x 86 m): gate apron, container yard, relay court and the quay with a gantry crane, from a seeded layout.
+- One quay at sunset (72 x 86 m): gate apron, container yard, relay court and the quay with a gantry crane, from a seeded layout.
 - **Containers as geometry**, not textured boxes: corrugated walls and roof, frame, doors with locking bars, corner castings, livery decals; one shader adds chipped paint, rust and grime.
-- **Wet ground shader**: asphalt and concrete slabs, cracks, worn paint, crane rails, puddles with rain ripples and a half-resolution **planar reflection** of the whole scene.
-- **Lighting**: moonlight, seven flood-light masts as real spot lights (four cast shadows) with volumetric beams, lightning, exponential fog, a reflection probe that includes the lamps.
-- **Rain** as two GPU-animated draw calls (streaks and splashes).
-- **Post-processing**: MSAA HDR target, ambient occlusion (high preset), bloom, ACES tone mapping, then a grade pass with vignette, film grain and slight chromatic aberration.
+- **Wet ground shader**: asphalt and concrete slabs, cracks, worn paint, crane rails, still puddles and a **planar reflection** of the whole scene (a third of the resolution and every other frame on medium, half resolution every frame on high).
+- **Lighting**: the low sun is the only real light (one shadow map), plus a hemisphere fill, a procedural sunset sky with drifting cloud, light haze and a sky reflection probe. Lamp heads are emissive only.
+- **Post-processing**: MSAA HDR target, ambient occlusion (high preset), bloom, ACES tone mapping, a NaN guard in front of the bloom, then a grade pass with vignette, film grain and slight chromatic aberration.
 - Detailed gantry crane, chain-link fence, site office, barriers, drums, pallets, bollards; ocean shader and a moored ship with lit windows.
 
 **Engineering**
@@ -103,7 +109,7 @@ simulation, procedural audio and procedurally built models. There is no backend 
 ## Gameplay
 
 ```
-Gate apron -> container yard (8 robots) -> relay court: hold the tower
+Gate apron -> container yard (10 robots) -> relay court: STINGER-7, hold the tower
            -> TITAN-04 drops onto the quay -> destroy 4 weak points -> shoot the exposed core -> victory
 ```
 
@@ -193,11 +199,12 @@ src/
   core/        game loop (fixed 60 Hz + interpolated render), renderer, input, event bus, settings, shared types
   config/      level layout (level.ts) and every gameplay number (tunables.ts)
   physics/     Rapier wrapper: character controller, static boxes, ray and shape queries, collision groups
-  world/       wet ground + planar reflection, modelled containers, sky, moon, fog, rain, ocean, ship, kerb
-  structures/  gantry crane, flood-light masts (spot lights + beams), fence, props
+  world/       wet ground + planar reflection, modelled containers, sunset sky, sun, haze, ocean, ship, kerb
+  structures/  gantry crane, flood-light masts (emissive lamps), fence, props
   player/      first-person controller (walk, sprint, jump, double jump)
   weapon/      rifle logic, recoil, procedural and GLB view models, pooled weapon effects
   combat/      damage and hit resolution
+  scorpion/    STINGER-7 semi-boss: model, skills, telegraph shaders, drops
   enemies/     framework, army mech, Spot, Bomber Duck, nav grid, AI scheduler, population
   boss/        TITAN-04: model, attacks, weak points, landing cinematic
   objectives/  towers and nuclear countdown
@@ -224,10 +231,10 @@ Design rules (full text in [`.specify/memory/constitution.md`](.specify/memory/c
 | Budget | Value |
 |---|---|
 | Target | 60 FPS desktop, 30 FPS low-end fallback |
-| Draw calls | at most 350 per frame; measured 210 to 250 including the reflection pass |
-| Triangles | about 1.1 million per frame with shadow and reflection passes (measured) |
-| Enemies | 8 regular robots plus the boss |
-| Shadows | moon + 4 flood lights, static maps refreshed at 6 Hz (medium) or 12 Hz (high) for moving casters |
+| Draw calls | at most 350 per frame; measured about 100 to 180 including the reflection pass |
+| Triangles | about 0.45 to 0.56 million per frame with shadow and reflection passes (measured) |
+| Enemies | roster of 18 regular robots streamed by area (10 alive at most), STINGER-7 and the boss |
+| Shadows | one sun shadow map, static content refreshed at 6 Hz (medium) or 12 Hz (high) for moving casters |
 | Presets | low: no shadows, reflection or bloom; medium: shadows, reflection, bloom; high: adds ambient occlusion |
 | Bundle | about 5.3 MB (Rapier's WASM is about 80% of it), split into three chunks |
 
@@ -256,9 +263,8 @@ The service worker is not registered by `npm run dev`.
 
 Known limitations:
 
-- Visuals are procedural; there is no authored art, so realism is limited by design. Robots and the tower are simpler than the environment.
-- The heavy shaders (planar reflection, 5 shadow maps, bloom, AO) target a desktop GPU; use the low preset on integrated graphics.
-- No rain or thunder audio yet.
+- Visuals are procedural; there is no authored art, so realism is limited by design. The robots and the scorpion are built from primitives and read as low-poly next to the environment.
+- The heavy shaders (planar reflection, shadow map, bloom, AO) target a desktop GPU; use the low preset on integrated graphics.
 - Gameplay balance (damage, enemy density on the compact map, countdown length) is untested.
 - The boss attacks were checked by unit tests and short scripted runs only.
 - The in-game Restart button reloads the page.

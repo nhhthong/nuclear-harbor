@@ -271,6 +271,61 @@ function upperTorso(): Group {
     cannon.add(brake);
     torso.add(cannon);
   }
+  // ---- heavy-assault kit: reactor exhausts, radiator fins, sensor mast, collar armour ----------
+  for (const side of [-1, 1]) {
+    const stack = new Group();
+    stack.position.set(side * 0.3, 1.12, -0.7);
+    stack.rotation.x = -0.32;
+    stack.add(M(new CylinderGeometry(0.075, 0.09, 0.62, seg(18)), 'gunmetal'));
+    const shroud = M(new CylinderGeometry(0.1, 0.1, 0.2, seg(18)), 'dark');
+    shroud.position.y = -0.12;
+    stack.add(shroud);
+    const lip = M(new CylinderGeometry(0.088, 0.078, 0.06, seg(18)), 'chrome');
+    lip.position.y = 0.33;
+    stack.add(lip);
+    const ember = M(new CylinderGeometry(0.06, 0.06, 0.02, seg(14)), 'glow');
+    ember.position.y = 0.352;
+    stack.add(ember);
+    torso.add(stack);
+    // collar plates sweeping up from the shoulders
+    const collar = M(chamferedBox(0.34, 0.07, 0.62, 0.02), 'armor');
+    collar.position.set(side * 0.6, 1.2, 0.0);
+    collar.rotation.z = side * 0.5;
+    torso.add(collar);
+    const collarEdge = M(chamferedBox(0.05, 0.09, 0.64, 0.012), 'dark');
+    collarEdge.position.set(side * 0.74, 1.285, 0.0);
+    collarEdge.rotation.z = side * 0.5;
+    torso.add(collarEdge);
+    // hip tassets
+    const tasset = M(chamferedBox(0.3, 0.42, 0.07, 0.02), 'armor');
+    tasset.position.set(side * 0.3, -0.06, 0.42);
+    tasset.rotation.x = -0.2;
+    torso.add(tasset);
+  }
+  for (let i = 0; i < 7; i++) {
+    const fin = M(box(0.7, 0.035, 0.07), 'chrome');
+    fin.position.set(0, 0.3 + i * 0.1, -0.79);
+    fin.rotation.x = 0.3;
+    torso.add(fin);
+  }
+  const reactor = M(new CylinderGeometry(0.16, 0.16, 0.05, seg(20)).rotateX(Math.PI / 2), 'glow');
+  reactor.position.set(0, 0.2, -0.775);
+  torso.add(reactor);
+  const reactorRing = M(new CylinderGeometry(0.21, 0.21, 0.04, seg(22)).rotateX(Math.PI / 2), 'chrome');
+  reactorRing.position.set(0, 0.2, -0.77);
+  torso.add(reactorRing);
+  // sensor mast with a radar bar
+  const mast = M(new CylinderGeometry(0.022, 0.03, 0.5, 8), 'gunmetal');
+  mast.position.set(-0.46, 1.5, -0.4);
+  torso.add(mast);
+  const radar = M(chamferedBox(0.34, 0.09, 0.07, 0.015), 'dark');
+  radar.position.set(-0.46, 1.78, -0.4);
+  radar.rotation.y = 0.4;
+  torso.add(radar);
+  const radarEye = M(box(0.2, 0.03, 0.01), 'glow');
+  radarEye.position.set(-0.445, 1.78, -0.362);
+  radarEye.rotation.y = 0.4;
+  torso.add(radarEye);
   return torso;
 }
 
@@ -767,13 +822,13 @@ export function getArmyAssets(shared: SharedAssets): ArmyAssets {
         map: armor?.map ?? null,
         roughnessMap: armor?.roughnessMap ?? null,
         bumpMap: armor?.bumpMap ?? null,
-        bumpScale: 0.014,
-        roughness: 0.55,
-        metalness: 0.2,
+        bumpScale: 0.02,
+        roughness: 0.5,
+        metalness: 0.4,
       }),
-    gunmetal: () => new MeshStandardMaterial({ color: 0x4a5058, roughness: 0.4, metalness: 0.6 }),
-    dark: () => new MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.45, metalness: 0.5 }),
-    chrome: () => new MeshStandardMaterial({ color: 0xd8dfe6, roughness: 0.25, metalness: 0.7 }),
+    gunmetal: () => new MeshStandardMaterial({ color: 0x4a5058, roughness: 0.34, metalness: 0.85 }),
+    dark: () => new MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.42, metalness: 0.7 }),
+    chrome: () => new MeshStandardMaterial({ color: 0xd8dfe6, roughness: 0.14, metalness: 1 }),
     decal: () =>
       new MeshBasicMaterial({
         map: decal,

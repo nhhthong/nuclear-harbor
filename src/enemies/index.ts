@@ -25,6 +25,7 @@ export function createEnemiesModule(): GameModule {
       offs.push(ctx.events.on('world:ready', () => m.start()));
       offs.push(ctx.events.on('objectives:defendStarted', (e) => m.onDefendStarted(e.position, e.radius)));
       offs.push(ctx.events.on('game:respawn', () => m.onRespawn()));
+      offs.push(ctx.events.on('enemy:destroyed', (e) => m.onDestroyed(e.id)));
 
       ctx.testHooks.enemies = {
         list: () => m.snapshot(),
@@ -33,6 +34,7 @@ export function createEnemiesModule(): GameModule {
           return e ? e.id : null;
         },
         killAll: () => m.killAll(),
+        rosterRemaining: () => m.rosterRemaining,
         projectiles: () => ({ live: m.projectiles.liveCount, cap: m.projectiles.capacity }),
       };
     },

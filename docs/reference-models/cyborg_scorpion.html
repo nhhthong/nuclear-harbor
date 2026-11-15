@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyborg Scorpion 3D</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #ffffff;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+            outline: none;
+            cursor: grab;
+        }
+        canvas:active {
+            cursor: grabbing;
+        }
+    </style>
+    <!-- Import Map for Three.js & Addons -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+</head>
+<body>
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+        import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+        // ==========================================
+        // 1. PROCEDURAL TEXTURES FOR METALLIC MICRO-SURFACE
+        // ==========================================
+        function createBrushedMetalTextures() {
+            const size = 512;
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+
+            // Base neutral gray
+            ctx.fillStyle = '#808080';
+            ctx.fillRect(0, 0, size, size);
+
+            // Micro brushed streaks & 3D printed / CNC machined layer striations
+            for (let y = 0; y < size; y++) {
+                const wave = Math.sin(y * 0.45) * 14;
+                const noise = (Math.random() - 0.5) * 18;
+                const val = Math.max(0, Math.min(255, 128 + wave + noise));
+                ctx.fillStyle = `rgb(${val},${val},${val})`;
+                ctx.fillRect(0, y, size, 1);
+            }
+
+            // Fine horizontal micro-scratches
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+            ctx.lineWidth = 0.7;
+            for (let i = 0; i < 450; i++) {
+                const x = Math.random() * size;
+                const y = Math.random() * size;
+                const len = 15 + Math.random() * 65;
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(x + len, y + (Math.random() - 0.5) * 1.5);
+                ctx.stroke();
+            }
+
+            const bumpMap = new THREE.CanvasTexture(canvas);
+            bumpMap.wrapS = THREE.RepeatWrapping;
+            bumpMap.wrapT = THREE.RepeatWrapping;
+            bumpMap.repeat.set(4, 4);
+
+            // Carbon / Braided Hose Texture
+            const hoseCanvas = document.createElement('canvas');
+            hoseCanvas.width = 128;
+            hoseCanvas.height = 128;
+            const hCtx = hoseCanvas.getContext('2d');
+            hCtx.fillStyle = '#303030';
+            hCtx.fillRect(0, 0, 128, 128);
+            hCtx.strokeStyle = '#909090';
+            hCtx.lineWidth = 3;
+            for (let i = -128; i < 256; i += 12) {
+                hCtx.beginPath();
+                hCtx.moveTo(i, 0);
+                hCtx.lineTo(i + 128, 128);
+                hCtx.stroke();
+                hCtx.beginPath();
+                hCtx.moveTo(i + 128, 0);
+                hCtx.lineTo(i, 128);
+                hCtx.stroke();
+            }
+            const hoseBump = new THREE.CanvasTexture(hoseCanvas);
+            hoseBump.wrapS = THREE.RepeatWrapping;
+            hoseBump.wrapT = THREE.RepeatWrapping;
+            hoseBump.repeat.set(6, 24);
+
+            return { bumpMap, hoseBump };
+        }
+
+        // ==========================================
+        // 2. SCENE, RENDERER & STUDIO ENVIRONMENT
+        // ==========================================
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xffffff);
+
+        const camera = new THREE.PerspectiveCamera(36, window.innerWidth / window.innerHeight, 0.1, 100);
+        // Set camera angle matching the dynamic three-quarter perspective in the reference photo
+        camera.position.set(5.4, 4.1, 6.2);
+
+        const renderer = new THREE.WebGLRenderer({
+            antialias: true,
+            powerPreference: 'high-performance'
+        });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.08;
+        document.body.appendChild(renderer.domElement);
+
+        // Custom Studio HDRI Reflection Environment via PMREMGenerator
+        const pmremGenerator = new THREE.PMREMGenerator(renderer);
+        pmremGenerator.compileEquirectangularShader();
+        const roomEnv = new RoomEnvironment();
+        const envRT = pmremGenerator.fromScene(roomEnv, 0.035);
+        scene.environment = envRT.texture;
+        scene.environmentIntensity = 0.85;
+        roomEnv.dispose();
+
+        // OrbitControls - Smooth Mouse Rotation & Zoom ONLY
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.055;
+        controls.enablePan = false;
+        controls.minDistance = 3.2;
+        controls.maxDistance = 15.0;
+        controls.maxPolarAngle = Math.PI * 0.49; // Prevent dipping beneath the white floor
+        controls.target.set(0.15, 1.35, 0.0);
+        controls.update();
+
+        // ==========================================
+        // 3. PBR METALLIC MATERIALS
+        // ==========================================
+        const { bumpMap, hoseBump } = createBrushedMetalTextures();
+
+        // Primary Gunmetal Armor (Dark metallic charcoal with crisp edge speculars)
+        const armorMat = new THREE.MeshPhysicalMaterial({
+            color: 0x202328,
+            metalness: 0.86,
+            roughness: 0.27,
+            clearcoat: 0.35,
+            clearcoatRoughness: 0.22,
+            bumpMap: bumpMap,
+            bumpScale: 0.008,
+            envMapIntensity: 1.25
+        });
+
+        // Secondary Matte Tactical Plate (Slightly darker, satin metallic contrast)
+        const darkPlateMat = new THREE.MeshPhysicalMaterial({
+            color: 0x15171a,
+            metalness: 0.78,
+            roughness: 0.38,
+            clearcoat: 0.15,
+            clearcoatRoughness: 0.35,
+            bumpMap: bumpMap,
+            bumpScale: 0.01,
+            envMapIntensity: 1.0
+        });
+
+        // Titanium / Machined Steel Joints, Pistons, Bearings & Rivets
+        const steelJointMat = new THREE.MeshPhysicalMaterial({
+            color: 0x5c626d,
+            metalness: 0.96,
+            roughness: 0.16,
+            clearcoat: 0.2,
+            clearcoatRoughness: 0.15,
+            envMapIntensity: 1.5
+        });
+
+        // Razor Blade / Stinger Tip (High-gloss dark chrome/obsidian steel)
+        const bladeMat = new THREE.MeshPhysicalMaterial({
+            color: 0x2b3038,
+            metalness: 0.98,
+            roughness: 0.11,
+            clearcoat: 0.5,
+            clearcoatRoughness: 0.1,
+            bumpMap: bumpMap,
+            bumpScale: 0.004,
+            envMapIntensity: 1.65
+        });
+
+        // Braided Hydraulic Cables & Hoses
+        const cableMat = new THREE.MeshPhysicalMaterial({
+            color: 0x18191c,
+            metalness: 0.45,
+            roughness: 0.48,
+            bumpMap: hoseBump,
+            bumpScale: 0.015,
+            envMapIntensity: 0.8
+        });
+
+        // Subtle Optic Sensor Lens (Deep dark red/amber metallic glint, non-distracting)
+        const sensorMat = new THREE.MeshPhysicalMaterial({
+            color: 0x3a0c0c,
+            emissive: 0x1a0303,
+            metalness: 0.9,
+            roughness: 0.08,
+            clearcoat: 1.0
+        });
+
+        // ==========================================
+        // 4. STUDIO LIGHTING & FLOOR SHADOWS
+        // ==========================================
+        const hemiLight = new THREE.HemisphereLight(0xffffff, 0xd8dde6, 0.75);
+        hemiLight.position.set(0, 10, 0);
+        scene.add(hemiLight);
+
+        // Main Key Light (Top-Front-Right) for crisp metallic highlights & soft shadow
+        const keyLight = new THREE.DirectionalLight(0xffffff, 2.4);
+        keyLight.position.set(5.5, 9.5, 5.0);
+        keyLight.castShadow = true;
+        keyLight.shadow.mapSize.width = 2048;
+        keyLight.shadow.mapSize.height = 2048;
+        keyLight.shadow.camera.near = 1;
+        keyLight.shadow.camera.far = 25;
+        const d = 5.5;
+        keyLight.shadow.camera.left = -d;
+        keyLight.shadow.camera.right = d;
+        keyLight.shadow.camera.top = d;
+        keyLight.shadow.camera.bottom = -d;
+        keyLight.shadow.bias = -0.0004;
+        keyLight.shadow.normalBias = 0.015;
+        keyLight.shadow.radius = 3.5;
+        scene.add(keyLight);
+
+        // Strong Rim Light (Back-Left) to carve gleaming silver-gunmetal edges against white background
+        const rimLight = new THREE.DirectionalLight(0xeef4ff, 2.8);
+        rimLight.position.set(-6.5, 6.0, -5.5);
+        scene.add(rimLight);
+
+        // Low Fill / Bounce Light (Front-Left) to reveal mechanical underbelly & pistons
+        const fillLight = new THREE.DirectionalLight(0xf5f7fa, 1.15);
+        fillLight.position.set(-4.0, 2.0, 5.5);
+        scene.add(fillLight);
+
+        // Top-Back Accent Rim for the arched tail segments
+        const tailRimLight = new THREE.DirectionalLight(0xffffff, 1.6);
+        tailRimLight.position.set(-2.0, 8.5, -2.0);
+        scene.add(tailRimLight);
+
+        // Pure White Shadow-Catching Ground Plane
+        const floorGeo = new THREE.PlaneGeometry(40, 40);
+        const floorMat = new THREE.ShadowMaterial({
+            opacity: 0.22,
+            color: 0x0f1218
+        });
+        const floorMesh = new THREE.Mesh(floorGeo, floorMat);
+        floorMesh.rotation.x = -Math.PI / 2;
+        floorMesh.position.y = 0;
+        floorMesh.receiveShadow = true;
+        scene.add(floorMesh);
+
+        // Subtle Ambient Occlusion Contact Shadow Pool under the body
+        function createContactShadowTexture() {
+            const c = document.createElement('canvas');
+            c.width = 256;
+            c.height = 256;
+            const g = c.getContext('2d');
+            const grad = g.createRadialGradient(128, 128, 10, 128, 128, 120);
+            grad.addColorStop(0, 'rgba(15, 18, 24, 0.36)');
+            grad.addColorStop(0.55, 'rgba(15, 18, 24, 0.14)');
+            grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+            g.fillStyle = grad;
+            g.fillRect(0, 0, 256, 256);
+            return new THREE.CanvasTexture(c);
+        }
+        const aoPlane = new THREE.Mesh(
+            new THREE.PlaneGeometry(5.6, 4.4),
+            new THREE.MeshBasicMaterial({
+                map: createContactShadowTexture(),
+                transparent: true,
+                depthWrite: false
+            })
+        );
+        aoPlane.rotation.x = -Math.PI / 2;
+        aoPlane.position.set(0.2, 0.002, 0);
+        scene.add(aoPlane);
+
+        // ==========================================
+        // 5. PROCEDURAL GEOMETRY HELPERS
+        // ==========================================
+        function enableShadows(obj) {
+            obj.traverse((child) => {
+                if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                }
+            });
+            return obj;
+        }
+
+        // Helper: Beveled polygon plate using ExtrudeGeometry
+        function createBeveledPlate(points, depth, bevelSize = 0.025, bevelThickness = 0.025, material = armorMat) {
+            const shape = new THREE.Shape();
+            shape.moveTo(points[0][0], points[0][1]);
+            for (let i = 1; i < points.length; i++) {
+                shape.lineTo(points[i][0], points[i][1]);
+            }
+            shape.closePath();
+
+            const geo = new THREE.ExtrudeGeometry(shape, {
+                depth: depth,
+                bevelEnabled: true,
+                bevelSegments: 2,
+                steps: 1,
+                bevelSize: bevelSize,
+                bevelThickness: bevelThickness
+            });
+            geo.center();
+            const mesh = new THREE.Mesh(geo, material);
+            return mesh;
+        }
+
+        // Helper: Mechanical Joint Drum with central axle bolt & bearing ring
+        function createMechJoint(radius, width, axis = 'z') {
+            const group = new THREE.Group();
+
+            // Outer housing
+            const housing = new THREE.Mesh(
+                new THREE.CylinderGeometry(radius, radius, width, 16),
+                darkPlateMat
+            );
+            // Inner steel bearing ring
+            const bearing = new THREE.Mesh(
+                new THREE.CylinderGeometry(radius * 0.68, radius * 0.68, width * 1.12, 16),
+                steelJointMat
+            );
+            // Hex center pin
+            const pin = new THREE.Mesh(
+                new THREE.CylinderGeometry(radius * 0.34, radius * 0.34, width * 1.24, 6),
+                armorMat
+            );
+
+            group.add(housing, bearing, pin);
+
+            if (axis === 'z') {
+                group.rotation.x = Math.PI / 2;
+            } else if (axis === 'x') {
+                group.rotation.z = Math.PI / 2;
+            }
+            return group;
+        }
+
+        // Helper: Hex Rivet / Bolt head
+        function createRivet(radius = 0.024, height = 0.02) {
+            return new THREE.Mesh(
+                new THREE.CylinderGeometry(radius, radius * 1.1, height, 6),
+                steelJointMat
+            );
+        }
+
+        // Helper: Hydraulic Piston connecting two 3D points
+        function createPistonBetween(pA, pB, radius = 0.026) {
+            const group = new THREE.Group();
+            const dir = new THREE.Vector3().subVectors(pB, pA);
+            const len = dir.length();
+            if (len < 0.001) return group;
+
+            const mid = new THREE.Vector3().addVectors(pA, pB).multiplyScalar(0.5);
+
+            // Outer cylinder sleeve (attached near pA)
+            const sleeveLen = len * 0.58;
+            const sleeve = new THREE.Mesh(
+                new THREE.CylinderGeometry(radius, radius, sleeveLen, 12),
+                darkPlateMat
+            );
+            sleeve.position.y = -len * 0.5 + sleeveLen * 0.5;
+
+            // Chrome inner rod (attached near pB)
+            const rod = new THREE.Mesh(
+                new THREE.CylinderGeometry(radius * 0.58, radius * 0.58, len * 0.92, 12),
+                steelJointMat
+            );
+
+            // Collar ring
+            const collar = new THREE.Mesh(
+                new THREE.CylinderGeometry(radius * 1.22, radius * 1.22, 0.03, 12),
+                steelJointMat
+            );
+            collar.position.y = -len * 0.5 + sleeveLen;
+
+            group.add(sleeve, rod, collar);
+            group.position.copy(mid);
+            group.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
+            return group;
+        }
+
+        // Helper: Flexible Cable / Hydraulic Tube along control points
+        function createCable(points, radius = 0.022, mat = cableMat) {
+            const curve = new THREE.CatmullRomCurve3(points);
+            const geo = new THREE.TubeGeometry(curve, 24, radius, 8, false);
+            return new THREE.Mesh(geo, mat);
+        }
+
+        // ==========================================
+        // 6. BUILD THE CYBORG SCORPION
+        // Orientation: +X is Forward (Head/Claws), -X is Rear (Tail base), +Y is Up, +/-Z is Left/Right
+        // ==========================================
+        const scorpion = new THREE.Group();
+        scene.add(scorpion);
+
+        // ------------------------------------------
+        // A. CEPHALOTHORAX & SEGMENTED ABDOMEN (MESOSOMA)
+        // ------------------------------------------
+        const bodyGroup = new THREE.Group();
+        bodyGroup.position.set(0.15, 1.08, 0);
+        bodyGroup.rotation.z = -0.04; // Slight aggressive forward tilt
+        scorpion.add(bodyGroup);
+
+        // Internal Chassis Core (Mechanical Spine & Ribcage)
+        const coreChassis = new THREE.Mesh(
+            new THREE.BoxGeometry(2.55, 0.38, 0.88),
+            darkPlateMat
+        );
+        coreChassis.position.set(-0.05, -0.05, 0);
+        bodyGroup.add(coreChassis);
+
+        // Underbelly mechanical heat-sink fins & hydraulic manifold
+        for (let i = 0; i < 8; i++) {
+            const rib = new THREE.Mesh(
+                new THREE.BoxGeometry(0.14, 0.24, 1.02 - Math.abs(i - 3.5) * 0.08),
+                steelJointMat
+            );
+            rib.position.set(-1.05 + i * 0.28, -0.18, 0);
+            bodyGroup.add(rib);
+        }
+
+        // Front Cephalothorax Carapace (Head Shield - heavy faceted armor)
+        const headShieldPts = [
+            [-0.45, -0.58],
+            [0.52, -0.44],
+            [0.68, -0.22],
+            [0.68, 0.22],
+            [0.52, 0.44],
+            [-0.45, 0.58],
+            [-0.55, 0.0]
+        ];
+        const headShield = createBeveledPlate(headShieldPts, 0.24, 0.04, 0.045, armorMat);
+        headShield.rotation.x = Math.PI / 2;
+        headShield.position.set(0.78, 0.22, 0);
+        bodyGroup.add(headShield);
+
+        // Raised Central Ridge on Cephalothorax with Cooling Vents
+        const headCrestPts = [
+            [-0.38, -0.26],
+            [0.45, -0.18],
+            [0.52, 0.0],
+            [0.45, 0.18],
+            [-0.38, 0.26]
+        ];
+        const headCrest = createBeveledPlate(headCrestPts, 0.12, 0.025, 0.03, darkPlateMat);
+        headCrest.rotation.x = Math.PI / 2;
+        headCrest.position.set(0.78, 0.36, 0);
+        bodyGroup.add(headCrest);
+
+        // Cooling louvers & rivets on Head Shield
+        for (let side of [-1, 1]) {
+            for (let i = 0; i < 4; i++) {
+                const vent = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.12, 0.04, 0.14),
+                    steelJointMat
+                );
+                vent.position.set(0.48 + i * 0.18, 0.33, side * 0.34);
+                vent.rotation.y = side * -0.22;
+                bodyGroup.add(vent);
+            }
+            // Median & Lateral Optic Sensor Pods
+            const eyePod = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.045, 0.055, 0.08, 12),
+                steelJointMat
+            );
+            eyePod.rotation.z = Math.PI / 2;
+            eyePod.position.set(1.22, 0.34, side * 0.11);
+            const eyeLens = new THREE.Mesh(
+                new THREE.SphereGeometry(0.036, 12, 12),
+                sensorMat
+            );
+            eyeLens.position.set(1.26, 0.34, side * 0.11);
+            bodyGroup.add(eyePod, eyeLens);
+
+            // Lateral sensor array
+            for (let e = 0; e < 3; e++) {
+                const latSensor = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.022, 8, 8),
+                    sensorMat
+                );
+                latSensor.position.set(1.28 - e * 0.08, 0.24, side * (0.31 + e * 0.04));
+                bodyGroup.add(latSensor);
+            }
+        }
+
+        // Chelicerae (Front Mini Pincers / Mandibles under the head)
+        for (let side of [-1, 1]) {
+            const chelGroup = new THREE.Group();
+            chelGroup.position.set(1.38, 0.06, side * 0.16);
+
+            const base = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.12, 0.12), darkPlateMat);
+            const upperJaw = new THREE.Mesh(new THREE.ConeGeometry(0.055, 0.28, 5), bladeMat);
+            upperJaw.rotation.z = -Math.PI / 2 - 0.15;
+            upperJaw.position.set(0.22, 0.03, 0);
+
+            const lowerJaw = new THREE.Mesh(new THREE.ConeGeometry(0.045, 0.24, 5), bladeMat);
+            lowerJaw.rotation.z = -Math.PI / 2 + 0.22;
+            lowerJaw.position.set(0.20, -0.04, 0);
+
+            chelGroup.add(base, upperJaw, lowerJaw);
+            chelGroup.rotation.y = side * -0.15;
+            bodyGroup.add(chelGroup);
+        }
+
+        // Overlapping Dorsal Mesosoma Plates (6 Armored Tergites tapering towards tail)
+        const tergiteCount = 6;
+        for (let i = 0; i < tergiteCount; i++) {
+            const t = i / (tergiteCount - 1);
+            const width = 1.24 - t * 0.48;
+            const length = 0.34;
+            const xPos = 0.18 - i * 0.28;
+            const yPos = 0.26 - t * 0.04;
+
+            const platePts = [
+                [-length * 0.55, -width * 0.44],
+                [length * 0.45, -width * 0.5],
+                [length * 0.58, -width * 0.25],
+                [length * 0.58, width * 0.25],
+                [length * 0.45, width * 0.5],
+                [-length * 0.55, width * 0.44]
+            ];
+            const tergite = createBeveledPlate(platePts, 0.15, 0.025, 0.03, armorMat);
+            tergite.rotation.x = Math.PI / 2;
+            tergite.rotation.y = 0.08; // Shingled overlap angle
+            tergite.position.set(xPos, yPos, 0);
+            bodyGroup.add(tergite);
+
+            // Dorsal spine ridge & dual hydraulic vents on each tergite
+            const spineBlock = new THREE.Mesh(
+                new THREE.BoxGeometry(0.24, 0.08, 0.26 - t * 0.08),
+                darkPlateMat
+            );
+            spineBlock.position.set(xPos + 0.02, yPos + 0.09, 0);
+            bodyGroup.add(spineBlock);
+
+            for (let side of [-1, 1]) {
+                const rivet = createRivet(0.022, 0.025);
+                rivet.position.set(xPos + 0.05, yPos + 0.085, side * (width * 0.36));
+                bodyGroup.add(rivet);
+
+                // Side armor skirts (pleural plates)
+                const skirt = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.24, 0.18, 0.07),
+                    darkPlateMat
+                );
+                skirt.position.set(xPos, yPos - 0.14, side * (width * 0.46));
+                skirt.rotation.x = side * 0.35;
+                bodyGroup.add(skirt);
+            }
+        }
+
+        // ------------------------------------------
+        // B. SEGMENTED ARCHING TAIL (METASOMA & TELSON)
+        // Curved gracefully up and forward over the body just like the reference image
+        // ------------------------------------------
+        const tailRoot = new THREE.Group();
+        tailRoot.position.set(-1.38, 0.16, 0);
+        bodyGroup.add(tailRoot);
+
+        // 5 Metasoma Segments + 1 Telson (Stinger Bulb)
+        // Angles calibrated to form the iconic high overhead C-curve
+        const tailSegmentConfigs = [
+            { len: 0.46, rTop: 0.25, rBot: 0.27, pitch: 0.62 },
+            { len: 0.50, rTop: 0.23, rBot: 0.25, pitch: 0.64 },
+            { len: 0.54, rTop: 0.21, rBot: 0.23, pitch: 0.58 },
+            { len: 0.56, rTop: 0.19, rBot: 0.21, pitch: 0.52 },
+            { len: 0.58, rTop: 0.17, rBot: 0.19, pitch: 0.46 }
+        ];
+
+        let currentTailParent = tailRoot;
+        const tailJointWorldMarkers = [];
+
+        tailSegmentConfigs.forEach((cfg, idx) => {
+            const segPivot = new THREE.Group();
+            if (idx > 0) {
+                segPivot.position.set(0, tailSegmentConfigs[idx - 1].len, 0);
+            }
+            // Rotate around Z to curl backward (-X), then upward (+Y), then forward (+X)
+            segPivot.rotation.z = cfg.pitch;
+            currentTailParent.add(segPivot);
+
+            // Mechanical Drum Joint at segment base
+            const joint = createMechJoint(cfg.rBot * 0.82, cfg.rBot * 1.75, 'z');
+            segPivot.add(joint);
+
+            // Inner structural spine cylinder
+            const innerCore = new THREE.Mesh(
+                new THREE.CylinderGeometry(cfg.rTop * 0.72, cfg.rBot * 0.72, cfg.len, 12),
+                darkPlateMat
+            );
+            innerCore.position.y = cfg.len * 0.5;
+            segPivot.add(innerCore);
+
+            // Faceted Octagonal Outer Armor Shell with Dorsal Keel Ridges
+            const armorShell = new THREE.Mesh(
+                new THREE.CylinderGeometry(cfg.rTop, cfg.rBot, cfg.len * 0.78, 8),
+                armorMat
+            );
+            armorShell.rotation.y = Math.PI / 8;
+            armorShell.position.y = cfg.len * 0.5;
+            segPivot.add(armorShell);
+
+            // Dorsal twin armor fins & cooling ribs
+            for (let side of [-1, 1]) {
+                const fin = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.08, cfg.len * 0.74, 0.05),
+                    steelJointMat
+                );
+                fin.position.set(-cfg.rTop * 0.85, cfg.len * 0.5, side * cfg.rTop * 0.42);
+                segPivot.add(fin);
+
+                // Side hydraulic hose loop bridging each joint
+                const hose = createCable([
+                    new THREE.Vector3(0.04, -0.08, side * (cfg.rBot * 0.88)),
+                    new THREE.Vector3(0.11, 0.04, side * (cfg.rBot * 0.96)),
+                    new THREE.Vector3(0.05, 0.16, side * (cfg.rBot * 0.88))
+                ], 0.022, cableMat);
+                segPivot.add(hose);
+
+                // Ventral (inner curve) braided hydraulic conduits
+                const innerPipe = createCable([
+                    new THREE.Vector3(cfg.rBot * 0.75, -0.06, side * 0.06),
+                    new THREE.Vector3(cfg.rBot * 0.85, cfg.len * 0.5, side * 0.06),
+                    new THREE.Vector3(cfg.rTop * 0.75, cfg.len + 0.06, side * 0.06)
+                ], 0.02, cableMat);
+                segPivot.add(innerPipe);
+
+                // Rivets on shell
+                const r1 = createRivet(0.018, 0.02);
+                r1.rotation.x = Math.PI / 2;
+                r1.position.set(0, cfg.len * 0.5, side * (cfg.rTop * 0.95));
+                segPivot.add(r1);
+            }
+
+            // Transverse ribbed collar bands
+            for (let b of [0.22, 0.78]) {
+                const band = new THREE.Mesh(
+                    new THREE.CylinderGeometry(cfg.rTop * 1.04, cfg.rBot * 1.04, 0.045, 8),
+                    darkPlateMat
+                );
+                band.rotation.y = Math.PI / 8;
+                band.position.y = cfg.len * b;
+                segPivot.add(band);
+            }
+
+            currentTailParent = segPivot;
+        });
+
+        // Telson (Venom Bulb) & Aculeus (Razor-Sharp Curved Stinger)
+        const telsonPivot = new THREE.Group();
+        telsonPivot.position.set(0, tailSegmentConfigs[tailSegmentConfigs.length - 1].len, 0);
+        telsonPivot.rotation.z = 0.42; // Points forward toward the front of the scorpion
+        currentTailParent.add(telsonPivot);
+
+        const telsonJoint = createMechJoint(0.14, 0.28, 'z');
+        telsonPivot.add(telsonJoint);
+
+        // Faceted Telson Bulb (Mechanized faceted housing)
+        const telsonBulb = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.12, 0.19, 0.44, 8),
+            armorMat
+        );
+        telsonBulb.rotation.y = Math.PI / 8;
+        telsonBulb.position.set(0.02, 0.24, 0);
+        telsonPivot.add(telsonBulb);
+
+        // Telson Dorsal Armor Plate & Side Exhaust Vents
+        const telsonCap = new THREE.Mesh(
+            new THREE.BoxGeometry(0.16, 0.36, 0.22),
+            darkPlateMat
+        );
+        telsonCap.position.set(-0.06, 0.24, 0);
+        telsonCap.rotation.z = -0.15;
+        telsonPivot.add(telsonCap);
+
+        for (let side of [-1, 1]) {
+            const nozzle = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.035, 0.045, 0.14, 10),
+                steelJointMat
+            );
+            nozzle.position.set(0.06, 0.32, side * 0.15);
+            telsonPivot.add(nozzle);
+        }
+
+        // Aculeus (Sharp Curved Metallic Stinger Blade)
+        const stingerCurve = new THREE.CatmullRomCurve3([
+            new THREE.Vector3(0.02, 0.42, 0),
+            new THREE.Vector3(0.06, 0.62, 0),
+            new THREE.Vector3(0.16, 0.80, 0),
+            new THREE.Vector3(0.32, 0.94, 0)
+        ]);
+        // Custom tapered faceted stinger geometry
+        const stingerSegments = 16;
+        const stingerGeo = new THREE.CylinderGeometry(0.003, 0.095, 0.62, 6, stingerSegments);
+        const posAttr = stingerGeo.attributes.position;
+        for (let i = 0; i < posAttr.count; i++) {
+            const y = posAttr.getY(i); // -0.31 to +0.31
+            const t = (y + 0.31) / 0.62; // 0 at base, 1 at tip
+            // Curve forward (+X) smoothly as t approaches 1
+            const bendX = Math.pow(t, 1.85) * 0.24;
+            posAttr.setX(i, posAttr.getX(i) + bendX);
+        }
+        stingerGeo.computeVertexNormals();
+        const stingerMesh = new THREE.Mesh(stingerGeo, bladeMat);
+        stingerMesh.position.set(0.02, 0.72, 0);
+        telsonPivot.add(stingerMesh);
+
+        // ------------------------------------------
+        // C. MASSIVE MECHANICAL PEDIPALPS (CLAWS)
+        // Left & Right articulated arms with heavy faceted pincers
+        // ------------------------------------------
+        function buildPedipalp(side) {
+            // side: 1 = Right (+Z), -1 = Left (-Z)
+            const root = new THREE.Group();
+            root.position.set(1.12, 0.06, side * 0.56);
+            bodyGroup.add(root);
+
+            // 1. Coxa / Shoulder Ball-and-Drum Mount
+            const shoulderJoint = createMechJoint(0.18, 0.26, 'y');
+            root.add(shoulderJoint);
+
+            // 2. Trochanter + Femur (Upper Arm extending outward & slightly back)
+            const femurPivot = new THREE.Group();
+            femurPivot.rotation.y = side * -0.58; // Angled outward/forward
+            femurPivot.rotation.z = -0.08;
+            root.add(femurPivot);
+
+            const femurLen = 0.78;
+            // Core steel spar
+            const femurCore = new THREE.Mesh(
+                new THREE.BoxGeometry(femurLen, 0.16, 0.16),
+                steelJointMat
+            );
+            femurCore.position.set(femurLen * 0.5, 0, 0);
+            femurPivot.add(femurCore);
+
+            // Faceted upper & outer armor guard on Femur
+            const femurArmor = new THREE.Mesh(
+                new THREE.BoxGeometry(femurLen * 0.86, 0.24, 0.25),
+                armorMat
+            );
+            femurArmor.position.set(femurLen * 0.5, 0.02, side * 0.02);
+            femurPivot.add(femurArmor);
+
+            // Hydraulic Piston on Femur
+            const femurPiston = createPistonBetween(
+                new THREE.Vector3(0.08, -0.11, -side * 0.11),
+                new THREE.Vector3(femurLen * 0.85, -0.09, -side * 0.11),
+                0.028
+            );
+            femurPivot.add(femurPiston);
+
+            // 3. Patella (Forearm / Elbow turning sharply inward toward center)
+            const patellaPivot = new THREE.Group();
+            patellaPivot.position.set(femurLen, 0, 0);
+            patellaPivot.rotation.y = side * 1.15; // Sweeps inward
+            patellaPivot.rotation.z = -0.05;
+            femurPivot.add(patellaPivot);
+
+            const elbowJoint = createMechJoint(0.17, 0.28, 'y');
+            patellaPivot.add(elbowJoint);
+
+            const patellaLen = 0.74;
+            const patellaHousing = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.16, 0.14, patellaLen, 8),
+                armorMat
+            );
+            patellaHousing.rotation.z = Math.PI / 2;
+            patellaHousing.rotation.x = Math.PI / 8;
+            patellaHousing.position.set(patellaLen * 0.5, 0, 0);
+            patellaPivot.add(patellaHousing);
+
+            // Side armor plates & rivets on Patella
+            const patellaGuard = new THREE.Mesh(
+                new THREE.BoxGeometry(patellaLen * 0.82, 0.26, 0.30),
+                darkPlateMat
+            );
+            patellaGuard.position.set(patellaLen * 0.5, 0.02, side * 0.02);
+            patellaPivot.add(patellaGuard);
+
+            // 4. Chela (Heavy Armored Claw Palm + Fixed Finger + Articulated Movable Finger)
+            const wristPivot = new THREE.Group();
+            wristPivot.position.set(patellaLen, -0.04, 0);
+            wristPivot.rotation.y = side * 0.32;
+            wristPivot.rotation.x = side * -0.18; // Slight aggressive roll
+            patellaPivot.add(wristPivot);
+
+            const wristJoint = createMechJoint(0.16, 0.26, 'y');
+            wristPivot.add(wristJoint);
+
+            // Bulky Faceted Manus (Claw Palm)
+            const palmPts = [
+                [0.0, -0.18],
+                [0.35, -0.28],
+                [0.82, -0.22],
+                [0.92, 0.0],
+                [0.82, 0.22],
+                [0.35, 0.26],
+                [0.0, 0.18]
+            ];
+            const palmBody = createBeveledPlate(palmPts, 0.34, 0.045, 0.05, armorMat);
+            palmBody.rotation.x = Math.PI / 2;
+            palmBody.position.set(0.46, 0.0, 0);
+            wristPivot.add(palmBody);
+
+            // Top Tactical Armor Shroud on Claw Palm with Ribs & Rivets
+            const palmShroud = createBeveledPlate([
+                [0.08, -0.14],
+                [0.72, -0.16],
+                [0.80, 0.0],
+                [0.72, 0.16],
+                [0.08, 0.14]
+            ], 0.12, 0.025, 0.03, darkPlateMat);
+            palmShroud.rotation.x = Math.PI / 2;
+            palmShroud.position.set(0.45, 0.19, 0);
+            wristPivot.add(palmShroud);
+
+            for (let r = 0; r < 4; r++) {
+                const rib = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.045, 0.04, 0.26),
+                    steelJointMat
+                );
+                rib.position.set(0.24 + r * 0.15, 0.26, 0);
+                wristPivot.add(rib);
+            }
+
+            // Fixed Outer Finger (Tarsus/Fixed Pollex) - long tapered serrated blade
+            const fixedFingerGroup = new THREE.Group();
+            fixedFingerGroup.position.set(0.86, -0.02, side * 0.11);
+            fixedFingerGroup.rotation.y = side * 0.08;
+            wristPivot.add(fixedFingerGroup);
+
+            const fixedBlade = new THREE.Mesh(
+                new THREE.ConeGeometry(0.11, 0.78, 6),
+                bladeMat
+            );
+            fixedBlade.rotation.z = -Math.PI / 2;
+            fixedBlade.scale.set(1.2, 1.0, 0.75);
+            fixedBlade.position.set(0.36, 0, 0);
+            fixedFingerGroup.add(fixedBlade);
+
+            // Serrated mechanical teeth along inner edge of fixed finger
+            for (let t = 0; t < 6; t++) {
+                const tooth = new THREE.Mesh(
+                    new THREE.ConeGeometry(0.024, 0.06, 4),
+                    steelJointMat
+                );
+                tooth.rotation.x = side * (Math.PI / 2);
+                tooth.position.set(0.14 + t * 0.09, 0, -side * 0.07);
+                fixedFingerGroup.add(tooth);
+            }
+
+            // Movable Inner Finger (Dactylus) with exposed actuator pivot & hydraulic piston
+            const movableFingerGroup = new THREE.Group();
+            movableFingerGroup.position.set(0.76, -0.02, -side * 0.12);
+            movableFingerGroup.rotation.y = side * -0.24; // Slightly open aggressive stance
+            wristPivot.add(movableFingerGroup);
+
+            const fingerPivotJoint = createMechJoint(0.095, 0.22, 'y');
+            movableFingerGroup.add(fingerPivotJoint);
+
+            const movableBlade = new THREE.Mesh(
+                new THREE.ConeGeometry(0.095, 0.74, 6),
+                bladeMat
+            );
+            movableBlade.rotation.z = -Math.PI / 2;
+            movableBlade.scale.set(1.15, 1.0, 0.72);
+            movableBlade.position.set(0.35, 0, 0);
+            movableFingerGroup.add(movableBlade);
+
+            // Inner teeth on movable finger
+            for (let t = 0; t < 5; t++) {
+                const tooth = new THREE.Mesh(
+                    new THREE.ConeGeometry(0.022, 0.055, 4),
+                    steelJointMat
+                );
+                tooth.rotation.x = -side * (Math.PI / 2);
+                tooth.position.set(0.16 + t * 0.09, 0, side * 0.065);
+                movableFingerGroup.add(tooth);
+            }
+
+            // Hydraulic actuator piston driving the movable claw finger
+            const clawActuator = createPistonBetween(
+                new THREE.Vector3(0.35, -0.06, -side * 0.22),
+                new THREE.Vector3(0.84, -0.05, -side * 0.16),
+                0.025
+            );
+            wristPivot.add(clawActuator);
+        }
+
+        buildPedipalp(1);  // Right Claw
+        buildPedipalp(-1); // Left Claw
+
+        // ------------------------------------------
+        // D. 8 ARTICULATED WALKING LEGS (4 PAIRS)
+        // Precisely grounded so all 8 drill-tip feet touch y = 0.0
+        // ------------------------------------------
+        const legConfigs = [
+            // Pair 1 (Front)
+            { x: 0.62, z: 0.44, yaw: 0.42, femurLen: 0.56, tibiaLen: 0.58, tarsusLen: 0.42 },
+            // Pair 2 (Mid-Front)
+            { x: 0.24, z: 0.48, yaw: 0.14, femurLen: 0.62, tibiaLen: 0.62, tarsusLen: 0.44 },
+            // Pair 3 (Mid-Back)
+            { x: -0.16, z: 0.46, yaw: -0.16, femurLen: 0.68, tibiaLen: 0.66, tarsusLen: 0.46 },
+            // Pair 4 (Rear)
+            { x: -0.56, z: 0.40, yaw: -0.46, femurLen: 0.74, tibiaLen: 0.70, tarsusLen: 0.48 }
+        ];
+
+        function buildWalkingLeg(cfg, side, index) {
+            const hipGroup = new THREE.Group();
+            hipGroup.position.set(cfg.x, -0.08, side * cfg.z);
+            hipGroup.rotation.y = side * -cfg.yaw;
+            bodyGroup.add(hipGroup);
+
+            // Coxa Ball-and-Socket Housing
+            const coxaSocket = new THREE.Mesh(
+                new THREE.SphereGeometry(0.115, 14, 14),
+                steelJointMat
+            );
+            const coxaCollar = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.13, 0.14, 0.10, 12),
+                darkPlateMat
+            );
+            coxaCollar.rotation.x = Math.PI / 2;
+            hipGroup.add(coxaSocket, coxaCollar);
+
+            // Femur Segment (Angles upward and outward like a true arachnid)
+            const femurGroup = new THREE.Group();
+            femurGroup.rotation.x = side * -0.52; // Knee rises higher than hip
+            hipGroup.add(femurGroup);
+
+            const fLen = cfg.femurLen;
+            // Inner steel shaft
+            const femurShaft = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.048, 0.056, fLen, 10),
+                steelJointMat
+            );
+            femurShaft.rotation.x = Math.PI / 2;
+            femurShaft.position.z = side * (fLen * 0.5);
+            femurGroup.add(femurShaft);
+
+            // Outer faceted armor plate on Femur
+            const femurPlate = new THREE.Mesh(
+                new THREE.BoxGeometry(0.11, 0.13, fLen * 0.82),
+                armorMat
+            );
+            femurPlate.position.set(0, 0.03, side * (fLen * 0.5));
+            femurGroup.add(femurPlate);
+
+            // Hydraulic Piston underneath Femur
+            const fPiston = createPistonBetween(
+                new THREE.Vector3(0, -0.07, side * 0.06),
+                new THREE.Vector3(0, -0.06, side * (fLen * 0.88)),
+                0.019
+            );
+            femurGroup.add(fPiston);
+
+            // Braided Hydraulic Cable arching over the hip into femur
+            const hipCable = createCable([
+                new THREE.Vector3(-0.04, 0.14, -side * 0.08),
+                new THREE.Vector3(-0.03, 0.18, side * 0.12),
+                new THREE.Vector3(0, 0.08, side * (fLen * 0.45))
+            ], 0.015, cableMat);
+            femurGroup.add(hipCable);
+
+            // Patella + Tibia Segment (Angles steeply downward toward ground)
+            const kneeGroup = new THREE.Group();
+            kneeGroup.position.set(0, 0, side * fLen);
+            kneeGroup.rotation.x = side * 1.48; // Sharp downward bend at the knee
+            femurGroup.add(kneeGroup);
+
+            const kneeJoint = createMechJoint(0.085, 0.15, 'x');
+            kneeGroup.add(kneeJoint);
+
+            const tLen = cfg.tibiaLen;
+            const tibiaShaft = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.042, 0.052, tLen, 10),
+                steelJointMat
+            );
+            tibiaShaft.rotation.x = Math.PI / 2;
+            tibiaShaft.position.z = side * (tLen * 0.5);
+            kneeGroup.add(tibiaShaft);
+
+            // Ribbed Shin Armor Guard
+            const tibiaArmor = new THREE.Mesh(
+                new THREE.BoxGeometry(0.095, 0.11, tLen * 0.80),
+                armorMat
+            );
+            tibiaArmor.position.set(0, 0.025, side * (tLen * 0.5));
+            kneeGroup.add(tibiaArmor);
+
+            // Tibia Piston
+            const tPiston = createPistonBetween(
+                new THREE.Vector3(0, -0.06, side * 0.06),
+                new THREE.Vector3(0, -0.05, side * (tLen * 0.88)),
+                0.017
+            );
+            kneeGroup.add(tPiston);
+
+            // Tarsus & Drill-Tip Foot (Basitarsus + Pretarsus spike)
+            const ankleGroup = new THREE.Group();
+            ankleGroup.position.set(0, 0, side * tLen);
+            ankleGroup.rotation.x = side * 0.36; // Nearly vertical stance for weight-bearing tip
+            kneeGroup.add(ankleGroup);
+
+            const ankleJoint = createMechJoint(0.065, 0.12, 'x');
+            ankleGroup.add(ankleJoint);
+
+            const tarLen = cfg.tarsusLen;
+            // Ribbed mechanical ankle cuff
+            const ankleCuff = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.058, 0.045, tarLen * 0.45, 8),
+                darkPlateMat
+            );
+            ankleCuff.rotation.x = Math.PI / 2;
+            ankleCuff.position.z = side * (tarLen * 0.25);
+            ankleGroup.add(ankleCuff);
+
+            // Sharp Tapered Mechanical Foot Spike
+            const footSpike = new THREE.Mesh(
+                new THREE.ConeGeometry(0.046, tarLen * 0.65, 6),
+                bladeMat
+            );
+            footSpike.rotation.x = side * (Math.PI / 2);
+            footSpike.position.z = side * (tarLen * 0.72);
+            ankleGroup.add(footSpike);
+
+            return footSpike;
+        }
+
+        const footTips = [];
+        legConfigs.forEach((cfg, idx) => {
+            footTips.push(buildWalkingLeg(cfg, 1, idx));  // Right leg
+            footTips.push(buildWalkingLeg(cfg, -1, idx)); // Left leg
+        });
+
+        // Auto-calibrate vertical height so the lowest foot tip rests cleanly at y = 0.002 on the floor
+        scorpion.updateMatrixWorld(true);
+        let minY = Infinity;
+        footTips.forEach((spike) => {
+            const box = new THREE.Box3().setFromObject(spike);
+            if (box.min.y < minY) minY = box.min.y;
+        });
+        if (isFinite(minY)) {
+            scorpion.position.y -= minY;
+        }
+
+        enableShadows(scorpion);
+
+        // ==========================================
+        // 7. POST-PROCESSING (SUBTLE SPECULAR BLOOM & TONE MAPPING)
+        // ==========================================
+        const composer = new EffectComposer(renderer);
+        const renderPass = new RenderPass(scene, camera);
+        composer.addPass(renderPass);
+
+        // High threshold bloom so ONLY sharp metallic specular glints catch subtle glow without washing out the pure white background
+        const bloomPass = new UnrealBloomPass(
+            new THREE.Vector2(window.innerWidth, window.innerHeight),
+            0.18, // strength
+            0.35, // radius
+            0.92  // threshold (only bright reflections > 0.92)
+        );
+        composer.addPass(bloomPass);
+
+        const outputPass = new OutputPass();
+        composer.addPass(outputPass);
+
+        // ==========================================
+        // 8. RESPONSIVE RESIZE & ANIMATION LOOP
+        // ==========================================
+        window.addEventListener('resize', () => {
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+            camera.aspect = w / h;
+            camera.updateProjectionMatrix();
+            renderer.setSize(w, h);
+            composer.setSize(w, h);
+        });
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            composer.render();
+        }
+
+        window.onload = () => {
+            animate();
+        };
+    </script>
+</body>
+</html>

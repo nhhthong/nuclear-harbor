@@ -1,3 +1,4 @@
+import { applyWeatheredPaint } from '@/world/containerModel';
 import {
   BoxGeometry,
   BufferGeometry,
@@ -80,8 +81,15 @@ function hexToLinear(hex: number): { r: number; g: number; b: number } {
 }
 
 /** The one material used by all merged robot parts. */
-export function createVertexColorMaterial(roughness = 0.45, metalness = 0.18): MeshStandardMaterial {
-  return new MeshStandardMaterial({ vertexColors: true, roughness, metalness });
+export function createVertexColorMaterial(
+  roughness = 0.45,
+  metalness = 0.18,
+  /** Object-space paint wear (chips, grime, faded paint); the pattern travels with the robot. */
+  weather?: { key: string; wear: number; bottomY: number; height: number; detail?: number },
+): MeshStandardMaterial {
+  const mat = new MeshStandardMaterial({ vertexColors: true, roughness, metalness });
+  if (weather) applyWeatheredPaint(mat, { ...weather, local: true, detail: weather.detail ?? 3 });
+  return mat;
 }
 
 export function box(w: number, h: number, d: number, radius = 0): BufferGeometry {

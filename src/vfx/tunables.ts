@@ -10,6 +10,8 @@ export const VFX = {
   lowPriorityFill: 0.8,
   /** Absolute buffer capacity (largest preset). */
   maxCapacity: 3000,
+  /** Camera shake: `trauma` 0..max, offset = trauma squared times the angles below (rad). */
+  shake: { max: 1, decay: 1.8, shot: 0.11, hit: 0.03, hitMax: 0.6, blast: 0.55, blastRange: 22, pitch: 0.035, yaw: 0.03, roll: 0.03 },
   maxLights: 3,
   maxRings: 8,
   maxScheduled: 32,

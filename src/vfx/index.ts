@@ -26,6 +26,19 @@ export function createVfxModule(): GameModule {
   let testIndex = 0;
   let vfxTest = false;
   const bossPos = new Vector3();
+  // camera shake ("trauma"): events add to it, it decays, the offset is its square
+  let trauma = 0;
+  let shakeT = 0;
+  const addTrauma = (amount: number): void => {
+    trauma = Math.min(VFX.shake.max, trauma + amount);
+  };
+  const blast = (x: number, y: number, z: number, scale: number): void => {
+    if (!ctx) return;
+    const p = ctx.player.position;
+    const d = Math.hypot(p.x - x, p.y - y, p.z - z);
+    const reach = VFX.shake.blastRange * Math.sqrt(scale);
+    if (d < reach) addTrauma(VFX.shake.blast * scale * (1 - d / reach));
+  };
 
   const spawn = (id: RecipeId, x: number, y: number, z: number, nx: number, ny: number, nz: number, scale: number, duration?: number) => {
     system?.spawn(id, x, y, z, nx, ny, nz, scale, duration);
@@ -68,6 +81,9 @@ export function createVfxModule(): GameModule {
       on('vfx:spawn', (e) => {
         const n = e.normal;
         spawn(e.kind as VfxKind, e.position.x, e.position.y, e.position.z, n ? n.x : 0, n ? n.y : 1, n ? n.z : 0, e.scale ?? 1, e.duration);
+        if (e.kind === 'explosion' || e.kind === 'big-explosion') {
+          blast(e.position.x, e.position.y, e.position.z, (e.scale ?? 1) * (e.kind === 'big-explosion' ? 3 : 1));
+        }
       });
 
       on('combat:impact', (e) => {
@@ -95,6 +111,34 @@ export function createVfxModule(): GameModule {
         const scale = e.type === 'duck' ? 1.6 : 1;
         spawn('explosion', p.x, p.y, p.z, 0, 1, 0, scale);
         spawn('smoke', p.x, p.y + 0.4, p.z, 0, 1, 0, scale);
+        // scorch mark on the ground and a wreck that smoulders for a few seconds
+        sys.addDecal(p.x, 0, p.z, 0, 1, 0, 7 * scale);
+        for (let i = 1; i <= 4; i++) scheduler?.schedule(i * 0.7, 'scorch-smoke', p.x, 0.2, p.z, scale);
+        blast(p.x, p.y, p.z, scale);
+      });
+
+      on('weapon:fired', (e) => {
+        addTrauma(VFX.shake.shot);
+        const o = e.origin;
+        const d = e.direction;
+        spawn('muzzle-smoke', o.x + d.x * 0.9, o.y + d.y * 0.9 - 0.08, o.z + d.z * 0.9, d.x, d.y, d.z, 1);
+      });
+
+      on('player:damaged', (e) => addTrauma(Math.min(VFX.shake.hitMax, VFX.shake.hit * e.amount)));
+
+      // applied after the player controller has written the camera, right before rendering
+      const applyShake = (): void => {
+        if (trauma <= 0.001) return;
+        const k = trauma * trauma;
+        const cam = context.camera;
+        cam.rotation.x += (Math.sin(shakeT * 47.3) + Math.sin(shakeT * 89.1 + 1.3)) * 0.5 * VFX.shake.pitch * k;
+        cam.rotation.y += (Math.sin(shakeT * 41.7 + 2.1) + Math.sin(shakeT * 97.3)) * 0.5 * VFX.shake.yaw * k;
+        cam.rotation.z += Math.sin(shakeT * 53.9 + 0.7) * VFX.shake.roll * k;
+      };
+      context.renderer.preRender.unshift(applyShake);
+      res.onDispose(() => {
+        const i = context.renderer.preRender.indexOf(applyShake);
+        if (i >= 0) context.renderer.preRender.splice(i, 1);
       });
 
       on('pickup:collected', (e) => spawn('pickup', e.position.x, e.position.y, e.position.z, 0, 1, 0, 1));
@@ -142,6 +186,8 @@ export function createVfxModule(): GameModule {
     update(dt) {
       if (!ctx || !system) return;
       scheduler?.advance(dt, fireStaged);
+      shakeT += dt;
+      trauma = Math.max(0, trauma - VFX.shake.decay * dt);
       if (vfxTest) {
         testTimer -= dt;
         if (testTimer <= 0) {

@@ -2,11 +2,13 @@ import { BufferGeometry, Euler, Matrix4, Quaternion, Vector3 } from 'three';
 import { box, cylX, cylZ, Parts, rod, sphere, sweptLink, type V3 } from '../duck/modelKit';
 import { SPOT } from './tunables';
 
-/** Palette of the reference Spot. */
+/** "Hound" palette: gunmetal armour with hazard-yellow accents (names kept from the reference Spot). */
 export const SPOT_COLORS = {
-  yellow: 0xf4c51c,
-  yellowSide: 0xeab20c,
-  yellowHighlight: 0xffd936,
+  yellow: 0x55616a,
+  yellowSide: 0x3a444c,
+  yellowHighlight: 0xf2b21a,
+  accent: 0xf2b21a,
+  red: 0xa8231c,
   dark: 0x202326,
   black: 0x111416,
   graphite: 0x3f4547,
@@ -105,6 +107,14 @@ function addLeg(p: Parts, leg: LegDef): void {
   p.add(cylX(0.078, 0.215, 12), C.graphite, [wx + leg.side * 0.015, 0.145, wheelZ]);
   p.add(cylX(0.045, 0.228, 10), C.silver, [wx + leg.side * 0.02, 0.145, wheelZ]);
   p.add(cylX(0.022, 0.235, 8), C.dark, [wx + leg.side * 0.025, 0.145, wheelZ]);
+  // knee guard with a hazard edge, shin blade and a second hydraulic ram
+  p.add(box(0.05, 0.24, 0.26, 0.03), C.yellowSide, [s * 1.15, 1.1, kneeZ], [0, 0, leg.side * -0.12]);
+  p.add(box(0.054, 0.045, 0.27, 0.015), C.accent, [s * 1.152, 1.2, kneeZ], [0, 0, leg.side * -0.12]);
+  p.add(box(0.035, 0.46, 0.11, 0.02), C.yellow, [s * 1.14, 0.62, wheelZ + (leg.front ? 0.2 : -0.18)], [leg.front ? -0.3 : 0.3, 0, 0]);
+  p.add(rod([s * 0.86, 1.52, z + zs * 0.2], [s * 1.02, 1.16, kneeZ + (leg.front ? -0.1 : 0.1)], 0.03, 0.03, 6), C.dark);
+  p.add(rod([s * 0.9, 1.42, z + zs * 0.3], [s * 1.02, 1.16, kneeZ + (leg.front ? -0.1 : 0.1)], 0.017, 0.017, 6), C.silver);
+  // mud guard over the wheel
+  p.add(box(0.2, 0.03, 0.3, 0.012), C.yellowSide, [wx, 0.31, wheelZ]);
 }
 
 /**
@@ -148,6 +158,40 @@ export function buildSpotModel(): SpotModel {
   // roof service cover
   body.add(box(0.34, 0.035, 0.3, 0.04), C.dark, [0, 2.22, -0.92]);
   body.add(box(0.26, 0.022, 0.22, 0.025), C.graphite, [0, 2.247, -0.92]);
+  // ---- "Hound" armour kit --------------------------------------------------------------------
+  for (const side of [-1, 1]) {
+    // angled pauldrons over the four shoulder joints, hazard strip on the lower edge
+    for (const z of [0.82, -0.82]) {
+      body.add(box(0.06, 0.4, 0.66, 0.03), C.yellow, [side * 0.69, 2.02, z], [0, 0, side * -0.38]);
+      body.add(box(0.064, 0.05, 0.6, 0.015), C.accent, [side * 0.755, 1.87, z], [0, 0, side * -0.38]);
+      for (const bz of [-0.24, 0.24]) body.add(cylX(0.022, 0.08, 6), C.silver, [side * 0.7, 2.06, z + bz], [0, 0, side * -0.38]);
+    }
+    // ammunition drum and feed chute into the back gun
+    body.add(cylX(0.19, 0.16, 14), C.dark, [side * 0.5, 1.98, 0.02]);
+    body.add(cylX(0.14, 0.19, 12), C.graphite, [side * 0.52, 1.98, 0.02]);
+    body.add(cylX(0.05, 0.21, 8), C.accent, [side * 0.53, 1.98, 0.02]);
+    body.add(rod([side * 0.46, 2.12, 0.02], [side * 0.16, 2.34, -0.1], 0.04, 0.04, 6), C.graphite);
+    // twin exhaust stacks at the rear
+    body.add(cylZ(0.062, 0.3, 10), C.silver, [side * 0.24, 2.02, -1.46]);
+    body.add(cylZ(0.046, 0.31, 8), C.black, [side * 0.24, 2.02, -1.47]);
+    // whip antennas
+    body.add(rod([side * 0.33, 2.2, -1.2], [side * 0.4, 3.05, -1.62], 0.014, 0.006, 5), C.black);
+    body.add(cylX(0.03, 0.05, 6), C.graphiteLight, [side * 0.33, 2.22, -1.2]);
+    // armoured side skirt with cooling slots
+    body.add(box(0.03, 0.2, 1.0, 0.02), C.yellowSide, [side * 0.44, 1.69, -0.02]);
+    for (let i = 0; i < 6; i++) body.add(box(0.034, 0.12, 0.03), C.black, [side * 0.445, 1.69, -0.42 + i * 0.16]);
+  }
+  // belly battery with cooling fins
+  body.add(box(0.5, 0.17, 1.3, 0.04), C.dark, [0, 1.6, -0.05]);
+  for (let i = 0; i < 8; i++) body.add(box(0.54, 0.05, 0.025), C.graphiteLight, [0, 1.53, -0.58 + i * 0.15]);
+  // front ram bar with teeth, red recognition chevron on the brow
+  body.add(box(0.96, 0.07, 0.09, 0.02), C.black, [0, 1.6, 1.62]);
+  for (let i = 0; i < 5; i++) body.add(box(0.07, 0.11, 0.05, 0.012), C.silver, [-0.36 + i * 0.18, 1.55, 1.655], [0.35, 0, 0]);
+  body.add(box(0.5, 0.05, 0.02), C.red, [0, 2.125, 1.572]);
+  body.add(box(0.1, 0.03, 0.5, 0.01), C.red, [0, 2.232, 1.05]);
+  // rear tow hook block and battery latch
+  body.add(box(0.3, 0.2, 0.1, 0.03), C.black, [0, 1.84, -1.4]);
+  body.add(cylX(0.05, 0.36, 8), C.silver, [0, 1.76, -1.44]);
   // static rifle prop on the back (reference group scale 1.42 / 1.30 / 1.25, lowered by 0.83)
   body.base = mk([0, -0.83, 0], [0, 0, 0], [1.42, 1.3, 1.25]);
   body.add(box(0.24, 0.075, 0.78, 0.055), C.dark, [0, 2.365, -0.06]);
@@ -194,6 +238,12 @@ export function buildSpotModel(): SpotModel {
   for (const x of [-0.39, 0.39]) lamps.add(sphere(0.045, 8, 6), C.yellowHighlight, [x, 1.67, 1.59], [0, 0, 0], [1, 0.8, 0.45]);
   for (let i = 0; i < 4; i++) lamps.add(sphere(0.03, 8, 6), C.lens, [-0.34, 2.015 - i * 0.074, 1.69], [0, 0, 0], [1, 0.8, 0.4]);
   lamps.add(box(0.4, 0.05, 0.012), C.lens, [-0.1, 1.89, 1.645]);
+  // visor slit across the brow, antenna tips, exhaust glow
+  lamps.add(box(0.62, 0.03, 0.012), C.lens, [0, 2.07, 1.578]);
+  for (const side of [-1, 1]) {
+    lamps.add(sphere(0.022, 6, 5), C.lens, [side * 0.4, 3.06, -1.62]);
+    lamps.add(cylZ(0.036, 0.02, 8), C.lens, [side * 0.24, 2.02, -1.62]);
+  }
   const lampGeo = lamps.merge(world);
 
   // far LOD

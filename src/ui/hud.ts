@@ -13,6 +13,8 @@ import {
 } from './format';
 
 const COMPASS_FOV_DEG = 120;
+/** Radius shown by the radar (m). */
+const RADAR_RANGE = 42;
 
 export function el<K extends keyof HTMLElementTagNameMap>(
   parent: HTMLElement | null,
@@ -81,24 +83,52 @@ export function createHud(ctx: GameContext, parent: HTMLElement): Hud {
   const hit = el(root, 'div', 'nh-hit');
 
   // ---- bottom left: HP ----
-  const bl = el(root, 'div', 'nh-panel nh-bl');
-  el(bl, 'div', 'nh-small', 'Integrity');
-  const hpCell = new Cell(el(bl, 'div', 'nh-big'), `${Math.ceil(ctx.player.hp)}`);
+  const bl = el(root, 'div', 'nh-bl');
+  const hpHead = el(bl, 'div', 'nh-stat-head');
+  el(hpHead, 'span', 'nh-glyph nh-glyph-hp');
+  el(hpHead, 'span', 'nh-small', 'Integrity');
+  const hpRow = el(bl, 'div', 'nh-stat-row');
+  const hpCell = new Cell(el(hpRow, 'div', 'nh-big'), `${Math.ceil(ctx.player.hp)}`);
+  el(hpRow, 'div', 'nh-sub2', `/ ${Math.ceil(ctx.player.maxHp)}`);
   const hpBar = el(bl, 'div', 'nh-hp-bar');
+  // the ghost lags behind the fill (CSS transition) so a hit shows how much was lost
+  const hpGhost = el(hpBar, 'div', 'nh-hp-ghost');
   const hpFill = el(hpBar, 'div', 'nh-hp-fill');
 
   // ---- bottom right: ammo ----
-  const br = el(root, 'div', 'nh-panel nh-br');
+  const br = el(root, 'div', 'nh-br');
   const weaponCell = new Cell(el(br, 'div', 'nh-small'), WEAPON.name);
-  const ammoCell = new Cell(el(br, 'div', 'nh-big'), ammoText(WEAPON.magazineSize, WEAPON.reserveAmmo));
+  const ammoRow = el(br, 'div', 'nh-stat-row');
+  const magCell = new Cell(el(ammoRow, 'div', 'nh-big'), `${WEAPON.magazineSize}`);
+  const reserveCell = new Cell(el(ammoRow, 'div', 'nh-sub2'), `/ ${WEAPON.reserveAmmo}`);
+  // kept for tests and screen readers; the split cells above are what is shown
+  const ammoCell = new Cell(el(br, 'div', 'nh-hidden'), ammoText(WEAPON.magazineSize, WEAPON.reserveAmmo));
+  const magBar = el(br, 'div', 'nh-mag');
+  const magFill = el(magBar, 'div', 'nh-mag-fill');
+  const reloadFill = el(magBar, 'div', 'nh-reload-fill');
   const reloadCell = new Cell(el(br, 'div', 'nh-small nh-reload'), '');
+  let magSize: number = WEAPON.magazineSize;
+  const setAmmo = (mag: number, reserve: number): void => {
+    ammoCell.set(ammoText(mag, reserve));
+    magCell.set(`${mag}`);
+    reserveCell.set(`/ ${reserve}`);
+    const r = magSize > 0 ? mag / magSize : 0;
+    magFill.style.transform = `scaleX(${r.toFixed(3)})`;
+    br.classList.toggle('low', r <= 0.25);
+    br.classList.toggle('empty', mag === 0 && reserve === 0);
+  };
 
   // ---- top: countdown + towers ----
-  const top = el(root, 'div', 'nh-panel nh-top');
+  const top = el(root, 'div', 'nh-top');
+  el(top, 'div', 'nh-small nh-top-label', 'Reactor meltdown');
   const countNode = el(top, 'div', 'nh-count');
   const countCell = new Cell(countNode, formatCountdown(OBJECTIVES.countdownSeconds));
-  const pipsRow = el(top, 'div', 'nh-pips');
-  const towersCell = new Cell(el(top, 'div', 'nh-small'), `0/${OBJECTIVES.towerCount}`);
+  const timeBar = el(top, 'div', 'nh-time');
+  const timeFill = el(timeBar, 'div', 'nh-time-fill');
+  const relayRow = el(top, 'div', 'nh-relay');
+  el(relayRow, 'span', 'nh-small', 'Relay');
+  const pipsRow = el(relayRow, 'div', 'nh-pips');
+  const towersCell = new Cell(el(relayRow, 'span', 'nh-small'), `0/${OBJECTIVES.towerCount}`);
   let pips: HTMLElement[] = [];
   const buildPips = (n: number): void => {
     for (const p of pips) p.remove();
@@ -110,8 +140,128 @@ export function createHud(ctx: GameContext, parent: HTMLElement): Hud {
 
   // ---- compass ----
   const compass = el(root, 'div', 'nh-compass nh-hidden');
-  const marker = el(compass, 'div', 'nh-marker', '▼');
+  const marker = el(compass, 'div', 'nh-marker', '◆');
   const compassCell = new Cell(el(compass, 'span', 'nh-hidden'), '');
+  // heading tape: eight labels slide with the yaw; it stays visible when no tower is left
+  const tape = el(root, 'div', 'nh-tape');
+  const CARDINALS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'] as const;
+  const tapeLabels = CARDINALS.map((c, i) => el(tape, 'span', i % 2 === 0 ? 'major' : '', c));
+  let lastHeading = 1e9;
+
+  // ---- radar (top left): robots, relay tower, bosses; up = where the player looks ----
+  const radarBox = el(root, 'div', 'nh-radar');
+  const radar = el(radarBox, 'canvas');
+  const RADAR_PX = 176;
+  radar.width = RADAR_PX;
+  radar.height = RADAR_PX;
+  const rg = radar.getContext('2d');
+  const radarCount = new Cell(el(radarBox, 'div', 'nh-radar-count'), '');
+  let radarFrame = 0;
+  let bossAt: { x: number; z: number } | null = null;
+  const drawRadar = (): void => {
+    if (!rg) return;
+    const p = ctx.player;
+    const c = RADAR_PX / 2;
+    const R = c - 6;
+    const scale = R / RADAR_RANGE;
+    const cos = Math.cos(p.yaw);
+    const sin = Math.sin(p.yaw);
+    // world -> radar: forward (-Z rotated by yaw) points up
+    const map = (x: number, z: number): [number, number, boolean] => {
+      const dx = x - p.position.x;
+      const dz = z - p.position.z;
+      let rx = (dx * cos - dz * sin) * scale;
+      let ry = (dx * sin + dz * cos) * scale;
+      const d = Math.hypot(rx, ry);
+      const out = d > R;
+      if (out) {
+        rx = (rx / d) * R;
+        ry = (ry / d) * R;
+      }
+      return [c + rx, c + ry, out];
+    };
+    rg.clearRect(0, 0, RADAR_PX, RADAR_PX);
+    rg.fillStyle = 'rgba(10,9,14,0.55)';
+    rg.beginPath();
+    rg.arc(c, c, R, 0, Math.PI * 2);
+    rg.fill();
+    rg.lineWidth = 1;
+    rg.strokeStyle = 'rgba(255,255,255,0.14)';
+    for (const f of [1 / 3, 2 / 3]) {
+      rg.beginPath();
+      rg.arc(c, c, R * f, 0, Math.PI * 2);
+      rg.stroke();
+    }
+    rg.beginPath();
+    rg.moveTo(c, c - R);
+    rg.lineTo(c, c + R);
+    rg.moveTo(c - R, c);
+    rg.lineTo(c + R, c);
+    rg.stroke();
+    // view cone
+    rg.fillStyle = 'rgba(255,176,102,0.10)';
+    rg.beginPath();
+    rg.moveTo(c, c);
+    rg.arc(c, c, R, -Math.PI / 2 - 0.6, -Math.PI / 2 + 0.6);
+    rg.fill();
+    rg.strokeStyle = 'rgba(255,150,70,0.75)';
+    rg.lineWidth = 2;
+    rg.beginPath();
+    rg.arc(c, c, R, 0, Math.PI * 2);
+    rg.stroke();
+    // towers: diamonds (amber = offline, green = online)
+    for (const t of towerList) {
+      const [x, y] = map(t.x, t.z);
+      rg.fillStyle = active.has(t.id) ? '#3dff8a' : '#ffd23a';
+      rg.beginPath();
+      rg.moveTo(x, y - 6);
+      rg.lineTo(x + 5, y);
+      rg.lineTo(x, y + 6);
+      rg.lineTo(x - 5, y);
+      rg.fill();
+    }
+    // robots
+    const robots = ctx.enemies.alive();
+    let near = 0;
+    rg.fillStyle = '#ff4a3a';
+    for (const e of robots) {
+      const [x, y, out] = map(e.position.x, e.position.z);
+      if (out) continue;
+      near++;
+      rg.beginPath();
+      rg.arc(x, y, e.type === 'army' ? 3.6 : 2.6, 0, Math.PI * 2);
+      rg.fill();
+    }
+    // large machines: the relay guardian (read through its debug hook) and the final boss
+    const big: Array<{ x: number; z: number }> = [];
+    const scorpion = ctx.testHooks.scorpion as { list?: () => Array<{ alive: boolean; position: { x: number; z: number } }> } | undefined;
+    for (const d of scorpion?.list?.() ?? []) if (d.alive) big.push(d.position);
+    if (bossAt) big.push(bossAt);
+    const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 160);
+    for (const b of big) {
+      const [x, y] = map(b.x, b.z);
+      near++;
+      rg.strokeStyle = `rgba(255,74,58,${(0.5 + 0.5 * pulse).toFixed(2)})`;
+      rg.lineWidth = 2;
+      rg.beginPath();
+      rg.arc(x, y, 6.5 + pulse * 2, 0, Math.PI * 2);
+      rg.stroke();
+      rg.fillStyle = '#ff4a3a';
+      rg.beginPath();
+      rg.arc(x, y, 4, 0, Math.PI * 2);
+      rg.fill();
+    }
+    // player
+    rg.fillStyle = '#fff4e6';
+    rg.beginPath();
+    rg.moveTo(c, c - 7);
+    rg.lineTo(c + 5, c + 5);
+    rg.lineTo(c, c + 2);
+    rg.lineTo(c - 5, c + 5);
+    rg.fill();
+    radarCount.set(near > 0 ? `${near} contact${near > 1 ? 's' : ''}` : 'clear');
+    radarBox.classList.toggle('hot', near > 0);
+  };
 
   // ---- prompt ----
   const promptBox = el(root, 'div', 'nh-prompt nh-hidden');
@@ -129,7 +279,7 @@ export function createHud(ctx: GameContext, parent: HTMLElement): Hud {
   const toastCell = new Cell(toast, '');
 
   // ---- boss ----
-  const boss = el(root, 'div', 'nh-panel nh-boss nh-hidden');
+  const boss = el(root, 'div', 'nh-boss nh-hidden');
   const bossName = new Cell(el(boss, 'div', 'nh-small'), '');
   const wpRow = el(boss, 'div', 'nh-wp');
   let wpBoxes: HTMLElement[] = [];
@@ -220,9 +370,24 @@ export function createHud(ctx: GameContext, parent: HTMLElement): Hud {
       const r = hpRatio(p.hp, p.maxHp);
       hpCell.set(`${Math.ceil(p.hp)}`);
       hpFill.style.transform = `scaleX(${r.toFixed(3)})`;
+      hpGhost.style.transform = `scaleX(${r.toFixed(3)})`;
       hpFill.classList.toggle('low', r < 0.3);
+      bl.classList.toggle('low', r < 0.3);
       vignette.style.opacity = r < 0.3 ? ((0.3 - r) / 0.3).toFixed(2) : '0';
     }
+    // heading tape (only when the yaw moved by half a degree) and radar (every 4th frame)
+    const heading = (((-p.yaw * 180) / Math.PI) % 360 + 360) % 360;
+    if (Math.abs(heading - lastHeading) > 0.5) {
+      lastHeading = heading;
+      for (let i = 0; i < tapeLabels.length; i++) {
+        const rel = ((i * 45 - heading + 540) % 360) - 180;
+        const label = tapeLabels[i] as HTMLElement;
+        const shown = Math.abs(rel) < COMPASS_FOV_DEG / 2;
+        label.style.opacity = shown ? (1 - Math.abs(rel) / (COMPASS_FOV_DEG / 2)).toFixed(2) : '0';
+        if (shown) label.style.transform = `translateX(${(compassX(rel, COMPASS_FOV_DEG) * 18).toFixed(1)}vh)`;
+      }
+    }
+    if (radarFrame++ % 4 === 0) drawRadar();
     // compass
     const nearest = nearestInactive(
       towerList,
@@ -278,13 +443,24 @@ export function createHud(ctx: GameContext, parent: HTMLElement): Hud {
     refresh();
   });
   on('weapon:ammoChanged', (e) => {
-    ammoCell.set(ammoText(e.mag, e.reserve));
+    magSize = e.magSize;
+    setAmmo(e.mag, e.reserve);
     weaponCell.set(e.name);
   });
-  on('weapon:reloadStarted', () => reloadCell.set('Reloading'));
+  on('weapon:reloadStarted', (e) => {
+    reloadCell.set('Reloading');
+    // the bar fills over the reload time
+    reloadFill.style.transition = 'none';
+    reloadFill.style.transform = 'scaleX(0)';
+    reloadFill.style.opacity = '1';
+    void reloadFill.offsetWidth;
+    reloadFill.style.transition = `transform ${e.duration.toFixed(2)}s linear`;
+    reloadFill.style.transform = 'scaleX(1)';
+  });
   on('weapon:reloadFinished', (e) => {
     reloadCell.set('');
-    ammoCell.set(ammoText(e.mag, e.reserve));
+    reloadFill.style.opacity = '0';
+    setAmmo(e.mag, e.reserve);
   });
   on('combat:hit', (e) => {
     if (e.targetKind === 'player') return;
@@ -342,6 +518,8 @@ export function createHud(ctx: GameContext, parent: HTMLElement): Hud {
   on('countdown:tick', (e) => {
     countCell.set(formatCountdown(e.remaining));
     countNode.classList.toggle('critical', e.critical);
+    top.classList.toggle('critical', e.critical);
+    timeFill.style.transform = `scaleX(${Math.max(0, Math.min(1, e.remaining / OBJECTIVES.countdownSeconds)).toFixed(4)})`;
   });
   on('countdown:stopped', (e) => {
     countCell.set(formatCountdown(e.remaining));
@@ -356,7 +534,10 @@ export function createHud(ctx: GameContext, parent: HTMLElement): Hud {
   });
   on('ui:toast', (e) => showToast(e.text, e.seconds));
 
-  on('boss:spawned', (e) => buildBoss(e.name, e.weakPoints, e.coreHp));
+  on('boss:spawned', (e) => {
+    buildBoss(e.name, e.weakPoints, e.coreHp);
+    bossAt = { x: e.position.x, z: e.position.z };
+  });
   on('boss:weakPointDamaged', (e) => {
     const f = wpFills[e.index];
     if (!f) return;
@@ -384,7 +565,10 @@ export function createHud(ctx: GameContext, parent: HTMLElement): Hud {
     coreFill.style.transform = `scaleX(${hpRatio(e.hp, e.maxHp).toFixed(3)})`;
     bossCore.set(`CORE ${Math.ceil(e.hp)} / ${e.maxHp}`);
   });
-  on('boss:defeated', () => bossCore.set('DEFEATED'));
+  on('boss:defeated', () => {
+    bossCore.set('DEFEATED');
+    bossAt = null;
+  });
 
   refresh();
 
