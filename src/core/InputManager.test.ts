@@ -6,9 +6,10 @@ import { DEFAULT_BINDINGS, InputManager } from './InputManager';
 const make = () => new InputManager(new EventBus<GameEvents>());
 
 describe('InputManager', () => {
-  it('uses the GDD defaults with R as a reload alias (REVIEW #1)', () => {
+  it('uses the defaults: R reloads, right mouse aims', () => {
     expect(DEFAULT_BINDINGS.fire).toEqual(['Mouse0']);
-    expect(DEFAULT_BINDINGS.reload).toEqual(['Mouse2', 'KeyR']);
+    expect(DEFAULT_BINDINGS.reload).toEqual(['KeyR']);
+    expect(DEFAULT_BINDINGS.aim).toEqual(['Mouse2']);
     expect(DEFAULT_BINDINGS.jump).toEqual(['Space']);
     expect(DEFAULT_BINDINGS.interact).toEqual(['KeyE']);
     expect(DEFAULT_BINDINGS.sprint).toContain('ShiftLeft');
@@ -29,6 +30,7 @@ describe('InputManager', () => {
 
   it('keeps an action down while any alias is held', () => {
     const input = make();
+    input.rebind('reload', ['Mouse2', 'KeyR']);
     input.handleCode('Mouse2', true);
     input.handleCode('KeyR', true);
     input.handleCode('Mouse2', false);

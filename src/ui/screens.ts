@@ -15,6 +15,7 @@ const ACTION_LABELS: Record<Action, string> = {
   moveRight: 'Move right',
   fire: 'Fire',
   reload: 'Reload',
+  aim: 'Aim (hold)',
   jump: 'Jump / double jump',
   sprint: 'Sprint',
   interact: 'Interact / hold',
@@ -178,6 +179,20 @@ export function createScreens(ctx: GameContext, parent: HTMLElement): Screens {
   };
   sliderRow('Mouse sensitivity', 'mouseSensitivity', 0.2, 3, 0.05, (v) => v.toFixed(2));
   sliderRow('Master volume', 'masterVolume', 0, 1, 0.01, (v) => `${Math.round(v * 100)}%`);
+
+  const checkRow = (label: string, key: 'autoReload'): void => {
+    const row = el(settings, 'label', 'nh-row');
+    el(row, 'span', '', label);
+    const box = el(row, 'input', 'interactive');
+    box.type = 'checkbox';
+    box.dataset.setting = key;
+    el(row, 'span', '');
+    listen(box, 'change', () => ctx.settings.set(key, box.checked));
+    syncers.push(() => {
+      box.checked = ctx.settings.get(key);
+    });
+  };
+  checkRow('Auto reload', 'autoReload');
 
   const selectRow = (label: string, key: 'quality' | 'fpsCap', options: Array<[string, string]>): void => {
     const row = el(settings, 'label', 'nh-row');

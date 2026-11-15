@@ -43,7 +43,7 @@ describe('shipped G36C GLB', () => {
     const gltf = await parseShipped();
     const vm = new GlbViewModel(gltf, new ResourceTracker('t').scope('weapon'));
     expect(vm.animated).toBe(true);
-    const state = { speed: 0, sprinting: false, time: 0 };
+    const state = { speed: 0, sprinting: false, time: 0, aim: 0 };
     vm.update(1 / 60, state);
     expect(vm.lastClip).toBe('draw');
     // muzzle: in front of the eye (-Z), within a metre, finite

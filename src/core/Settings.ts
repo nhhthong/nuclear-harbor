@@ -10,6 +10,8 @@ export interface SettingsData {
   quality: QualityPreset;
   /** 0 = uncapped (vsync). */
   fpsCap: 0 | 30 | 60 | 120;
+  /** Start reloading as soon as the magazine empties. */
+  autoReload: boolean;
   bindings: Bindings;
 }
 
@@ -18,6 +20,7 @@ const DEFAULT_SETTINGS: SettingsData = {
   masterVolume: 0.8,
   quality: 'medium',
   fpsCap: 0,
+  autoReload: true,
   bindings: DEFAULT_BINDINGS,
 };
 
@@ -35,6 +38,19 @@ function cloneDefaults(): SettingsData {
       Object.entries(DEFAULT_SETTINGS.bindings).map(([action, codes]) => [action, [...codes]]),
     ) as Bindings,
   };
+}
+
+/**
+ * Merge saved bindings over the defaults. Saves written before the `aim` action existed gave right mouse
+ * to `reload`: drop it there so the two actions do not share a button.
+ */
+export function migrateBindings(defaults: Bindings, saved: Partial<Bindings> | undefined): Bindings {
+  const merged = { ...defaults, ...(saved ?? {}) } as Bindings;
+  if (saved && !saved.aim && saved.reload?.includes('Mouse2')) {
+    const rest = saved.reload.filter((c) => c !== 'Mouse2');
+    merged.reload = rest.length > 0 ? rest : [...defaults.reload];
+  }
+  return merged;
 }
 
 /**
@@ -82,7 +98,7 @@ export class Settings {
         ...defaults,
         ...parsed,
         // new actions added after a save was written keep their default binding
-        bindings: { ...defaults.bindings, ...(parsed.bindings ?? {}) },
+        bindings: migrateBindings(defaults.bindings, parsed.bindings),
       };
     } catch {
       this.data = cloneDefaults();

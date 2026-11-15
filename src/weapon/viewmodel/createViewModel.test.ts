@@ -35,7 +35,7 @@ describe('createViewModel', () => {
     expect(onFallback).toHaveBeenCalledTimes(1);
     expect(vm.object3d.children.length).toBe(1);
     expect(() => {
-      vm.update(1 / 60, { speed: 0, sprinting: false, time: 0 });
+      vm.update(1 / 60, { speed: 0, sprinting: false, time: 0, aim: 0 });
       vm.playFire();
       vm.playReload(1.8);
     }).not.toThrow();
@@ -82,7 +82,7 @@ describe('createViewModel', () => {
     const glb = (vm as unknown as { active: ViewModel }).active;
     expect(glb).toBeInstanceOf(GlbViewModel);
     expect((glb as GlbViewModel).animated).toBe(false);
-    vm.update(1 / 60, { speed: 0, sprinting: false, time: 0 });
+    vm.update(1 / 60, { speed: 0, sprinting: false, time: 0, aim: 0 });
     expect(vm.muzzleLocalPosition.distanceTo(new Vector3(0, 0.1, -0.5).add(glb.object3d.position))).toBeLessThan(1e-5);
   });
 });

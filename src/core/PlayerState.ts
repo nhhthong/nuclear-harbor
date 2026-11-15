@@ -29,6 +29,8 @@ export class PlayerState implements Damageable {
   eyeHeight: number = PLAYER.eyeHeight;
   grounded = false;
   sprinting = false;
+  /** 0..1 blend hip -> aimed (hold right mouse). Written by the weapon module; read by the controller and HUD. */
+  aimAmount = 0;
 
   maxHp: number = PLAYER.maxHp;
   hp: number = PLAYER.maxHp;

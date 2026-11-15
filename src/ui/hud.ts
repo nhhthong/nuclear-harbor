@@ -79,7 +79,8 @@ export function createHud(ctx: GameContext, parent: HTMLElement): Hud {
   // ---- overlays ----
   const vignette = el(root, 'div', 'nh-vignette');
   const dmg = el(root, 'div', 'nh-dmg');
-  el(root, 'div', 'nh-crosshair');
+  const crosshair = el(root, 'div', 'nh-crosshair');
+  let lastAimOpacity = '1';
   const hit = el(root, 'div', 'nh-hit');
 
   // ---- bottom left: HP ----
@@ -386,6 +387,12 @@ export function createHud(ctx: GameContext, parent: HTMLElement): Hud {
 
   const refresh = (): void => {
     const p = ctx.player;
+    // crosshair fades out while aiming down the sights (the rifle's own sights take over)
+    const aimOpacity = (1 - p.aimAmount).toFixed(2);
+    if (aimOpacity !== lastAimOpacity) {
+      lastAimOpacity = aimOpacity;
+      crosshair.style.opacity = aimOpacity;
+    }
     if (p.hp !== lastHp) {
       lastHp = p.hp;
       const r = hpRatio(p.hp, p.maxHp);

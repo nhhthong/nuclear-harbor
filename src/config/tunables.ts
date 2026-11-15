@@ -28,14 +28,14 @@ export const PLAYER = {
   walkSpeed: 6.5,
   sprintSpeed: 10,
   /**
-   * Owner request: higher, longer jumps. The player has its own, lower gravity (the world value
-   * `SIM.gravity` stays -24): a ground jump rises 3.9 m and lasts 1.4 s (about 14 m at sprint speed),
+   * Owner request: high jumps that do not feel floaty. The player has its own gravity (the world value
+   * `SIM.gravity` stays -24): a ground jump rises 3.9 m and lasts 1.2 s (about 12 m at sprint speed),
    * the air jump adds 3.3 m (7.2 m when chained at the apex). Two-high stacks (5.2 m) are reachable,
-   * three-high ones (7.8 m) are not.
+   * three-high ones (7.8 m) are not. Speeds follow v = sqrt(2 g h) so heights stay when g changes.
    */
-  gravity: -15,
-  jumpSpeed: 10.8,
-  airJumpSpeed: 10,
+  gravity: -22,
+  jumpSpeed: 13.1,
+  airJumpSpeed: 12,
   airJumps: 1,
   /** Jump still allowed this long after walking off an edge (s). */
   coyoteTime: 0.1,
@@ -284,6 +284,21 @@ export const CAMERA = {
   far: 600,
 } as const;
 
+/** Aim down sights (hold right mouse). `aimAmount` 0..1 blends hip -> aimed. */
+export const ADS = {
+  /** Camera FOV at full aim (hip FOV is `CAMERA.fovDeg`). */
+  fovDeg: 55,
+  /** Exponential response (1/s): about 0.2 s to 95%. */
+  response: 14,
+  /** Walk speed multiplier at full aim. */
+  moveSpeedScale: 0.7,
+  /** Spread and camera recoil multipliers at full aim. */
+  spreadScale: 0.5,
+  recoilScale: 0.5,
+  /** Below this aim amount sprint is still allowed (it is blocked while the aim button is held anyway). */
+  sprintBlockAbove: 0.1,
+} as const;
+
 export const TUNABLES = {
   SIM,
   PLAYER,
@@ -298,6 +313,7 @@ export const TUNABLES = {
   PERFORMANCE,
   WORLD,
   CAMERA,
+  ADS,
 } as const;
 
 export type QualityPreset = keyof typeof PERFORMANCE.quality;

@@ -23,7 +23,7 @@ The DesertTech MDR / GameBanana idea was dropped. The owner supplied a GoldSrc v
 ## Gameplay rules and numbers
 - Towers: ids are **1-based** (1..4); tower 3 stands on a 10 m gantry reachable by grapple only; defend waves reuse existing robots (no extra spawns); passive 5 s hold costs about 12-44 HP depending on the tower (scripted run).
 - Death: checkpoint at each activated tower and at the boss start; countdown does not reset; Restart in the UI reloads the page.
-- Controls: RMB reload and `R` alias; **no jump**; **P toggles pause** (Esc does not resume, because of pointer lock).
+- Controls (see the last section: RMB now aims, `R` reloads): **no jump**; **P toggles pause** (Esc does not resume, because of pointer lock).
 - Ammo: a unit test now computes 372 hits for the 30 reworked robots (the GDD table says 404 in total with the boss); real play was never measured.
 - Grappling: perches at 8 / 14 / 20 m are free-standing towers (not on the dock cranes); ends standing on the perch via a landing point.
 - Zones: 4, as in GDD v1.2; cargo ship is a static backdrop.
@@ -86,3 +86,9 @@ Owner: the doubled map felt empty and the yard too symmetric. The quay is now 72
 - **Court and quay clusters**: up to 3 and 10 clusters (1-4 boxes, 1-2 rows, uneven heights), kept off reserved strips (patrol beats, supply spots); the quay beats now run on the ring just outside the boss arena, which never has containers.
 - Spawn (0, 29), `SPAWN_SAFE_RADIUS` 32 m, tower (0, -34), arena (-10, -66), crane (25, -75); 103 containers + 5 safe containers.
 - **Rendering fixes found while checking the overview shot**: the quay body's top sat 2 cm under the ground and z-fought with it at a distance (large triangle-shaped light and dark patches, visible from far away in play too); it is now 0.4 m lower. The sky dome had a seam at the zenith (sun-side factor flipped sign) that the wet ground mirrored when looking down; it now fades out near the zenith.
+
+## Aim down sights, auto reload, heavier gravity (owner request; Spec Kit: `specs/24-ads-autoreload-gravity`)
+- **ADS**: hold right mouse (new action `aim`; `reload` is now `R` only, saved bindings that gave Mouse2 to reload are migrated). `PlayerState.aimAmount` (0..1, smoothed in `src/core/ads.ts`) drives the camera FOV (75 to 55), mouse sensitivity (scaled to the zoom), walk speed (x0.7), sprint (blocked while aiming), spread and camera recoil (x0.5), the rifle pose (`WEAPON_LOCAL.viewModel.ads`, `GLB_VIEW.ads`, tuned by eye from screenshots for the G36C and the procedural rifle) and the crosshair (fades out). Aim is cancelled while reloading, dead or in menus/cinematics. All numbers are in `ADS` (`src/config/tunables.ts`).
+- **Auto reload**: Settings checkbox "Auto reload" (default on, persisted). When on, the reload starts in the same step the last round is fired.
+- **Gravity**: `PLAYER.gravity` -22 (was -15). `jumpSpeed` 13.1 and `airJumpSpeed` 12 keep the old jump heights (3.9 m ground, +3.3 m air), so only air time shortens (about 1.2 s instead of 1.4 s). The jump description in the Jumps bullet above uses the old numbers.
+- **Verified**: `tsc`, 450 unit tests, build, screenshots of hip and aimed views (GLB and procedural, no console errors). **Not verified**: feel on a real GPU, ADS pose while moving or reloading, balance of the new gravity, smoke/e2e (skipped per owner policy).

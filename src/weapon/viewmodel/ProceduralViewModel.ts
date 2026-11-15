@@ -55,11 +55,16 @@ export class ProceduralViewModel implements ViewModel {
   update(dt: number, state: ViewModelState): void {
     this.kick *= Math.exp(-VM.kickRecoverPerSec * dt);
     const moveAmt = Math.min(1, state.speed / 6);
-    const bob = Math.sin(state.time * VM.swayFrequency) * VM.swayAmount * moveAmt;
-    const sway = Math.sin(state.time * 1.3) * VM.swayAmount * 0.3;
+    const calm = 1 - state.aim * (1 - VM.adsSwayKeep);
+    const bob = Math.sin(state.time * VM.swayFrequency) * VM.swayAmount * moveAmt * calm;
+    const sway = Math.sin(state.time * 1.3) * VM.swayAmount * 0.3 * calm;
     const sprint = state.sprinting ? 1 : 0;
 
-    this.rig.position.set(bob, Math.abs(bob) * 0.8 + sway - sprint * VM.sprintLowerMetres, this.kick * VM.kickBackMetres);
+    this.rig.position.set(
+      bob + VM.ads.x * state.aim,
+      Math.abs(bob) * 0.8 + sway - sprint * VM.sprintLowerMetres + VM.ads.y * state.aim,
+      this.kick * VM.kickBackMetres * (1 - 0.5 * state.aim) + VM.ads.z * state.aim,
+    );
     this.rig.rotation.set(this.kick * VM.kickPitchRad, sprint * VM.sprintTiltRad, 0);
 
     if (this.reloadDuration > 0) {

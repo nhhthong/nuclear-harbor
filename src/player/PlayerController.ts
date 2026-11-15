@@ -1,6 +1,7 @@
 import { Vector3 } from 'three';
 import type { Camera } from 'three';
-import { PLAYER } from '@/config/tunables';
+import { ADS, PLAYER } from '@/config/tunables';
+import { aimScale, aimSensitivityScale } from '@/core/ads';
 import type { EventBus } from '@/core/EventBus';
 import type { GameEvents } from '@/core/events';
 import type { InputManager } from '@/core/InputManager';
@@ -91,8 +92,10 @@ export class PlayerController {
       vel.copy(external);
       player.sprinting = false;
     } else {
-      player.sprinting = canControl && canSprint(this.wasGrounded, axis.y, input.isDown('sprint'), player.sprinting);
-      const speed = player.sprinting ? PLAYER.sprintSpeed : PLAYER.walkSpeed;
+      // holding the aim button blocks sprint (aiming wins when both are pressed)
+      const sprintHeld = input.isDown('sprint') && !input.isDown('aim') && player.aimAmount <= ADS.sprintBlockAbove;
+      player.sprinting = canControl && canSprint(this.wasGrounded, axis.y, sprintHeld, player.sprinting);
+      const speed = (player.sprinting ? PLAYER.sprintSpeed : PLAYER.walkSpeed) * aimScale(ADS.moveSpeedScale, player.aimAmount);
       desiredVelocity(axis.x, axis.y, player.yaw, speed, this.target2);
       this.vel2.x = vel.x;
       this.vel2.z = vel.z;
@@ -182,7 +185,7 @@ export class PlayerController {
     const look = input.consumeLookDelta();
     if (player.alive && !player.controlsLocked && input.wasPressed('jump')) this.jumpBuffer = PLAYER.jumpBufferTime;
     if (player.alive && !player.controlsLocked) {
-      const s = PLAYER.lookRadPerPixel * this.deps.getSensitivity();
+      const s = PLAYER.lookRadPerPixel * this.deps.getSensitivity() * aimSensitivityScale(player.aimAmount);
       player.yaw -= look.x * s;
       player.pitch = clampPitch(player.pitch - look.y * s, PLAYER.maxPitchDeg);
     } else {

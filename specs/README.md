@@ -32,4 +32,6 @@ at the owner's request, **without Spec Kit** and without e2e. They have no folde
 | T-21-dinosaur | dinosaur semi-boss | REPLACED by the mecha scorpion STINGER-7 (`src/scorpion`) |
 | T-22-final-boss | spherical boss, cinematic | kept |
 
+Folders numbered 24 and above (`24-ads-autoreload-gravity`) are current and describe the game as built.
+
 New work: follow `docs/SPECKIT.md` (current policy) and create a new folder only if the owner requires Spec Kit for it.

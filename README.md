@@ -179,7 +179,8 @@ Enemy and weapon numbers are starting values and have **not** been balanced by p
 | Move | `W` `A` `S` `D` |
 | Look | Mouse |
 | Fire | Left mouse button |
-| Reload | Right mouse button or `R` |
+| Aim down sights | Hold right mouse button |
+| Reload | `R` (Settings: Auto reload, on by default) |
 | Jump / double jump | `Space` (press again in the air) |
 | Sprint | `Shift` |
 | Interact / activate tower | Hold `E` |

@@ -33,7 +33,7 @@ Scorpion (`src/scorpion`): charge, venom, tail slam, hex shield blocks 80% of fr
 
 **Economy:** crates 10 + 6, medkits 4 + 2 (see `ECONOMY`). Ammo budget now 345 hits / 690 rounds.
 
-**Player:** `PLAYER.gravity` -15 (own gravity, higher jumps). Fixed 60 Hz sim.
+**Player:** `PLAYER.gravity` -22 (own gravity; jump 13.1 m/s and air jump 12 m/s keep the 3.9 m / 3.3 m heights). Hold right mouse to aim down sights (`ADS` tunables, `PlayerState.aimAmount`, `src/core/ads.ts`: FOV 55, slower walk, no sprint, half spread and recoil). `R` reloads; Settings `autoReload` (default on) reloads when the magazine empties. Fixed 60 Hz sim.
 
 **Tunables sections** (`src/config/tunables.ts`): SIM, PLAYER, WEAPON, ECONOMY, ENEMY_COUNTS, ENEMY_DISTRIBUTION, ARMY_ROBOT, AI_SCHEDULING, OBJECTIVES, BOSS, PERFORMANCE, WORLD, CAMERA (GRAPPLE section may remain as dead data). Feature-local numbers stay in `src/<feature>/tunables.ts`.
 
@@ -41,7 +41,7 @@ Scorpion (`src/scorpion`): charge, venom, tail slam, hex shield blocks 80% of fr
 
 **Query params:** `autostart`, `sandbox`, `debug`, `colliders`, `enemies=army,spot,duck|none` (sandbox), `countdown`, `towers`, `boss`, `bossphase`, `scorpion` (sandbox), `viewmodel=procedural`, `bench`, `seed`, `vfxtest`, `audiotest`.
 
-**Verification policy (owner):** run `npx tsc --noEmit`, unit tests (437 in 67 files) and `npm run build`. Do NOT run `npm run smoke` / `npm run e2e` unless the owner asks. All `tests/e2e/*.mjs` are stale (old coordinates, four towers, grapple); rewrite before use. CI (`.github/workflows/pages.yml`) runs typecheck + unit tests + build only; deploys to GitHub Pages on `main`.
+**Verification policy (owner):** run `npx tsc --noEmit`, unit tests (450 in 69 files) and `npm run build`. Do NOT run `npm run smoke` / `npm run e2e` unless the owner asks. All `tests/e2e/*.mjs` are stale (old coordinates, four towers, grapple); rewrite before use. CI (`.github/workflows/pages.yml`) runs typecheck + unit tests + build only; deploys to GitHub Pages on `main`.
 
 **Process:** Spec Kit was used for T-01..T-22 only (`specs/README.md`). Later reworks were done without it. Rules: `docs/SPECKIT.md`.
 
