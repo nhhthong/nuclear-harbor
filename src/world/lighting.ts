@@ -58,7 +58,7 @@ void main() {
   vec3 horizon = mix(uAnti, uHorizon, smoothstep(0.0, 1.0, side));
   float up = smoothstep(0.0, 0.62, d.y);
   vec3 col = mix(horizon, uZenith, pow(up, 0.8));
-  col += uSunTint * pow(s, 6.0) * 0.55;
+  col += uSunTint * pow(s, 6.0) * 0.4;
   if (d.y > 0.01) {
     vec2 uv = d.xz / (d.y + 0.16) * 1.15 + vec2(uTime * 0.004, uTime * 0.0015);
     float deck = fbm(uv);
@@ -70,7 +70,7 @@ void main() {
     vec3 cloud = mix(lit, shade, smoothstep(0.62, 0.95, deck) * 0.7);
     col = mix(col, cloud, c * fade * 0.85);
   }
-  col += uSunTint * (pow(s, 40.0) * 0.6 + pow(s, 1200.0) * 3.5);
+  col += uSunTint * (pow(s, 40.0) * 0.3 + pow(s, 1200.0) * 1.5);
   col = mix(uGround, col, smoothstep(-0.1, 0.0, d.y));
   gl_FragColor = vec4(col, 1.0);
   #include <tonemapping_fragment>

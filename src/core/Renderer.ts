@@ -22,6 +22,28 @@ import { ShadowScheduler, effectivePixelRatio, fogRange } from './quality';
  * Final display-space pass: slight chromatic aberration towards the corners, a cool-shadow / warm-
  * highlight grade, vignette and animated film grain. Runs after tone mapping and sRGB encoding.
  */
+// Guard before the bloom: one NaN or infinite pixel (a shader corner case on some GPU) would be blurred
+// over the whole frame by the bloom mip chain and turn the screen black.
+const SANITIZE_SHADER = {
+  name: 'SanitizeShader',
+  uniforms: { tDiffuse: { value: null } },
+  vertexShader: /* glsl */ `
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }`,
+  fragmentShader: /* glsl */ `
+    uniform sampler2D tDiffuse;
+    varying vec2 vUv;
+    void main() {
+      vec4 c = texture2D(tDiffuse, vUv);
+      bvec3 bad = bvec3(isnan(c.r) || isinf(c.r), isnan(c.g) || isinf(c.g), isnan(c.b) || isinf(c.b));
+      vec3 rgb = vec3(bad.r ? 0.0 : c.r, bad.g ? 0.0 : c.g, bad.b ? 0.0 : c.b);
+      gl_FragColor = vec4(clamp(rgb, 0.0, 48.0), 1.0);
+    }`,
+};
+
 const GRADE_SHADER = {
   name: 'GradeShader',
   uniforms: {
@@ -198,6 +220,7 @@ export class Renderer {
         composer.addPass(ao);
       }
       const b = PERFORMANCE.bloom;
+      composer.addPass(new ShaderPass(SANITIZE_SHADER));
       composer.addPass(new UnrealBloomPass(new Vector2(size.x, size.y), b.strength, b.radius, b.threshold));
       composer.addPass(new OutputPass());
       this.gradePass = new ShaderPass(GRADE_SHADER);

@@ -26,9 +26,9 @@ npm run smoke / npm run e2e -- T-XX    # browser checks, see policy below
 - Everything is procedural (no CDN, no network at runtime) except the G36C GLB; `docs/reference-models/*.html` are visual references only.
 
 ## Status (update this block when it changes)
-- Latest: **tiny night quay rework** (last section of `docs/DEVIATIONS.md`): one 72 x 86 m level, 1 tower, 8 robots, half-size boss, no dinosaur; night rain look with modelled containers, wet-ground shader + planar reflection, flood lights with shadows and beams, rain, bloom/AO/grade. Verified by `tsc`, 397 unit tests, build and manual screenshots on all three quality presets (no console errors). **Not verified**: a full run, enemy behaviour and balance on the new level, frame rate on a real GPU, the boss fight at half size beyond spawning it.
-- **All `tests/e2e/*.mjs` are stale** (old coordinates, four towers, grapple, dinosaur): rewrite them before running e2e. `scripts/smoke.mjs` was not run after the rework either.
+- Latest: **sunset rework, Crimson Rex, area streaming** (last section of `docs/DEVIATIONS.md`): one 72 x 86 m quay at sunset, no rain, the sun is the only real light; 1 tower guarded by the dinosaur semi-boss (`src/dinosaur`), roster of 18 robots streamed by area (`src/enemies/areaSpawner.ts`, 10 alive at most), half-size boss; upgraded robots, pickups, VFX (camera shake) and a cinematic menu. Verified by `tsc`, 416 unit tests, build and scripted screenshots on the medium preset (no console errors). **Not verified**: a full run, balance, the Rex fight beyond forced skills, frame rate on a real GPU, whether the owner's black-screen report is fixed (a NaN guard was added before the bloom).
+- **All `tests/e2e/*.mjs` are stale** (old coordinates, four towers, grapple): rewrite them before running e2e. `scripts/smoke.mjs` was not run after the reworks either.
 - Docs that describe older versions: `docs/PLAN.md` (module table), `docs/PLAYTEST.md`, `docs/PERFORMANCE.md`, tickets and `specs/`.
-- Known limits: robots and the tower are visually simpler than the environment; no rain/thunder audio; heavy shaders target a desktop GPU (low preset for integrated graphics); bundle ~5.3 MB (Rapier 82%); in-game Restart reloads the page.
+- Known limits: robots and the Rex are primitive-built and read as low-poly; no ambient audio; bundle ~5.3 MB (Rapier 82%); in-game Restart reloads the page.
 - CC0 asset sites are blocked from the cloud sandbox (polyhaven, ambientcg); everything is procedural except the G36C GLB.
-- **Next**: owner playtest on a real GPU, then UI improvements (scope to be defined by the owner).
+- **Next**: owner playtest on a real GPU (lag, black screen, balance), then follow-ups from it.
