@@ -152,7 +152,11 @@ export class Samurai extends BaseEnemy {
     this.model.add(this.legL, this.legR);
     const blade = new Mesh(geo('weapon', m.weapon), armor);
     blade.castShadow = true;
-    this.weapon.add(blade, new Mesh(geo('weaponGlow', m.weaponGlow), this.glow));
+    // blades: mirror steel with a bright ground bevel, no paint wear
+    const bladeMat = shared.get('samurai:blade-mat', () => createVertexColorMaterial(0.2, 0.9));
+    const edge = new Mesh(geo('blade', m.blade), bladeMat);
+    edge.castShadow = true;
+    this.weapon.add(blade, edge, new Mesh(geo('weaponGlow', m.weaponGlow), this.glow));
     this.weapon.position.copy(m.grip);
     this.weapon.rotation.z = m.restAngle;
     this.model.add(this.weapon);
@@ -162,7 +166,7 @@ export class Samurai extends BaseEnemy {
     // blur disc of the spinning polearm
     this.fanMat = new MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false, blending: AdditiveBlending, side: DoubleSide, fog: false });
     this.fanMat.color.setRGB(0.55, 0.3, 0.26);
-    this.fan = new Mesh(shared.get('samurai:fan-geo', () => new CircleGeometry(2.95, 40)), this.fanMat);
+    this.fan = new Mesh(shared.get('samurai:fan-geo', () => new CircleGeometry(3.25, 40)), this.fanMat);
     this.fan.position.copy(m.grip);
     this.fan.visible = false;
     this.fan.userData.noReflect = true;
