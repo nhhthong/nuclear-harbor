@@ -1,9 +1,9 @@
 /**
- * Tiny synthesised sounds for the dinosaur (roar, warning pulse, stomp thud). The shared audio
- * module has no hook for the dino:* events yet (see foundation-requests.md), so the module owns a
+ * Tiny synthesised sounds for the scorpion (roar, warning pulse, stomp thud). The shared audio
+ * module has no hook for the scorpion:* events yet (see foundation-requests.md), so the module owns a
  * lazily created AudioContext. Everything is wrapped: audio must never break the game.
  */
-export class DinoAudio {
+export class ScorpionAudio {
   private ac: AudioContext | null = null;
 
   constructor(private readonly volume: () => number) {}

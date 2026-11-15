@@ -234,8 +234,8 @@ export function createHud(ctx: GameContext, parent: HTMLElement): Hud {
     }
     // large machines: the relay guardian (read through its debug hook) and the final boss
     const big: Array<{ x: number; z: number }> = [];
-    const dino = ctx.testHooks.dinosaur as { list?: () => Array<{ alive: boolean; position: { x: number; z: number } }> } | undefined;
-    for (const d of dino?.list?.() ?? []) if (d.alive) big.push(d.position);
+    const scorpion = ctx.testHooks.scorpion as { list?: () => Array<{ alive: boolean; position: { x: number; z: number } }> } | undefined;
+    for (const d of scorpion?.list?.() ?? []) if (d.alive) big.push(d.position);
     if (bossAt) big.push(bossAt);
     const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 160);
     for (const b of big) {

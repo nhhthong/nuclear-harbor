@@ -4,16 +4,16 @@ import type { GameContext } from '@/core/GameContext';
 import type { GameModule } from '@/core/GameModule';
 import type { HitZone } from '@/core/types';
 import { QueryGroups } from '@/physics/groups';
-import { createDecals, Dinosaur, type DinoDecals, type DinoHooks } from './Dinosaur';
-import { createDinoAssets, type DinoAssets } from './DinoModel';
-import { DinoAudio } from './dinoAudio';
-import { DinoDrops } from './drops';
-import type { DinoSkill } from './events';
+import { createDecals, Scorpion, type ScorpionDecals, type ScorpionHooks } from './Scorpion';
+import { createScorpionAssets, type ScorpionAssets } from './ScorpionModel';
+import { ScorpionAudio } from './scorpionAudio';
+import { ScorpionDrops } from './drops';
+import type { ScorpionSkill } from './events';
 import './events';
 import { pickGuardTowers, seedFromParams } from './guards';
-import { DINO } from './tunables';
+import { SCORPION } from './tunables';
 
-const MODULE_ID = 'dinosaur';
+const MODULE_ID = 'scorpion';
 
 interface TowerRef {
   id: number;
@@ -24,17 +24,17 @@ const evPos = new Vector3();
 const DIRS = 8;
 
 /**
- * Dinosaur semi-boss (T-21): picks 2 of the 4 towers with a seeded RNG (`?seed=`), spawns a ~9 m
- * mecha T-Rex when the player first comes within 35 m of one, and runs the fight. The dinosaur is
- * not an `Enemy` in `ctx.enemies` (population totals stay 14 / 10 / 6). In `?sandbox` the module
- * only acts with `?dino`.
+ * Mecha scorpion semi-boss (STINGER-7): guards the relay tower, rises out of the ground on its far
+ * side when the player first comes within SCORPION.triggerRadius, and runs the fight. It is not an
+ * `Enemy` in `ctx.enemies` (the robot roster stays as configured). In `?sandbox` the module only acts
+ * with `?scorpion`.
  */
-export function createDinosaurModule(): GameModule {
+export function createScorpionModule(): GameModule {
   let ctx: GameContext | null = null;
-  let assets: DinoAssets | null = null;
-  let decals: DinoDecals | null = null;
-  let audio: DinoAudio | null = null;
-  let drops: DinoDrops | null = null;
+  let assets: ScorpionAssets | null = null;
+  let decals: ScorpionDecals | null = null;
+  let audio: ScorpionAudio | null = null;
+  let drops: ScorpionDrops | null = null;
   let barEl: HTMLDivElement | null = null;
   let barFill: HTMLDivElement | null = null;
   let barText = '';
@@ -43,7 +43,7 @@ export function createDinosaurModule(): GameModule {
   const towers: TowerRef[] = [];
   let guardIds: number[] = [];
   const spawned = new Set<number>();
-  const dinos: Dinosaur[] = [];
+  const scorpions: Scorpion[] = [];
   const offs: Array<() => void> = [];
   let shakeAmp = 0;
   let shakeLeft = 0;
@@ -51,11 +51,11 @@ export function createDinosaurModule(): GameModule {
   let serialSpawns = 0;
   let passiveAll = false;
 
-  const hooks: DinoHooks = {
+  const hooks: ScorpionHooks = {
     shake(amplitude, seconds, x, z) {
       if (!ctx) return;
       const p = ctx.player.position;
-      const falloff = Math.max(0, 1 - Math.hypot(p.x - x, p.z - z) / DINO.shakeRange);
+      const falloff = Math.max(0, 1 - Math.hypot(p.x - x, p.z - z) / SCORPION.shakeRange);
       const amp = amplitude * falloff;
       if (amp > shakeAmp * (shakeLeft / shakeTotal)) {
         shakeAmp = amp;
@@ -63,9 +63,9 @@ export function createDinosaurModule(): GameModule {
         shakeTotal = seconds;
       }
     },
-    defeated(dino) {
+    defeated(scorpion) {
       if (!ctx || !drops) return;
-      drops.dropLoot(dino.position.x, dino.position.z);
+      drops.dropLoot(scorpion.position.x, scorpion.position.z);
     },
   };
 
@@ -74,8 +74,8 @@ export function createDinosaurModule(): GameModule {
     const c = ctx as GameContext;
     const p = c.player.position;
     const base = Math.atan2(p.z - tower.position.z, p.x - tower.position.x);
-    const ring = DINO.spawnRing;
-    const r = DINO.spawnClearRadius;
+    const ring = SCORPION.spawnRing;
+    const r = SCORPION.spawnClearRadius;
     let fallback: { x: number; z: number } | null = null;
     // far side of the tower first: it rises behind the relay, facing the player
     for (const off of [Math.PI, 2.4, -2.4, 1.6, -1.6, 0.8, -0.8, 0]) {
@@ -101,20 +101,20 @@ export function createDinosaurModule(): GameModule {
     return fallback ?? { x: tower.position.x + ring, z: tower.position.z };
   }
 
-  function spawn(towerId: number, x: number, z: number): Dinosaur | null {
+  function spawn(towerId: number, x: number, z: number): Scorpion | null {
     if (!ctx || !assets || !decals || !audio) return null;
     const res = ctx.resources.scope(MODULE_ID);
-    const d = new Dinosaur(ctx, assets, decals, audio, res, towerId, x, z, hooks);
+    const d = new Scorpion(ctx, assets, decals, audio, res, towerId, x, z, hooks);
     d.passive = passiveAll;
-    dinos.push(d);
+    scorpions.push(d);
     serialSpawns++;
     spawned.add(towerId);
-    ctx.events.emit('dino:spawned', { id: d.id, towerId, position: evPos.set(x, 0, z) });
-    ctx.events.emit('dino:roar', { id: d.id, position: evPos.set(x, 4, z), shake: DINO.spawn.shake, duration: DINO.spawn.shakeSeconds });
+    ctx.events.emit('scorpion:spawned', { id: d.id, towerId, position: evPos.set(x, 0, z) });
+    ctx.events.emit('scorpion:roar', { id: d.id, position: evPos.set(x, 4, z), shake: SCORPION.spawn.shake, duration: SCORPION.spawn.shakeSeconds });
     ctx.events.emit('vfx:spawn', { kind: 'dust', position: evPos.set(x, 0.3, z), scale: 4 });
     ctx.events.emit('vfx:spawn', { kind: 'telegraph-ring', position: evPos.set(x, 0.1, z), scale: 10 });
-    ctx.events.emit('ui:toast', { text: 'CRIMSON REX GUARDS THE RELAY', seconds: 3 });
-    hooks.shake(DINO.spawn.shake, DINO.spawn.shakeSeconds, x, z);
+    ctx.events.emit('ui:toast', { text: 'STINGER-7 GUARDS THE RELAY', seconds: 3 });
+    hooks.shake(SCORPION.spawn.shake, SCORPION.spawn.shakeSeconds, x, z);
     audio.roar();
     return d;
   }
@@ -123,10 +123,10 @@ export function createDinosaurModule(): GameModule {
     towers.push({ id: e.towerId, position: e.position.clone() });
     if (towers.length < e.total) return;
     towers.sort((a, b) => a.id - b.id);
-    // Tower 1 stands inside the 10 m warehouse hall: a 9 m dinosaur does not fit there, so only the
+    // Tower 1 stands inside the 10 m warehouse hall: a 9 m scorpion does not fit there, so only the
     // outdoor towers can be guarded (the sandbox has a single tower and keeps it).
     const outdoor = towers.length > 1 ? towers.filter((t) => t.id !== 1) : towers;
-    const idx = pickGuardTowers(seed, outdoor.length, Math.min(DINO.guardCount, outdoor.length));
+    const idx = pickGuardTowers(seed, outdoor.length, Math.min(SCORPION.guardCount, outdoor.length));
     guardIds = idx.map((i) => (outdoor[i] as TowerRef).id).sort((a, b) => a - b);
   }
 
@@ -135,11 +135,11 @@ export function createDinosaurModule(): GameModule {
     el.style.cssText =
       'position:absolute;left:50%;bottom:20vh;transform:translateX(-50%);width:min(52vh,60vw);display:none;pointer-events:none;font:700 1.5vh "Bahnschrift","Segoe UI",system-ui,sans-serif;color:#ffe2cf;text-align:center;letter-spacing:.34em;text-shadow:0 1px 4px #000';
     const label = document.createElement('div');
-    label.textContent = 'CRIMSON REX // RELAY GUARDIAN';
+    label.textContent = 'STINGER-7 // RELAY GUARDIAN';
     const track = document.createElement('div');
-    track.style.cssText = 'margin-top:.6vh;height:1.1vh;background:rgba(8,6,10,.7);border-left:3px solid #ff8a2a;clip-path:polygon(0 0,100% 0,calc(100% - .8vh) 100%,0 100%);overflow:hidden';
+    track.style.cssText = 'margin-top:.6vh;height:1.1vh;background:rgba(8,6,10,.7);border-left:3px solid #3dff4e;clip-path:polygon(0 0,100% 0,calc(100% - .8vh) 100%,0 100%);overflow:hidden';
     const fill = document.createElement('div');
-    fill.style.cssText = 'height:100%;width:100%;background:linear-gradient(90deg,#c41808,#ff7a2a);box-shadow:0 0 1.2vh #ff5a1a;transition:width .12s';
+    fill.style.cssText = 'height:100%;width:100%;background:linear-gradient(90deg,#0f9a2c,#7dff6a);box-shadow:0 0 1.2vh #3dff4e;transition:width .12s';
     track.appendChild(fill);
     el.append(label, track);
     c.uiRoot.appendChild(el);
@@ -149,9 +149,9 @@ export function createDinosaurModule(): GameModule {
 
   function updateBar(): void {
     if (!ctx || !barEl || !barFill) return;
-    let best: Dinosaur | null = null;
-    let bestD: number = DINO.hpBarRange;
-    for (const d of dinos) {
+    let best: Scorpion | null = null;
+    let bestD: number = SCORPION.hpBarRange;
+    for (const d of scorpions) {
       if (!d.alive) continue;
       const dist = Math.hypot(d.position.x - ctx.player.position.x, d.position.z - ctx.player.position.z);
       if (dist < bestD) {
@@ -180,21 +180,21 @@ export function createDinosaurModule(): GameModule {
     init(c) {
       ctx = c;
       const res = c.resources.scope(MODULE_ID);
-      enabled = !c.flags.sandbox || c.flags.params.has('dino');
+      enabled = !c.flags.sandbox || c.flags.params.has('scorpion');
       seed = seedFromParams(c.flags.params, Date.now());
-      assets = createDinoAssets();
+      assets = createScorpionAssets();
       res.onDispose(() => assets?.dispose());
       decals = createDecals();
       const dg = decals;
       res.onDispose(() => dg.dispose());
-      audio = new DinoAudio(() => c.settings.get('masterVolume'));
-      drops = new DinoDrops(c, res);
+      audio = new ScorpionAudio(() => c.settings.get('masterVolume'));
+      drops = new ScorpionDrops(c, res);
       buildBar(c);
 
       offs.push(
         c.events.on('tower:registered', onTowerRegistered),
         c.events.on('game:respawn', () => {
-          for (const d of dinos) d.resetToGuard();
+          for (const d of scorpions) d.resetToGuard();
         }),
       );
 
@@ -205,7 +205,7 @@ export function createDinosaurModule(): GameModule {
         towers: () => towers.map((t) => ({ id: t.id, x: t.position.x, y: t.position.y, z: t.position.z })),
         spawnedTowers: () => [...spawned],
         list: () =>
-          dinos.map((d) => ({
+          scorpions.map((d) => ({
             id: d.id,
             towerId: d.towerId,
             state: d.state,
@@ -221,11 +221,11 @@ export function createDinosaurModule(): GameModule {
         spawnAt: (x: number, z: number, towerId = 0) => spawn(towerId, x, z)?.id ?? null,
         passive: (on: boolean) => {
           passiveAll = on;
-          for (const d of dinos) d.passive = on;
+          for (const d of scorpions) d.passive = on;
         },
-        force: (skill: DinoSkill) => dinos.find((d) => d.alive)?.forceSkill(skill) ?? false,
+        force: (skill: ScorpionSkill) => scorpions.find((d) => d.alive)?.forceSkill(skill) ?? false,
         damage: (amount: number, zone: HitZone = 'body') =>
-          dinos.find((d) => d.alive)?.applyDamage({ amount, zone, source: 'player' }) ?? null,
+          scorpions.find((d) => d.alive)?.applyDamage({ amount, zone, source: 'player' }) ?? null,
         drops: () => drops?.list() ?? [],
         shake: () => shakeAmp * (shakeLeft / shakeTotal),
         spawnCount: () => serialSpawns,
@@ -238,24 +238,24 @@ export function createDinosaurModule(): GameModule {
       if (p.alive && guardIds.length > 0) {
         for (const t of towers) {
           if (spawned.has(t.id) || !guardIds.includes(t.id)) continue;
-          if (Math.hypot(p.position.x - t.position.x, p.position.z - t.position.z) <= DINO.triggerRadius) {
+          if (Math.hypot(p.position.x - t.position.x, p.position.z - t.position.z) <= SCORPION.triggerRadius) {
             const spot = findSpot(t);
             spawn(t.id, spot.x, spot.z);
           }
         }
       }
-      for (const d of dinos) d.fixedUpdate(dt);
+      for (const d of scorpions) d.fixedUpdate(dt);
       drops?.fixedUpdate(dt);
     },
 
     update(dt) {
       if (!ctx) return;
-      for (let i = dinos.length - 1; i >= 0; i--) {
-        const d = dinos[i] as Dinosaur;
+      for (let i = scorpions.length - 1; i >= 0; i--) {
+        const d = scorpions[i] as Scorpion;
         d.animate(dt);
         if (d.removable) {
           d.dispose();
-          dinos.splice(i, 1);
+          scorpions.splice(i, 1);
         }
       }
       drops?.update(ctx.clock.simTime);
@@ -271,8 +271,8 @@ export function createDinosaurModule(): GameModule {
 
     dispose() {
       for (const off of offs.splice(0)) off();
-      for (const d of dinos) d.dispose();
-      dinos.length = 0;
+      for (const d of scorpions) d.dispose();
+      scorpions.length = 0;
       drops?.dispose();
       drops = null;
       audio?.dispose();

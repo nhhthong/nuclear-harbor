@@ -4,7 +4,7 @@ import { ECONOMY } from '@/config/tunables';
 import type { GameContext } from '@/core/GameContext';
 import type { PickupKind } from '@/core/types';
 import { QueryGroups } from '@/physics/groups';
-import { DINO } from './tunables';
+import { SCORPION } from './tunables';
 
 interface Drop {
   id: string;
@@ -21,11 +21,11 @@ const dummy = new Object3D();
 const evPos = new Vector3();
 
 /**
- * Guaranteed dinosaur loot: ammo crates and a medkit, bounded (DINO.drops.capacity). The pickups
+ * Guaranteed scorpion loot: ammo crates and a medkit, bounded (SCORPION.drops.capacity). The pickups
  * module only drops 15 ammo at random per destroyed robot, so the semi-boss keeps its own small
  * pickups and announces them with the shared pickup events (see foundation-requests.md).
  */
-export class DinoDrops {
+export class ScorpionDrops {
   private readonly items: Drop[] = [];
   private readonly ammo: InstancedMesh;
   private readonly medkit: InstancedMesh;
@@ -35,7 +35,7 @@ export class DinoDrops {
     private readonly ctx: GameContext,
     res: ResourceTracker,
   ) {
-    const cap = DINO.drops.capacity;
+    const cap = SCORPION.drops.capacity;
     const geo = new BoxGeometry(0.6, 0.4, 0.45);
     this.ammo = new InstancedMesh(geo, new MeshStandardMaterial({ color: 0x4a6b2a, emissive: 0x2a5a10, emissiveIntensity: 0.8 }), cap);
     this.medkit = new InstancedMesh(
@@ -67,7 +67,7 @@ export class DinoDrops {
 
   /** Scatter the loot around `x, z`. */
   dropLoot(x: number, z: number): void {
-    const { ammoCrates, medkits, scatter } = DINO.drops;
+    const { ammoCrates, medkits, scatter } = SCORPION.drops;
     const total = ammoCrates + medkits;
     for (let i = 0; i < total; i++) {
       const kind: PickupKind = i < ammoCrates ? 'ammo' : 'medkit';
@@ -79,8 +79,8 @@ export class DinoDrops {
   }
 
   add(kind: PickupKind, x: number, y: number, z: number): boolean {
-    if (this.items.length >= DINO.drops.capacity) return false;
-    const d: Drop = { id: `dino-drop-${this.nextId++}`, kind, x, y, z, life: DINO.drops.lifetimeSeconds, phase: this.nextId * 2.1 };
+    if (this.items.length >= SCORPION.drops.capacity) return false;
+    const d: Drop = { id: `scorpion-drop-${this.nextId++}`, kind, x, y, z, life: SCORPION.drops.lifetimeSeconds, phase: this.nextId * 2.1 };
     this.items.push(d);
     this.ctx.events.emit('pickup:spawned', { id: d.id, kind, position: evPos.set(x, y, z), dropped: true });
     return true;
@@ -89,7 +89,7 @@ export class DinoDrops {
   fixedUpdate(dt: number): void {
     const ctx = this.ctx;
     const p = ctx.player;
-    const r2 = DINO.drops.pickupRadius * DINO.drops.pickupRadius;
+    const r2 = SCORPION.drops.pickupRadius * SCORPION.drops.pickupRadius;
     for (let i = this.items.length - 1; i >= 0; i--) {
       const d = this.items[i];
       if (!d) continue;

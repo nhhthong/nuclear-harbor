@@ -1,19 +1,20 @@
 /**
- * All numbers of the dinosaur semi-boss (T-21). Starting values to be playtested; `proposed`
+ * All numbers of the scorpion semi-boss. Starting values to be playtested; `proposed`
  * unless the ticket (docs/tickets/ROBOT-REFRESH.md) fixes them.
  */
-export const DINO = {
+export const SCORPION = {
   /** ticket: HP about 1500, about 9 m tall. */
   hp: 1300,
   /** Scaled for the tiny quay (the first version was 9 m on a much larger map). */
-  heightM: 6,
+  /** Height of the arched tail; the body is about 1.4 m high and 6 m long with the claws. */
+  heightM: 4.6,
   /** Collision/avoidance radius of the body (m). */
   bodyRadius: 2.2,
   /** ticket: spawns when the player first comes this close to its tower (horizontal, m). */
   triggerRadius: 15,
   /** Number of guarded towers per run. */
   guardCount: 1,
-  /** Distance from the tower where the dinosaur appears (m); the spot search rotates around it. */
+  /** Distance from the tower where the scorpion appears (m); the spot search rotates around it. */
   spawnRing: 9,
   /** Free-space probe radius used by the spawn spot search (m). */
   spawnClearRadius: 3,
@@ -24,7 +25,7 @@ export const DINO = {
   turnRate: 1.5,
   /** Detect/forget the player (m). */
   aggroRange: 34,
-  /** Below this HP share the dinosaur is enraged: brighter glow, lashing tail, smoke, shorter recovery. */
+  /** Below this HP share the scorpion is enraged: brighter glow, lashing tail, smoke, shorter recovery. */
   enrageFraction: 0.4,
   enragedRecover: 0.55,
   /** Pause after any skill before it may act again (s). */
@@ -48,44 +49,53 @@ export const DINO = {
       damage: 25,
       /** Contact radius around the body centre (m). */
       hitRadius: 2.6,
-      knockback: 14,
+      /** Thrown straight back along the charge, with some lift. */
+      knockback: 22,
+      knockUp: 6,
       stun: 2.5,
       cooldown: 7,
       stripWidth: 4.4,
     },
-    leapStomp: {
-      min: 6,
-      max: 22,
-      telegraph: 1.0,
-      airTime: 0.85,
+    /** Venom shot: the stinger lobs a glob that bursts into a green pool; the pool keeps hurting. */
+    venom: {
+      min: 7,
+      max: 30,
+      telegraph: 1.1,
+      /** Flight time (s) and arc height (m) of the glob. */
+      flight: 0.8,
       apex: 5,
-      radius: 6,
-      damage: 30,
-      /** Damage fraction at the edge of the radius. */
-      edgeFraction: 0.3,
-      stun: 1.4,
+      radius: 4.5,
+      /** Burst damage at the centre and the fraction left at the edge. */
+      damage: 14,
+      edgeFraction: 0.4,
+      /** The pool: lifetime, damage per tick and tick length (s); feet above `poolHeight` are safe. */
+      poolSeconds: 5,
+      tickDamage: 5,
+      tickInterval: 0.5,
+      poolHeight: 1.2,
       cooldown: 8,
-      knockback: 10,
     },
-    tailSpin: {
-      max: 7,
+    /** Tail slam: the tail whips over the head into the ground; blasts run outwards in a fan. */
+    tailSlam: {
+      max: 8.5,
       telegraph: 0.9,
-      spinSeconds: 0.8,
-      radius: 6.5,
-      damage: 20,
-      /** Half angular width of the tail sweep (rad). */
-      sweepHalfWidth: 0.5,
-      /** Player feet this far above the dinosaur's ground level are safe (grapple/perch dodge). */
+      /** Time of the strike itself and the hold afterwards (s). */
+      strikeSeconds: 0.2,
+      holdSeconds: 0.45,
+      radius: 9,
+      /** Half opening angle of the fan (rad). */
+      halfAngle: 0.6,
+      damage: 28,
+      /** Player feet this far above the ground are safe (double jump dodge). */
       clearance: 1.9,
       knockback: 9,
       cooldown: 5,
     },
-    /** Below this distance the dinosaur prefers the tail spin, below `leapPreferMax` the leap. */
-    leapPreferMax: 13,
+    /** Below `venom.min` the scorpion prefers the tail slam, below this the venom shot, beyond it the charge. */
+    venomPreferMax: 14,
   },
   /** Player vertical reach for stomp/ram checks. */
-  stompHeight: 2.6,
-  ramHeight: 3.6,
+  ramHeight: 2.4,
   drops: {
     ammoCrates: 4,
     medkits: 1,

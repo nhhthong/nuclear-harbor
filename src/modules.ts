@@ -2,7 +2,7 @@ import { createAudioModule } from '@/audio';
 import { createBossModule } from '@/boss';
 import type { GameModule } from '@/core/GameModule';
 import { createDebugModule } from '@/debug';
-import { createDinosaurModule } from '@/dinosaur';
+import { createScorpionModule } from '@/scorpion';
 import { createEnemiesModule } from '@/enemies';
 import { createFlowModule } from '@/flow';
 import { createObjectivesModule } from '@/objectives';
@@ -31,7 +31,7 @@ export function createModules(): GameModule[] {
     createWeaponModule(),
     createEnemiesModule(),
     createBossModule(),
-    createDinosaurModule(),
+    createScorpionModule(),
     createObjectivesModule(),
     createPickupsModule(),
     createVfxModule(),

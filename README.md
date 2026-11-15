@@ -3,7 +3,7 @@
 # LAST STAND: NUCLEAR HARBOR
 
 **A single-player browser FPS on a container quay at sunset, still wet from the rain and taken over by military robots.**
-Fight through the yard, bring down the Crimson Rex that guards the relay tower, then TITAN-04, before the countdown ends.
+Fight through the yard, bring down STINGER-7, the mecha scorpion that guards the relay tower, then TITAN-04, before the countdown ends.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -42,7 +42,7 @@ Fight through the yard, bring down the Crimson Rex that guards the relay tower, 
 
 You are the only survivor of a container quay whose defence robots have been hijacked. The rain has just stopped, the sun is going
 down, and the nuclear control system is counting down from **08:00**. Push through the container yard, reach
-the relay tower in the court behind it, where the **Crimson Rex** (a mecha T-Rex) rises out of the ground, and hold **E**
+the relay tower in the court behind it, where **STINGER-7** (a mecha scorpion) rises out of the ground, and hold **E**
 to activate the tower while the robots close in. Then **TITAN-04**,
 a four-legged spherical war machine that can only be hurt through its lights, drops onto the quay.
 
@@ -66,8 +66,8 @@ simulation, procedural audio and procedurally built models. There is no backend 
     <td width="50%"><img src="docs/media/sunset-quay.jpg" alt="Quay with the moored ship and the gantry crane"><br><sub>Quay: gantry crane, concrete slabs, the moored ship</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/media/sunset-rex.jpg" alt="Crimson Rex, the mecha T-Rex semi-boss, with its health bar"><br><sub>Crimson Rex, the relay guardian</sub></td>
-    <td width="50%"><img src="docs/media/sunset-rex-tailspin.jpg" alt="Crimson Rex during its tail spin"><br><sub>Tail spin: club tail and its trail</sub></td>
+    <td width="50%"><img src="docs/media/sunset-scorpion.jpg" alt="STINGER-7, the mecha scorpion semi-boss, seen from the side"><br><sub>STINGER-7, the relay guardian</sub></td>
+    <td width="50%"><img src="docs/media/sunset-scorpion-venom.jpg" alt="Green venom pool left by the scorpion's venom shot"><br><sub>Venom shot: the pool keeps hurting for five seconds</sub></td>
   </tr>
 </table>
 
@@ -88,7 +88,7 @@ simulation, procedural audio and procedurally built models. There is no backend 
 - **Vanguard army mech** (3): slow patrols, then smooth, disciplined advance and rocket salvos.
 - **Spot dog** (8): weak and fast, lunges and rams.
 - **Bomber Duck** (5): hops toward you, arms a **3-2-1** countdown and blows up for 15 damage.
-- **Crimson Rex semi-boss** (about 6 m, 1300 HP): rises behind the relay tower when you approach it. Three telegraphed skills: charge, leap stomp and tail spin; it is stunned after a stomp or after ramming a wall, and enrages below 40% HP.
+- **STINGER-7 semi-boss** (mecha scorpion, about 6 m long, 1300 HP): rises behind the relay tower when you approach it. Three telegraphed skills: a **charge** that throws you straight back, a **venom shot** (green glob, burst damage and a pool that hurts for 5 s) and a **tail slam** whose blasts run out in a fan in front of it. It is stunned after ramming a wall and enrages below 40% HP. Weak spots: head sensors and the stinger bulb.
 - **Area streaming**: no robot exists at load. An area's robots appear when you approach it (never closer than 13 m), at most 10 are alive at once, and survivors are removed again after you leave.
 - **TITAN-04 final boss** (about 9 m tall): falls from the sky after the tower is activated, four knee-light weak points, then an exposed core.
 
@@ -109,7 +109,7 @@ simulation, procedural audio and procedurally built models. There is no backend 
 ## Gameplay
 
 ```
-Gate apron -> container yard (10 robots) -> relay court: Crimson Rex, hold the tower
+Gate apron -> container yard (10 robots) -> relay court: STINGER-7, hold the tower
            -> TITAN-04 drops onto the quay -> destroy 4 weak points -> shoot the exposed core -> victory
 ```
 
@@ -204,7 +204,7 @@ src/
   player/      first-person controller (walk, sprint, jump, double jump)
   weapon/      rifle logic, recoil, procedural and GLB view models, pooled weapon effects
   combat/      damage and hit resolution
-  dinosaur/    Crimson Rex semi-boss: model, skills, telegraph shaders, drops
+  scorpion/    STINGER-7 semi-boss: model, skills, telegraph shaders, drops
   enemies/     framework, army mech, Spot, Bomber Duck, nav grid, AI scheduler, population
   boss/        TITAN-04: model, attacks, weak points, landing cinematic
   objectives/  towers and nuclear countdown
@@ -233,7 +233,7 @@ Design rules (full text in [`.specify/memory/constitution.md`](.specify/memory/c
 | Target | 60 FPS desktop, 30 FPS low-end fallback |
 | Draw calls | at most 350 per frame; measured about 100 to 180 including the reflection pass |
 | Triangles | about 0.45 to 0.56 million per frame with shadow and reflection passes (measured) |
-| Enemies | roster of 18 regular robots streamed by area (10 alive at most), the Crimson Rex and the boss |
+| Enemies | roster of 18 regular robots streamed by area (10 alive at most), STINGER-7 and the boss |
 | Shadows | one sun shadow map, static content refreshed at 6 Hz (medium) or 12 Hz (high) for moving casters |
 | Presets | low: no shadows, reflection or bloom; medium: shadows, reflection, bloom; high: adds ambient occlusion |
 | Bundle | about 5.3 MB (Rapier's WASM is about 80% of it), split into three chunks |
@@ -263,7 +263,7 @@ The service worker is not registered by `npm run dev`.
 
 Known limitations:
 
-- Visuals are procedural; there is no authored art, so realism is limited by design. The robots and the Crimson Rex are built from primitives and read as low-poly next to the environment.
+- Visuals are procedural; there is no authored art, so realism is limited by design. The robots and the scorpion are built from primitives and read as low-poly next to the environment.
 - The heavy shaders (planar reflection, shadow map, bloom, AO) target a desktop GPU; use the low preset on integrated graphics.
 - Gameplay balance (damage, enemy density on the compact map, countdown length) is untested.
 - The boss attacks were checked by unit tests and short scripted runs only.
