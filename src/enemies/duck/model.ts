@@ -37,8 +37,14 @@ export interface DuckModel {
   body: BufferGeometry;
   /** Lower jaw, authored around its hinge (origin = hinge). */
   beak: BufferGeometry;
-  /** Both feet in one geometry (they hop together). */
+  /** Both feet in one geometry (kept for the far LOD and older callers). */
   feet: BufferGeometry;
+  /** Each foot on its own, authored around its ankle pivot (they step one after the other). */
+  footL: BufferGeometry;
+  footR: BufferGeometry;
+  /** Ankle pivots in the root frame. */
+  ankleL: Vector3;
+  ankleR: Vector3;
   /** Low-detail single mesh for the far LOD. */
   far: BufferGeometry;
   /** Hinge pose of the jaw inside the root (rest orientation includes the reference opening). */
@@ -276,6 +282,17 @@ export function buildDuckModel(): DuckModel {
   foot(feet, true);
   foot(feet, false);
   const feetGeo = feet.merge(world);
+  // per-foot geometry around the ankle (top of the foot), for the waddle
+  const ankleRef = (isLeft: boolean): Vector3 => new Vector3(isLeft ? -0.58 : 0.42, 0.66, isLeft ? 0.22 : 0.36);
+  const ankleL = ankleRef(true).applyMatrix4(world);
+  const ankleR = ankleRef(false).applyMatrix4(world);
+  const one = (isLeft: boolean, ankle: Vector3): BufferGeometry => {
+    const p = new Parts();
+    foot(p, isLeft);
+    return p.merge(new Matrix4().makeTranslation(-ankle.x, -ankle.y, -ankle.z).multiply(world));
+  };
+  const footL = one(true, ankleL);
+  const footR = one(false, ankleR);
 
   // ---- jaw ---------------------------------------------------------------------------
   const jaw = new Parts();
@@ -306,5 +323,5 @@ export function buildDuckModel(): DuckModel {
   const farGeo = far.merge();
 
   const beaconPosition = new Vector3(0, 1.04, -0.02);
-  return { body: bodyGeo, beak: beakGeo, feet: feetGeo, far: farGeo, beakPosition, beakQuaternion, beakRest, beaconPosition };
+  return { body: bodyGeo, beak: beakGeo, feet: feetGeo, footL, footR, ankleL, ankleR, far: farGeo, beakPosition, beakQuaternion, beakRest, beaconPosition };
 }

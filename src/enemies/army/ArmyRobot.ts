@@ -1,11 +1,12 @@
-import { Group, LOD, Mesh, Vector3, type Material } from 'three';
+import { Bone, Group, LOD, Mesh, Quaternion, Skeleton, SkinnedMesh, Vector3, type Material, type Matrix4 } from 'three';
+import { createGaitPose, gaitPose, strideLength } from '../gait';
 import { ARMY_ROBOT } from '@/config/tunables';
 import type { DamageInfo, DamageResult, SimLevel } from '@/core/types';
 import { BaseEnemy, type EnemyDeps, type EnemySpawn } from '../BaseEnemy';
 import { forgetTarget, markAware, type Perception } from '../perception';
 import { ENEMY_LOCAL } from '../tunables';
 import { decideArmy, engageGoal, radialIntent, type ArmyState, type XZ } from './armyBrain';
-import { getArmyAssets } from './model';
+import { ARMY_BONE_PARENT, getArmyAssets } from './model';
 import { stepMotion, type Motion, type MotionLimits } from './motion';
 import { abortTelegraph, beginSalvo, createSalvo, glowLevel, stepSalvo, type Salvo, type SalvoConfig } from './salvo';
 import { ARMY_LOCAL } from './tunables';
@@ -13,6 +14,8 @@ import { ARMY_LOCAL } from './tunables';
 const aim = new Vector3();
 const shotDir = new Vector3();
 const shotFrom = new Vector3();
+const boneTurn = new Quaternion();
+const AXIS_X = new Vector3(1, 0, 0);
 const dustAt = new Vector3();
 const awayDir = new Vector3();
 const dustUp = new Vector3(0, 1, 0);
@@ -54,6 +57,11 @@ export class ArmyRobot extends BaseEnemy {
   private lastZ: number;
 
   private readonly visual = new Group();
+  private readonly bones: Bone[] = [];
+  private readonly boneRestQuat: Quaternion[] = [];
+  private readonly legLength: number;
+  private readonly gait = createGaitPose();
+  private walkAmount = 0;
   private readonly glowMesh: Mesh;
   private readonly glowMats: ReadonlyArray<Material>;
   private glowIndex = 0;
@@ -82,9 +90,24 @@ export class ArmyRobot extends BaseEnemy {
 
     const assets = getArmyAssets(deps.shared);
     const nearGroup = new Group();
+    // walk rig: one skeleton per robot, the six merged meshes all bind to it
+    for (let i = 0; i < assets.boneRest.length; i++) {
+      const bone = new Bone();
+      (assets.boneRest[i] as Matrix4).decompose(bone.position, bone.quaternion, bone.scale);
+      this.boneRestQuat.push(bone.quaternion.clone());
+      const parent = ARMY_BONE_PARENT[i] as number;
+      (parent < 0 ? nearGroup : (this.bones[parent] as Bone)).add(bone);
+      this.bones.push(bone);
+    }
+    this.legLength = assets.legLength;
+    nearGroup.updateMatrixWorld(true);
+    const skeleton = new Skeleton(this.bones);
     let glow: Mesh | null = null;
     for (const part of assets.near) {
-      const mesh = new Mesh(part.geometry, part.material);
+      const mesh = new SkinnedMesh(part.geometry, part.material);
+      mesh.bind(skeleton);
+      // legs swing outside the rest bounds: cull by the robot's root instead
+      mesh.frustumCulled = false;
       mesh.castShadow = part.id === 'armor';
       if (part.id === 'glow') glow = mesh;
       nearGroup.add(mesh);
@@ -354,11 +377,20 @@ export class ArmyRobot extends BaseEnemy {
 
   override animate(dt: number, time: number): void {
     const speed = this.motion.speed;
-    this.stepPhase += (speed * dt * Math.PI) / ARMY_LOCAL.stepLength;
-    const s = Math.sin(this.stepPhase);
-    const walking = Math.min(1, speed / ARMY_ROBOT.speed);
-    this.visual.position.y = Math.abs(s) * ARMY_LOCAL.bobAmplitude * walking + Math.sin(time * 2.1 + this.phase) * 0.012;
-    this.visual.rotation.z = s * ARMY_LOCAL.rollAmplitude * walking;
+    const f = Math.min(1, speed / ARMY_ROBOT.speed);
+    // phase from the ground covered: one cycle per stride, so the feet do not slide
+    this.stepPhase += ((speed * dt) / strideLength(this.legLength, f * 0.6)) * Math.PI * 2;
+    this.walkAmount += ((speed > 0.2 ? 1 : 0) - this.walkAmount) * Math.min(1, dt * 6);
+    const pose = gaitPose(this.stepPhase, this.walkAmount, f * 0.6, this.legLength, this.gait);
+    // the bones carry the reference's 180-degree turn, so forward is a negative X rotation
+    this.setBone(1, -pose.left.hip);
+    this.setBone(2, -pose.left.knee);
+    this.setBone(3, -pose.right.hip);
+    this.setBone(4, -pose.right.knee);
+    // foot strikes happen at the extremes of the swing
+    const s = Math.cos(this.stepPhase);
+    this.visual.position.y = pose.bob * 0.8 + Math.sin(time * 2.1 + this.phase) * 0.012;
+    this.visual.rotation.z = pose.sway * 0.8;
     this.visual.rotation.y =
       this.brainState === 'patrol' && speed < 0.2
         ? Math.sin(time * 0.9 + this.phase) * 0.06 * (ARMY_LOCAL.scanAmplitude / 0.7)
@@ -386,5 +418,11 @@ export class ArmyRobot extends BaseEnemy {
       this.glowIndex = index;
       this.glowMesh.material = this.glowMats[index] as Material;
     }
+  }
+
+  private setBone(index: number, angle: number): void {
+    const bone = this.bones[index] as Bone;
+    boneTurn.setFromAxisAngle(AXIS_X, angle);
+    bone.quaternion.copy(this.boneRestQuat[index] as Quaternion).multiply(boneTurn);
   }
 }

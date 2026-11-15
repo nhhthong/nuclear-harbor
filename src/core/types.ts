@@ -6,7 +6,7 @@ import type { Vector3 } from 'three';
  * internals.
  */
 
-export type EnemyType = 'army' | 'spot' | 'duck';
+export type EnemyType = 'army' | 'spot' | 'duck' | 'samurai';
 export type DamageSource = 'player' | 'enemy' | 'boss' | 'environment';
 export type DamageableKind = 'player' | 'enemy' | 'boss' | 'prop';
 

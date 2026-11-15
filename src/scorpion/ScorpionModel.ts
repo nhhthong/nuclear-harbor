@@ -49,9 +49,18 @@ export type PivotName =
   | 'clawR'
   | 'fingerL'
   | 'fingerR'
-  | 'legsA'
-  | 'legsB';
-const PIVOTS: readonly PivotName[] = ['body', 'tail0', 'tail1', 'tail2', 'tail3', 'tail4', 'telson', 'clawL', 'clawR', 'fingerL', 'fingerR', 'legsA', 'legsB'];
+  | 'leg0'
+  | 'leg1'
+  | 'leg2'
+  | 'leg3'
+  | 'leg4'
+  | 'leg5'
+  | 'leg6'
+  | 'leg7';
+const LEG_PIVOTS: readonly PivotName[] = ['leg0', 'leg1', 'leg2', 'leg3', 'leg4', 'leg5', 'leg6', 'leg7'];
+const PIVOTS: readonly PivotName[] = ['body', 'tail0', 'tail1', 'tail2', 'tail3', 'tail4', 'telson', 'clawL', 'clawR', 'fingerL', 'fingerR', ...LEG_PIVOTS];
+/** Per leg (same order as the leg pivots): side (+1 right, -1 left) and gait set (true = first half). */
+const LEG_INFO: Array<{ side: number; setA: boolean }> = [];
 const TAIL: readonly PivotName[] = ['tail0', 'tail1', 'tail2', 'tail3', 'tail4', 'telson'];
 
 const PALETTE = {
@@ -327,18 +336,17 @@ function buildReference(): { root: Group; orb: Object3D; telson: Group } {
     piston(wrist, new Vector3(0.35, -0.06, -side * 0.22), new Vector3(0.84, -0.05, -side * 0.16), 0.025);
   }
 
-  // ---- eight legs in two alternating gait sets (R1 L2 R3 L4 / L1 R2 L3 R4) ----
-  const sets: Record<'legsA' | 'legsB', Group> = { legsA: new Group(), legsB: new Group() };
-  sets.legsA.userData.pivot = 'legsA';
-  sets.legsB.userData.pivot = 'legsB';
-  body.add(sets.legsA, sets.legsB);
+  // ---- eight legs, each on its own hip pivot; gait sets R1 L2 R3 L4 / L1 R2 L3 R4 ----
+  LEG_INFO.length = 0;
   LEGS.forEach((cfg, index) => {
     for (const side of [1, -1]) {
       const setA = (index % 2 === 0) === (side === 1);
       const hip = new Group();
       hip.position.set(cfg.x, -0.08, side * cfg.z);
       hip.rotation.y = side * -cfg.yaw;
-      (setA ? sets.legsA : sets.legsB).add(hip);
+      hip.userData.pivot = LEG_PIVOTS[LEG_INFO.length];
+      LEG_INFO.push({ side, setA });
+      body.add(hip);
       add(hip, new SphereGeometry(0.115, 10, 8), 'steel');
       add(hip, new CylinderGeometry(0.13, 0.14, 0.1, 10), 'plate', 0, 0, 0, Math.PI / 2, 0, 0);
       const femur = new Group();
@@ -480,7 +488,7 @@ export function createScorpionAssets(): ScorpionAssets {
 
 /** Per-frame pose inputs. Plain numbers, nothing is allocated per frame. */
 export interface ScorpionPose {
-  /** Gait phase (rad) and amount 0..1. */
+  /** Gait phase (rad, advanced by the distance walked) and amount 0..1. */
   walkPhase: number;
   walk: number;
   time: number;
@@ -510,6 +518,7 @@ export function createPose(): ScorpionPose {
 }
 
 const qa = new Quaternion();
+const qb = new Quaternion();
 const AX = new Vector3(1, 0, 0);
 const AY = new Vector3(0, 1, 0);
 const AZ = new Vector3(0, 0, 1);
@@ -592,15 +601,19 @@ export function createScorpionRig(assets: ScorpionAssets): ScorpionRig {
       // body: the pipeline frame has the head on +Z, so a positive X rotation lowers it
       pivots.body.position.set(restPos.body.x, restPos.body.y + breathe - pose.crouch * 0.22, restPos.body.z);
       setRot('body', AX, pose.pitch);
-      // legs: two alternating sets, swing about the vertical axis and lift on the forward stroke
-      const sA = Math.sin(pose.walkPhase);
-      const sB = -sA;
-      const amp = 0.2 * pose.walk;
-      setRot('legsA', AY, sA * amp);
-      setRot('legsB', AY, sB * amp);
-      const lift = 0.09 * pose.walk;
-      pivots.legsA.position.set(restPos.legsA.x, restPos.legsA.y + Math.max(0, Math.cos(pose.walkPhase)) * lift + pose.crouch * 0.22, restPos.legsA.z);
-      pivots.legsB.position.set(restPos.legsB.x, restPos.legsB.y + Math.max(0, -Math.cos(pose.walkPhase)) * lift + pose.crouch * 0.22, restPos.legsB.z);
+      // legs: alternating tetrapod gait, each leg swings about its own hip and lifts on the way forward
+      const amp = 0.28 * pose.walk;
+      const lift = 0.42 * pose.walk;
+      for (let i = 0; i < LEG_INFO.length; i++) {
+        const info = LEG_INFO[i] as { side: number; setA: boolean };
+        const p = pose.walkPhase + (info.setA ? 0 : Math.PI) + i * 0.12;
+        const swing = Math.sin(p) * amp;
+        const up = Math.max(0, Math.cos(p)) * lift + pose.crouch * 0.35;
+        const leg = LEG_PIVOTS[i] as PivotName;
+        qa.setFromAxisAngle(AY, info.side * swing);
+        qb.setFromAxisAngle(AX, -info.side * up);
+        pivots[leg].quaternion.copy(restQuat[leg]).multiply(qa).multiply(qb);
+      }
       // tail: breathing sway plus strike / wind-up / aim curls (pivot Z is the curl axis)
       const strike = Math.max(0, pose.tailStrike);
       const wind = Math.max(0, -pose.tailStrike);

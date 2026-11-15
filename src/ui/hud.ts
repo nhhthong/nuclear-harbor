@@ -228,6 +228,17 @@ export function createHud(ctx: GameContext, parent: HTMLElement): Hud {
       const [x, y, out] = map(e.position.x, e.position.z);
       if (out) continue;
       near++;
+      if (e.type === 'samurai') {
+        // elites: a bright upward triangle
+        rg.fillStyle = '#ffb066';
+        rg.beginPath();
+        rg.moveTo(x, y - 5.5);
+        rg.lineTo(x + 4.8, y + 3.6);
+        rg.lineTo(x - 4.8, y + 3.6);
+        rg.fill();
+        rg.fillStyle = '#ff4a3a';
+        continue;
+      }
       rg.beginPath();
       rg.arc(x, y, e.type === 'army' ? 3.6 : 2.6, 0, Math.PI * 2);
       rg.fill();

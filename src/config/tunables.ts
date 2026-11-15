@@ -122,7 +122,7 @@ export const WEAPON = {
 /** GDD 5.4 */
 export const ECONOMY = {
   ammoCrateAmount: 30,
-  ammoCratesInZones: 9,
+  ammoCratesInZones: 10,
   ammoCratesInBossArena: 6,
   medkitHeal: 40,
   medkitsInZones: 4,
@@ -146,7 +146,9 @@ export const ENEMY_COUNTS = {
   army: 5,
   spot: 8,
   duck: 5,
-  total: 18,
+  /** Elites: twice the HP and damage of a regular robot, one per area. */
+  samurai: 3,
+  total: 21,
 } as const;
 
 /**

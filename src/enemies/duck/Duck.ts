@@ -26,6 +26,8 @@ const AXIS_X = new Vector3(1, 0, 0);
 const facing = new Vector3();
 const impulse = new Vector3();
 const blastDir = new Vector3();
+/** Ground covered by one waddle step (m). */
+const DUCK_STEP = 0.32;
 const qDelta = new Quaternion();
 
 const models = new WeakMap<SharedAssets, DuckModel>();
@@ -53,7 +55,14 @@ export class Duck extends BaseEnemy {
 
   // visuals
   private readonly model = new Group();
-  private readonly feet: Mesh;
+  private readonly footL: Mesh;
+  private readonly footR: Mesh;
+  private waddle = 0;
+  private ankleLY = 0;
+  private ankleRY = 0;
+  private walkAmount = 0;
+  private lastX = 0;
+  private lastZ = 0;
   private readonly beakJoint = new Group();
   private readonly beakQuat: Quaternion;
   private readonly beacon: Mesh;
@@ -92,7 +101,16 @@ export class Duck extends BaseEnemy {
     const near = new Group();
     const body = new Mesh(geo('body', m.body), mat);
     body.castShadow = true;
-    this.feet = new Mesh(geo('feet', m.feet), mat);
+    this.footL = new Mesh(geo('footL', m.footL), mat);
+    this.footR = new Mesh(geo('footR', m.footR), mat);
+    this.footL.position.copy(m.ankleL);
+    this.footR.position.copy(m.ankleR);
+    this.ankleLY = m.ankleL.y;
+    this.ankleRY = m.ankleR.y;
+    this.footL.castShadow = true;
+    this.footR.castShadow = true;
+    this.lastX = this.position.x;
+    this.lastZ = this.position.z;
     const beak = new Mesh(geo('beak', m.beak), mat);
     this.beakJoint.position.copy(m.beakPosition);
     this.beakJoint.add(beak);
@@ -103,7 +121,7 @@ export class Duck extends BaseEnemy {
       this.beaconOff,
     );
     this.beacon.position.copy(m.beaconPosition);
-    near.add(body, this.feet, this.beakJoint, this.beacon);
+    near.add(body, this.footL, this.footR, this.beakJoint, this.beacon);
     const far = new Mesh(geo('far', m.far), mat);
     const lod = new LOD();
     lod.addLevel(near, 0);
@@ -338,22 +356,38 @@ export class Duck extends BaseEnemy {
 
   // ---- animation ----------------------------------------------------------------------------
 
-  override animate(_dt: number, time: number): void {
+  override animate(dt: number, time: number): void {
     if (!this.alive) return;
     const state = this.brainState;
+    const travelled = Math.hypot(this.position.x - this.lastX, this.position.z - this.lastZ);
+    this.lastX = this.position.x;
+    this.lastZ = this.position.z;
     let lift = 0;
     let stride = 0;
+    let squash = 1;
+    let roll = 0;
+    let footLX = 0;
+    let footRX = 0;
+    let footLY = 0;
+    let footRY = 0;
     let beakDelta = 0;
     let pulse = 0;
     if (state === 'hop') {
       const u = hopPhase(this.hopTime, DUCK.hopPeriod);
       lift = hopArc(u, DUCK.landFraction, DUCK.hopHeight);
-      stride = isGrounded(u, DUCK.landFraction) ? 0 : Math.sin(u * Math.PI * 2) * 0.06;
-      beakDelta = isGrounded(u, DUCK.landFraction) ? -0.25 : 0.1;
-    } else if (state === 'patrol' && this.moveSpeed > 0) {
-      const w = time * 7 + this.phase;
-      lift = Math.abs(Math.sin(w)) * 0.05;
-      stride = Math.sin(w) * 0.04;
+      const grounded = isGrounded(u, DUCK.landFraction);
+      beakDelta = grounded ? -0.25 : 0.1;
+      if (grounded) {
+        // landing squash, then the push-off stretch
+        const g = u / DUCK.landFraction;
+        squash = 1 - 0.16 * Math.sin(g * Math.PI);
+      } else {
+        const v = (u - DUCK.landFraction) / (1 - DUCK.landFraction);
+        squash = 1 + 0.09 * Math.sin(v * Math.PI) - 0.05 * v;
+        // feet tuck back in the air and reach forward before touching down
+        footLX = footRX = -0.6 * Math.sin(v * Math.PI) + 0.3 * Math.max(0, v - 0.7) / 0.3;
+        footLY = footRY = 0.06 * Math.sin(v * Math.PI);
+      }
     } else if (state === 'arming') {
       const elapsed = this.fsm.timeInState;
       const countIndex = Math.min(DUCK.flashHz.length - 1, Math.floor(elapsed / DUCK.countSeconds));
@@ -365,11 +399,31 @@ export class Duck extends BaseEnemy {
     } else {
       beakDelta = Math.sin(time * 1.6 + this.phase) * 0.05;
     }
+    // waddle while patrolling: one foot after the other, paced by the ground covered
+    const walking = state === 'patrol' && travelled > 1e-4 ? 1 : 0;
+    this.walkAmount += (walking - this.walkAmount) * Math.min(1, dt * 8);
+    if (walking) this.waddle += (travelled / DUCK_STEP) * Math.PI;
+    if (state !== 'hop' && this.walkAmount > 0.01) {
+      const a = this.walkAmount;
+      const sL = Math.sin(this.waddle);
+      const sR = Math.sin(this.waddle + Math.PI);
+      footLX = 0.45 * Math.cos(this.waddle) * a;
+      footRX = 0.45 * Math.cos(this.waddle + Math.PI) * a;
+      footLY = Math.max(0, sL) * 0.09 * a;
+      footRY = Math.max(0, sR) * 0.09 * a;
+      roll = sL * 0.09 * a;
+      lift = Math.abs(sL) * 0.03 * a;
+      stride = sL;
+    }
     if (state !== 'arming') this.setBeacon(false);
     this.model.position.y = lift;
-    this.model.scale.setScalar(1 + pulse);
-    this.feet.position.y = Math.abs(stride) * 0.6;
-    this.feet.rotation.z = stride * 2;
+    this.model.scale.set(1 + pulse, (1 + pulse) * squash, 1 + pulse);
+    this.model.rotation.z = roll;
+    this.model.rotation.y = stride * 0.06 * this.walkAmount;
+    this.footL.position.y = this.ankleLY + footLY;
+    this.footR.position.y = this.ankleRY + footRY;
+    this.footL.rotation.x = footLX;
+    this.footR.rotation.x = footRX;
     this.beakJoint.quaternion.copy(this.beakQuat).multiply(qDelta.setFromAxisAngle(AXIS_X, beakDelta));
     this.root.position.y = this.position.y;
   }

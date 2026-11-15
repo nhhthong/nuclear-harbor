@@ -34,7 +34,7 @@ const m = (zone: ZoneId, x: number, z: number, elevated = false, castFromY?: num
 });
 
 /**
- * Zone placement for the quay: 9 crates and 4 medkits. Two of them sit on one-high container
+ * Zone placement for the quay: 10 crates and 4 medkits. Two of them sit on one-high container
  * stacks (2.6 m) and need the double jump. `placements.test.ts` checks every position against the
  * generated container layout and the props.
  */
@@ -42,6 +42,7 @@ export const ZONE_PLACEMENTS: readonly PickupCandidate[] = [
   // C Gate Apron
   c('C', -24, 27),
   c('C', 26, 23),
+  c('C', -14, 30.5),
   m('C', 16, 28.5),
   // A Container Yard
   c('A', -9.3, 5),

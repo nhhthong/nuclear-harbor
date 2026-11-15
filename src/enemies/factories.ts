@@ -2,6 +2,7 @@ import type { EnemyType } from '@/core/types';
 import type { EnemyFactory } from './BaseEnemy';
 import { createArmyRobot } from './army';
 import { createDuckRobot } from './duck';
+import { createSamuraiRobot } from './samurai';
 import { createSpotRobot } from './spot';
 
 /**
@@ -12,4 +13,5 @@ export const ENEMY_FACTORIES: Readonly<Record<EnemyType, EnemyFactory>> = {
   army: createArmyRobot,
   spot: createSpotRobot,
   duck: createDuckRobot,
+  samurai: createSamuraiRobot,
 };

@@ -671,7 +671,8 @@ export class Scorpion implements Damageable {
     if (!skillDrivesGait) {
       this.walkAmount += ((walking ? 1 : 0) - this.walkAmount) * Math.min(1, dt * 6);
       pose.walk = this.walkAmount;
-      pose.walkPhase += dt * SCORPION.walkSpeed * 2.4 * (walking ? 1 : 0);
+      // one gait cycle per stride of ground actually covered: the feet keep pace with the quay
+      if (walking) pose.walkPhase += ((SCORPION.walkSpeed * dt) / SCORPION.strideLength) * Math.PI * 2;
     }
     this.syncPose();
   }
@@ -882,7 +883,7 @@ export class Scorpion implements Damageable {
     this.position.x = nx;
     this.position.z = nz;
     this.travelled += step;
-    pose.walkPhase += dt * 30;
+    pose.walkPhase += (step / (SCORPION.strideLength * 1.6)) * Math.PI * 2;
     pose.walk = 1;
     pose.crouch = 0.35;
     pose.pitch = 0.1;

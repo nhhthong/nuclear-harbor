@@ -1,4 +1,5 @@
-import { Group, LOD, Mesh, MeshStandardMaterial, Vector3, type BufferGeometry } from 'three';
+import { Bone, Group, LOD, Mesh, MeshStandardMaterial, Skeleton, SkinnedMesh, Vector3, type BufferGeometry } from 'three';
+import { legAt, strideLength, type LegPose } from '../gait';
 import type { DamageInfo, DamageResult } from '@/core/types';
 import { BaseEnemy, type EnemyDeps, type EnemySpawn } from '../BaseEnemy';
 import { createVertexColorMaterial } from '../duck/modelKit';
@@ -9,6 +10,7 @@ import { decideSpot, lungeTouchesPlayer, retreatDirection, type SpotState } from
 import { SPOT } from './tunables';
 
 const impulse = new Vector3();
+const AXIS_X = new Vector3(1, 0, 0);
 const away = { x: 0, z: 0 };
 const retreatDir = { x: 0, z: 0 };
 
@@ -43,10 +45,14 @@ export class Spot extends BaseEnemy {
   private lastZ: number;
   private speedEstimate = 0;
   private gait = 0;
+  private lastX2 = 0;
+  private lastZ2 = 0;
 
   private readonly model = new Group();
-  private readonly legsA: Mesh;
-  private readonly legsB: Mesh;
+  private readonly bones: Bone[] = [];
+  private readonly legLength: number;
+  private readonly legPose: LegPose = { hip: 0, knee: 0 };
+  private walkAmount = 0;
   private readonly lamps: Mesh;
   private readonly lampOn: MeshStandardMaterial;
   private readonly lampOff: MeshStandardMaterial;
@@ -68,6 +74,8 @@ export class Spot extends BaseEnemy {
     );
     this.lastX = this.position.x;
     this.lastZ = this.position.z;
+    this.lastX2 = this.position.x;
+    this.lastZ2 = this.position.z;
     const { shared } = deps;
     const m = modelFor(shared);
     const mat = shared.get('spot:mat', () => createVertexColorMaterial(0.36, 0.62, { key: 'spot', wear: 0.45, bottomY: -0.6, height: 1.4 }));
@@ -82,14 +90,22 @@ export class Spot extends BaseEnemy {
     );
 
     const near = new Group();
-    const body = new Mesh(geo('body', m.body), mat);
-    body.castShadow = true;
-    this.legsA = new Mesh(geo('legsA', m.legsA), mat);
-    this.legsB = new Mesh(geo('legsB', m.legsB), mat);
-    this.legsA.position.copy(m.legPivot);
-    this.legsB.position.copy(m.legPivot);
+    // body and legs: one skinned mesh, one skeleton per dog (thigh + shin per leg)
+    for (let i = 0; i < m.boneRest.length; i++) {
+      const bone = new Bone();
+      bone.position.copy(m.boneRest[i] as Vector3);
+      const parent = m.boneParent[i] as number;
+      (parent < 0 ? near : (this.bones[parent] as Bone)).add(bone);
+      this.bones.push(bone);
+    }
+    this.legLength = m.legLength;
+    near.updateMatrixWorld(true);
+    const rig = new SkinnedMesh(geo('rig', m.rig), mat);
+    rig.bind(new Skeleton(this.bones));
+    rig.castShadow = true;
+    rig.frustumCulled = false;
     this.lamps = new Mesh(geo('lamps', m.lamps), this.lampOff);
-    near.add(body, this.legsA, this.legsB, this.lamps);
+    near.add(rig, this.lamps);
     const far = new Mesh(geo('far', m.far), mat);
     const lod = new LOD();
     lod.addLevel(near, 0);
@@ -349,25 +365,53 @@ export class Spot extends BaseEnemy {
     this.lastX = this.position.x;
     this.lastZ = this.position.z;
     const state = this.brainState;
-    let swing = 0;
+    const travelled = Math.hypot(this.position.x - this.lastX2, this.position.z - this.lastZ2);
+    this.lastX2 = this.position.x;
+    this.lastZ2 = this.position.z;
     let lift = 0;
     let drop = 0;
+    let pitch = 0;
+    const f = Math.min(1, this.speedEstimate / SPOT.chaseSpeed);
+    const moving = state !== 'lunge' && state !== 'telegraph' && this.speedEstimate > 0.3 ? 1 : 0;
+    this.walkAmount += (moving - this.walkAmount) * Math.min(1, dt * 8);
+    if (moving) this.gait += (travelled / strideLength(this.legLength, f)) * Math.PI * 2;
+    const amp = (0.26 + 0.24 * f) * this.walkAmount;
+    const fold = (0.75 + 0.5 * f) * this.walkAmount;
+    // trot: diagonal pairs (front-right + rear-left, front-left + rear-right) half a cycle apart
+    for (let leg = 0; leg < 4; leg++) {
+      const pairA = leg === 0 || leg === 3;
+      legAt(this.gait + (pairA ? 0 : Math.PI), amp, fold, this.legPose);
+      let hip = this.legPose.hip;
+      let knee = this.legPose.knee;
+      const front = leg < 2;
+      if (state === 'telegraph') {
+        // crouch: legs gather under the body, knees fold
+        const k = Math.min(1, this.fsm.timeInState / SPOT.telegraphTime);
+        hip = (front ? -0.25 : 0.3) * k;
+        knee = (front ? 0.55 : -0.6) * k;
+      } else if (state === 'lunge') {
+        // stretched leap: front legs reach, rear legs push off
+        const w = Math.min(1, this.travelled / SPOT.lungeMaxDistance);
+        hip = front ? 0.75 - 0.4 * w : -0.8 + 0.3 * w;
+        knee = front ? -0.15 : -0.3;
+      }
+      this.setLeg(leg, hip, knee);
+    }
     if (state === 'lunge') {
       const w = Math.min(1, this.travelled / SPOT.lungeMaxDistance);
       lift = 4 * SPOT.lungeArcHeight * w * (1 - w);
-      swing = -SPOT.lungeSwing;
+      pitch = 0.12 - 0.24 * w;
     } else if (state === 'telegraph') {
       const k = Math.min(1, this.fsm.timeInState / SPOT.telegraphTime);
-      drop = SPOT.crouchDrop * k;
+      drop = SPOT.crouchDrop * 1.6 * k;
+      pitch = 0.06 * k;
     } else {
-      const f = Math.min(1.4, this.speedEstimate / SPOT.chaseSpeed);
-      this.gait += dt * SPOT.trotFrequency * Math.PI * 2 * (0.3 + f);
-      swing = Math.sin(this.gait) * SPOT.trotSwing * Math.min(1, f * 2);
-      lift = Math.abs(Math.cos(this.gait)) * 0.02 * Math.min(1, f * 2);
+      // body dips at each footfall (twice per cycle) and rocks a little
+      lift = -Math.abs(Math.sin(this.gait)) * 0.035 * this.walkAmount;
+      pitch = Math.sin(this.gait * 2) * 0.02 * this.walkAmount;
     }
-    this.legsA.rotation.x = swing;
-    this.legsB.rotation.x = state === 'lunge' ? SPOT.lungeSwing : -swing;
     this.model.position.y = lift - drop;
+    this.model.rotation.x = pitch;
     this.root.position.y = this.position.y;
   }
 
@@ -375,5 +419,11 @@ export class Spot extends BaseEnemy {
     if (lit === this.lampLit) return;
     this.lampLit = lit;
     this.lamps.material = lit ? this.lampOn : this.lampOff;
+  }
+
+  /** Leg `index` (FR, FL, RR, RL): hip and knee angles about X, positive swings forward. */
+  private setLeg(index: number, hip: number, knee: number): void {
+    (this.bones[1 + 2 * index] as Bone).quaternion.setFromAxisAngle(AXIS_X, hip);
+    (this.bones[2 + 2 * index] as Bone).quaternion.setFromAxisAngle(AXIS_X, knee);
   }
 }

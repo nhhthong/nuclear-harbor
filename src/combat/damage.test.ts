@@ -3,6 +3,7 @@ import { BOSS, ECONOMY, ENEMY_COUNTS, ARMY_ROBOT, WEAPON } from '@/config/tunabl
 import { DUCK } from '@/enemies/duck/tunables';
 import { SPOT } from '@/enemies/spot/tunables';
 import { resolveDamage, shotsToKill } from './damage';
+import { SAMURAI } from '@/enemies/samurai/tunables';
 
 describe('resolveDamage', () => {
   it('applies the critical multiplier (GDD 5.3)', () => {
@@ -26,19 +27,20 @@ describe('resolveDamage', () => {
 });
 
 describe('ammo budget (GDD 5.4)', () => {
-  it('needs about 309 hits (whole roster and the boss) and the supply covers 50% accuracy', () => {
+  it('needs about 345 hits (whole roster and the boss) and the supply covers 50% accuracy', () => {
     const hits =
       ENEMY_COUNTS.army * shotsToKill(ARMY_ROBOT.hp) +
       ENEMY_COUNTS.spot * shotsToKill(SPOT.hp) +
       ENEMY_COUNTS.duck * shotsToKill(DUCK.hp) +
+      ENEMY_COUNTS.samurai * shotsToKill(SAMURAI.hp) +
       BOSS.weakPointCount * shotsToKill(BOSS.weakPointHp) +
       shotsToKill(BOSS.coreHp);
-    expect(hits).toBe(309);
+    expect(hits).toBe(345);
     const supply =
       WEAPON.magazineSize +
       WEAPON.reserveAmmo +
       (ECONOMY.ammoCratesInZones + ECONOMY.ammoCratesInBossArena) * ECONOMY.ammoCrateAmount;
-    expect(supply).toBe(660);
+    expect(supply).toBe(690);
     expect(supply).toBeGreaterThanOrEqual(hits / ECONOMY.assumedAccuracy);
   });
 });
