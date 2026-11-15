@@ -75,7 +75,7 @@ export const FALLBACK_LANES: readonly LaneData[] = [
 /** Distance kept from lane ends when placing a Duck (m). */
 const LANE_INSET = 6;
 /** Ducks on the yard aisles (zone A). */
-const YARD_DUCKS = 2;
+const YARD_DUCKS = 3;
 /** Arm length of the plus-shaped patrol at lane intersections (m). */
 const ARM = 8;
 
@@ -130,16 +130,28 @@ const cross = (cx: number, cz: number): XZ[] => [
 const army = (patrol: XZ[], at: XZ = patrol[0] ?? [0, 0]): Authored => ({ type: 'army', at, patrol });
 const spot = (patrol: XZ[]): Authored => ({ type: 'spot', at: patrol[0] ?? [0, 0], patrol });
 
-/** Army loops (tower, lane crossings) and spot beats; the two Ducks come from the yard aisles. */
+const duck = (patrol: XZ[]): Authored => ({ type: 'duck', at: patrol[0] ?? [0, 0], patrol });
+
+/** Army loops (tower, lane crossings), spot beats and the Ducks outside the yard; the yard Ducks come from its aisles. */
 const ARMY_SPOT_POSTS: readonly Authored[] = [
-  // A Container Yard (2 army, 2 spot)
+  // A Container Yard (3 army, 4 spot)
   army(cross(-9.32, -0.89), [-9.32, -0.89]),
   army(cross(9.5, 10.89), [9.5, 10.89]),
+  army(line([-30, 10.89], [-16, 10.89])),
   spot(line([-28, -0.89], [-16, -0.89])),
   spot(line([20, 10.89], [30, 10.89])),
-  // B Relay Court (1 army, 1 spot): the tower guard
+  spot(line([16, -0.89], [30, -0.89])),
+  spot(line([-9.32, 4], [-9.32, 9])),
+  // B Relay Court (1 army, 2 spot, 1 duck): the tower guard
   army(ring(0, -14, 4.5)),
   spot(line([15, -12.5], [26, -12.5])),
+  spot(line([-26, -15], [-16, -15])),
+  duck(line([18, -16.5], [30, -16.5])),
+  // D Quay, east of the boss arena (1 army, 2 spot, 1 duck)
+  army(line([17, -22], [17, -33])),
+  spot(line([22, -22], [32, -22])),
+  spot(line([10, -47], [10, -39])),
+  duck(line([21, -30], [32, -30])),
 ];
 
 function laneAlong(lane: LaneData, d: number): XZ {
@@ -150,7 +162,7 @@ function laneAlong(lane: LaneData, d: number): XZ {
 /** Yard Ducks: one per yard lane, longest first; further Ducks reuse the lanes from the other end. */
 export function yardDucks(lanes: readonly LaneData[]): Authored[] {
   const yard = lanes
-    .filter((l) => l.id.startsWith('yard'))
+    .filter((l) => l.id.startsWith('yard') && l.axis === 'x')
     .sort((a, b) => b.length - a.length || a.id.localeCompare(b.id));
   const out: Authored[] = [];
   for (let i = 0; i < YARD_DUCKS && yard.length > 0; i++) {
@@ -204,7 +216,7 @@ export function toSpawns(list: readonly Authored[], nav: NavGrid | null): EnemyS
 
 /**
  * The robots to spawn after `world:ready`. Sandbox: `?enemies=` list around (0, 0, -24). Harbor:
- * authored data honouring ENEMY_DISTRIBUTION (3 army / 3 spot / 2 duck): Ducks on the yard aisles
+ * authored roster honouring ENEMY_DISTRIBUTION (the manager streams it by area): Ducks on the yard aisles
  * reported by the world module; army loops around the tower and lane crossings; spots on short beats. Every point is
  * checked against the nav grid (warn and nudge when blocked).
  */

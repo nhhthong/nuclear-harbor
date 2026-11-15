@@ -8,7 +8,10 @@ import { EnemyProjectiles } from './EnemyProjectiles';
 import { ENEMY_FACTORIES } from './factories';
 import { bakeNav, registerNav } from './nav/bakeNav';
 import type { NavGrid } from './nav/NavGrid';
+import { ZONES, zoneAt, type ZoneId } from '@/config/level';
+import { AreaSpawner } from './areaSpawner';
 import { getPopulation } from './population';
+import { ENEMY_LOCAL } from './tunables';
 import { SharedAssets } from './SharedAssets';
 
 export interface EnemySnapshot {
@@ -33,6 +36,8 @@ export class EnemyManager {
   private readonly shared: SharedAssets;
   private readonly thinking: BaseEnemy[] = [];
   private time = 0;
+  private areas: AreaSpawner<BaseEnemy> | null = null;
+  private readonly fx = new Vector3();
 
   constructor(
     private readonly ctx: GameContext,
@@ -48,7 +53,59 @@ export class EnemyManager {
     this.nav = nav;
     registerNav(this.ctx, nav);
     console.info(`[enemies] nav grid ${nav.cols}x${nav.rows}, ${nav.walkableCount} walkable cells, baked in ${ms.toFixed(1)} ms`);
-    for (const spawn of getPopulation(this.ctx, nav)) this.spawn(spawn);
+    const population = getPopulation(this.ctx, nav);
+    if (this.ctx.flags.sandbox) {
+      for (const spawn of population) this.spawn(spawn);
+      return;
+    }
+    this.prewarm(population);
+    // harbor: nothing is alive at load; the roster is streamed by area as the player moves
+    const roster = population.map((spawn) => ({ spawn, zone: (zoneAt(spawn.position.x, spawn.position.z) ?? 'A') as ZoneId }));
+    this.areas = new AreaSpawner<BaseEnemy>(roster, ZONES, ENEMY_LOCAL.area, {
+      spawn: (s) => {
+        const e = this.spawn(s);
+        if (e) this.ctx.events.emit('vfx:spawn', { kind: 'pickup', position: this.fx.set(s.position.x, 1.2, s.position.z), scale: 2 });
+        return e;
+      },
+      despawn: (e) => this.despawn(e),
+    });
+  }
+
+  /** Robots still to be destroyed in the harbor roster (live or not yet spawned). */
+  get rosterRemaining(): number {
+    return this.areas?.remaining ?? this.robots.length;
+  }
+
+  onDestroyed(id: string): void {
+    this.areas?.onDestroyed(id);
+  }
+
+  /** Silent removal of a live robot (area streaming): no explosion, no drops, no kill event. */
+  private despawn(e: BaseEnemy): void {
+    e.dispose();
+    const i = this.robots.indexOf(e);
+    if (i >= 0) this.robots.splice(i, 1);
+  }
+
+  /**
+   * Builds one robot of each type once and compiles its shaders while the level loads, so the first
+   * robot that appears mid-game does not stall a frame.
+   */
+  private prewarm(population: readonly EnemySpawn[]): void {
+    const seen = new Set<EnemyType>();
+    const temp: BaseEnemy[] = [];
+    for (const s of population) {
+      if (seen.has(s.type)) continue;
+      seen.add(s.type);
+      const e = this.spawn(s);
+      if (e) temp.push(e);
+    }
+    try {
+      this.ctx.renderer.webgl.compile(this.ctx.scene, this.ctx.camera);
+    } catch (error) {
+      console.warn('[enemies] shader prewarm skipped:', error);
+    }
+    for (const e of temp) this.despawn(e);
   }
 
   spawn(spawn: EnemySpawn): BaseEnemy | null {
@@ -73,6 +130,7 @@ export class EnemyManager {
     if (!this.nav) return;
     this.prune();
     const player = this.ctx.player;
+    this.areas?.update(dt, player.position.x, player.position.z);
     this.scheduler.update(this.robots, player.position.x, player.position.z, dt, this.thinking);
     for (let i = 0; i < this.thinking.length; i++) this.thinking[i]?.runThink();
     for (let i = 0; i < this.robots.length; i++) {
