@@ -1,7 +1,7 @@
-import { BoxGeometry, BufferGeometry, Color, InstancedMesh, Matrix4, Mesh, MeshStandardMaterial, Object3D } from 'three';
+import { BoxGeometry, BufferGeometry, Color, InstancedMesh, Mesh, MeshStandardMaterial, Object3D } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { applyWeatheredPaint } from '@/world/containerModel';
-import { VEHICLE_SIZE, VEHICLES, type Vehicle, type VehicleKind } from './layout';
+import { VEHICLE_SIZE, VEHICLES, type VehicleKind } from './layout';
 import { STRUCTURES } from './tunables';
 
 /** What `GLTFLoader` hands back (only the part used here). */
@@ -29,21 +29,6 @@ export function geometriesFrom(gltf: LoadedGltf): Map<VehicleKind, BufferGeometr
   return out;
 }
 
-const tmpA = new Matrix4();
-const tmpB = new Matrix4();
-
-/**
- * World matrix of a parked vehicle or wreck. Wrecks roll about their length axis: on the roof the body
- * is lifted by its height, on a side it is lifted by half its width and shifted so the footprint stays centred.
- */
-export function vehicleMatrix(v: Vehicle, out: Matrix4): Matrix4 {
-  const s = VEHICLE_SIZE[v.kind];
-  out.makeTranslation(v.x, 0, v.z).multiply(tmpA.makeRotationY(v.yaw));
-  if (v.wreck === 'roof') out.multiply(tmpA.makeTranslation(0, s.h, 0)).multiply(tmpB.makeRotationZ(Math.PI));
-  else if (v.wreck === 'side') out.multiply(tmpA.makeTranslation(s.h / 2, s.hx, 0)).multiply(tmpB.makeRotationZ(Math.PI / 2));
-  return out;
-}
-
 /** Plain box stand-in when the GLB cannot be loaded (the colliders exist either way). */
 function fallbackGeometry(kind: VehicleKind): BufferGeometry {
   const s = VEHICLE_SIZE[kind];
@@ -60,7 +45,7 @@ export function buildVehicleMeshes(geos: Map<VehicleKind, BufferGeometry>): Inst
   const material = new MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.55, metalness: 0.3 });
   applyWeatheredPaint(material, { bottomY: 0, height: 3.2, wear: 0.7, key: 'vehicle', local: true, detail: 2 });
   const plain = new MeshStandardMaterial({ color: 0x8a8f94, roughness: 0.6, metalness: 0.3 });
-  const m = new Matrix4();
+  const obj = new Object3D();
   const c = new Color();
   const meshes: InstancedMesh[] = [];
   const kinds = [...new Set(VEHICLES.map((v) => v.kind))];
@@ -69,7 +54,10 @@ export function buildVehicleMeshes(geos: Map<VehicleKind, BufferGeometry>): Inst
     const loaded = geos.get(kind);
     const mesh = new InstancedMesh(loaded ?? fallbackGeometry(kind), loaded ? material : plain, items.length);
     items.forEach((v, i) => {
-      mesh.setMatrixAt(i, vehicleMatrix(v, m));
+      obj.position.set(v.x, 0, v.z);
+      obj.rotation.set(0, v.yaw, 0);
+      obj.updateMatrix();
+      mesh.setMatrixAt(i, obj.matrix);
       mesh.setColorAt(i, c.setHex(v.tint));
     });
     mesh.instanceMatrix.needsUpdate = true;

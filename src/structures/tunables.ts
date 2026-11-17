@@ -5,8 +5,4 @@ export const STRUCTURES = {
   vehiclesUrl: 'assets/props/vehicles.glb',
   /** Scanned CC0 clutter from Poly Haven (cabinets, barriers, barrels, tyres, generator, work light). */
   dressingUrl: 'assets/props/industrial.glb',
-  /** Smoke above burning wrecks: one puff every interval (s) while the player is within range (m). */
-  smokeInterval: 0.25,
-  smokeRange: 75,
-  smokeScale: 2.4,
 } as const;

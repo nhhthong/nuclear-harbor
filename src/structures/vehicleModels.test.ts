@@ -1,10 +1,9 @@
 import { readFileSync, statSync } from 'node:fs';
-import { Box3, BufferGeometry, Matrix4, Mesh, Vector3 } from 'three';
+import { Box3, BufferGeometry, Mesh, Vector3 } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { describe, expect, it } from 'vitest';
-import { buildFireMesh } from './fire';
-import { VEHICLE_SIZE, VEHICLES, vehicleFires, vehicleSolid, type VehicleKind } from './layout';
-import { buildVehicleMeshes, geometriesFrom, loadVehicleGeometries, vehicleMatrix } from './vehicles';
+import { VEHICLE_SIZE, VEHICLES, type VehicleKind } from './layout';
+import { buildVehicleMeshes, geometriesFrom, loadVehicleGeometries } from './vehicles';
 
 const FILE = new URL('../../public/assets/props/vehicles.glb', import.meta.url);
 
@@ -45,37 +44,5 @@ describe('vehicle meshes', () => {
   it('fall back to boxes when the model cannot load', async () => {
     const geos = await loadVehicleGeometries(() => Promise.reject(new Error('offline')));
     expect(geos.size).toBe(0);
-  });
-});
-
-describe('wrecks', () => {
-  const wrecks = VEHICLES.filter((v) => v.wreck);
-  it('exist, burn, and rest on the ground inside their collider', () => {
-    expect(wrecks.length).toBeGreaterThanOrEqual(3);
-    const m = new Matrix4();
-    for (const v of wrecks) {
-      const s = VEHICLE_SIZE[v.kind];
-      const box = new Box3(new Vector3(-s.hx, 0, -s.hz), new Vector3(s.hx, s.h, s.hz)).applyMatrix4(vehicleMatrix(v, m));
-      const solid = vehicleSolid(v);
-      expect(box.min.y, v.kind).toBeCloseTo(0, 5);
-      expect(box.max.y).toBeCloseTo(solid.half.y * 2, 5);
-      expect(box.min.x).toBeCloseTo(solid.center.x - solid.half.x, 5);
-      expect(box.max.z).toBeCloseTo(solid.center.z + solid.half.z, 5);
-      if (v.burning) {
-        const fires = vehicleFires(v);
-        expect(fires.length).toBe(2);
-        for (const f of fires) {
-          expect(f.seed).toBeGreaterThanOrEqual(0);
-          expect(f.seed).toBeLessThan(1);
-          expect(f.y).toBeLessThan(box.max.y);
-        }
-      }
-    }
-  });
-
-  it('draws every flame in one instanced mesh', () => {
-    const spots = VEHICLES.flatMap(vehicleFires);
-    expect(buildFireMesh(spots)?.count).toBe(spots.length);
-    expect(buildFireMesh([])).toBeNull();
   });
 });

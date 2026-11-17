@@ -8,8 +8,6 @@ import {
   MeshStandardMaterial,
   Object3D,
   RepeatWrapping,
-  Vector3,
-  type ShaderMaterial,
   type BufferGeometry,
   type Material,
 } from 'three';
@@ -19,8 +17,7 @@ import type { GameContext } from '@/core/GameContext';
 import type { GameModule } from '@/core/GameModule';
 import { applyWeatheredPaint } from '@/world/containerModel';
 import { WORLD_LOCAL } from '@/world/tunables';
-import { CRANE, FLOOD_LIGHTS, PROPS, VEHICLES, structureSolids, vehicleFires, type Prop, type PropKind } from './layout';
-import { buildFireMesh } from './fire';
+import { CRANE, FLOOD_LIGHTS, PROPS, VEHICLES, structureSolids, type Prop, type PropKind } from './layout';
 import { buildBarrier, buildBollard, buildCabin, buildCone, buildCrane, buildDrum, buildFence, buildMast, buildPallet } from './models';
 import { STRUCTURES } from './tunables';
 import { buildVehicleMeshes, loadVehicleGeometries } from './vehicles';
@@ -67,14 +64,6 @@ export function createStructuresModule(): GameModule {
   let colliders: Collider[] = [];
   let beaconMat: MeshBasicMaterial | null = null;
   let time = 0;
-  let ctxRef: GameContext | null = null;
-  let fireMat: ShaderMaterial | null = null;
-  /** Smoke columns above burning wrecks: emitted through the shared VFX system while the player is near. */
-  const smoke = VEHICLES.filter((v) => v.burning).map((v, i) => {
-    const top = vehicleFires(v)[0];
-    return { x: v.x, y: (top?.y ?? 1) + 1.6, z: v.z, next: i * 0.17 };
-  });
-  const smokePos = new Vector3();
 
   return {
     id: MODULE_ID,
@@ -211,14 +200,6 @@ export function createStructuresModule(): GameModule {
       const windows = instanced(cabin.windows, windowMat, byKind('cabin'));
       if (windows) windows.castShadow = false;
 
-      // ---- flames on the burning wrecks (procedural shader, independent of the GLB) ----------------
-      const fires = buildFireMesh(VEHICLES.flatMap(vehicleFires));
-      if (fires) {
-        add(fires);
-        fireMat = fires.material as ShaderMaterial;
-      }
-      ctxRef = ctx;
-
       // ---- parked vehicles (async GLB; the colliders below exist from the first frame) -------------
       let vehiclesShown = 0;
       void loadVehicleGeometries().then((geos) => {
@@ -253,8 +234,6 @@ export function createStructuresModule(): GameModule {
         }
         colliders = [];
         beaconMat = null;
-        fireMat = null;
-        ctxRef = null;
         delete ctx.testHooks[MODULE_ID];
       });
 
@@ -265,17 +244,6 @@ export function createStructuresModule(): GameModule {
 
     update(dt) {
       time += dt;
-      if (fireMat) fireMat.uniforms.uTime!.value = time;
-      const c = ctxRef;
-      if (c && smoke.length > 0 && c.state.is('playing')) {
-        const p = c.player.position;
-        for (const s of smoke) {
-          if (time < s.next) continue;
-          s.next = time + STRUCTURES.smokeInterval;
-          if (Math.hypot(p.x - s.x, p.z - s.z) > STRUCTURES.smokeRange) continue;
-          c.events.emit('vfx:spawn', { kind: 'smoke', position: smokePos.set(s.x, s.y, s.z), scale: STRUCTURES.smokeScale });
-        }
-      }
       // slow double blink of the red obstruction lights
       if (beaconMat) {
         const t = time % 2.4;
