@@ -24,6 +24,7 @@ import { buildFireMesh } from './fire';
 import { buildBarrier, buildBollard, buildCabin, buildCone, buildCrane, buildDrum, buildFence, buildMast, buildPallet } from './models';
 import { STRUCTURES } from './tunables';
 import { buildVehicleMeshes, loadVehicleGeometries } from './vehicles';
+import { buildDressingMeshes, loadDressingModels } from './dressing';
 
 const MODULE_ID = 'structures';
 
@@ -228,6 +229,15 @@ export function createStructuresModule(): GameModule {
         }
         ctx.renderer.markShadowsDirty();
       });
+      let dressingShown = 0;
+      void loadDressingModels().then((models) => {
+        if (res !== scope) return;
+        for (const mesh of buildDressingMeshes(models)) {
+          add(mesh);
+          dressingShown += mesh.count;
+        }
+        ctx.renderer.markShadowsDirty();
+      });
 
       // ---- colliders ----------------------------------------------------------------------------
       for (const s of structureSolids()) {
@@ -249,7 +259,7 @@ export function createStructuresModule(): GameModule {
       });
 
       ctx.testHooks[MODULE_ID] = {
-        summary: () => ({ floodLights: FLOOD_LIGHTS.length, props: PROPS.length, vehicles: VEHICLES.length, vehiclesShown, cranes: CRANE_SITES.length, colliders: colliders.length }),
+        summary: () => ({ floodLights: FLOOD_LIGHTS.length, props: PROPS.length, vehicles: VEHICLES.length, vehiclesShown, dressingShown, cranes: CRANE_SITES.length, colliders: colliders.length }),
       };
     },
 

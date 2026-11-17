@@ -272,9 +272,86 @@ export function vehicleSolid(v: Vehicle): SolidBox {
   };
 }
 
+// ---- scanned industrial clutter (models: public/assets/props/industrial.glb, built by industrial.py) ----
+
+export type DressingKind = 'cabinet_a' | 'cabinet_b' | 'barrier' | 'barrel_red' | 'barrel_blue' | 'tyre' | 'generator' | 'worklight';
+
+/** Footprint half extents (hx across, hz deep at yaw 0) and height, as printed by industrial.py. */
+export const DRESSING_SIZE: Record<DressingKind, { hx: number; hz: number; h: number }> = {
+  cabinet_a: { hx: 0.35, hz: 0.29, h: 1.51 },
+  cabinet_b: { hx: 0.62, hz: 0.29, h: 1.51 },
+  barrier: { hx: 0.78, hz: 0.22, h: 1.11 },
+  barrel_red: { hx: 0.28, hz: 0.28, h: 0.88 },
+  barrel_blue: { hx: 0.32, hz: 0.32, h: 0.93 },
+  tyre: { hx: 0.3, hz: 0.3, h: 0.17 },
+  generator: { hx: 0.41, hz: 0.29, h: 0.58 },
+  worklight: { hx: 0.39, hz: 0.64, h: 1.79 },
+};
+
+export interface Dressing {
+  kind: DressingKind;
+  x: number;
+  z: number;
+  /** Multiples of PI/2 for the collider; `jitter` turns the model a little without moving the collider. */
+  yaw: number;
+  jitter?: number;
+  /** Tyres only: how many lie on top of each other. */
+  stack?: number;
+}
+
+const barrierRow = (x0: number, z: number, n: number, yaw = 0): Dressing[] =>
+  Array.from({ length: n }, (_, i) => ({ kind: 'barrier' as const, x: x0 + i * 1.6 * Math.cos(yaw), z: z - i * 1.6 * Math.sin(yaw), yaw }));
+
+/**
+ * Dense clutter on the gate apron (the robot-free spawn area), in the spirit of a working terminal: an
+ * electrical corner on the west fence, barrier walls that narrow the apron into lanes, barrel and tyre dumps
+ * and a generator with a work light next to the burning wreck.
+ */
+export const DRESSING: readonly Dressing[] = [
+  // west fence: electrical corner
+  { kind: 'cabinet_b', x: -34.8, z: 22.6, yaw: Q },
+  { kind: 'cabinet_a', x: -34.8, z: 23.9, yaw: Q },
+  { kind: 'cabinet_b', x: -34.8, z: 25.0, yaw: Q },
+  { kind: 'generator', x: -33.3, z: 24.2, yaw: Q, jitter: 0.15 },
+  { kind: 'worklight', x: -33.6, z: 26.6, yaw: Q, jitter: -0.3 },
+  // barrier walls: narrow the apron into lanes on both sides of the spawn
+  ...barrierRow(-12.4, 28.6, 4),
+  ...barrierRow(8.0, 28.6, 4),
+  ...barrierRow(16.0, 21.9, 3),
+  // tyre dump between the truck and the forklift
+  { kind: 'tyre', x: -26.4, z: 27.4, yaw: 0, stack: 4 },
+  { kind: 'tyre', x: -25.6, z: 28.1, yaw: 0, stack: 2 },
+  { kind: 'tyre', x: -26.6, z: 28.4, yaw: 0, stack: 1, jitter: 0.4 },
+  // barrels by the west car park
+  { kind: 'barrel_red', x: -22.8, z: 17.3, yaw: 0, jitter: 0.4 },
+  { kind: 'barrel_red', x: -22.2, z: 17.8, yaw: 0, jitter: 1.1 },
+  { kind: 'barrel_blue', x: -22.9, z: 18.0, yaw: 0, jitter: 2.0 },
+  // east: cabinets by the gate mast, barrels by the site office
+  { kind: 'cabinet_b', x: 18.6, z: 25.0, yaw: Math.PI },
+  { kind: 'cabinet_a', x: 19.9, z: 25.0, yaw: Math.PI },
+  { kind: 'barrel_blue', x: 23.6, z: 26.0, yaw: 0, jitter: 0.7 },
+  { kind: 'barrel_red', x: 24.3, z: 25.8, yaw: 0, jitter: 2.4 },
+  { kind: 'barrel_blue', x: 23.6, z: 25.1, yaw: 0, jitter: 1.6 },
+  // fire crew kit next to the burning wreck
+  { kind: 'generator', x: 25.1, z: 24.1, yaw: Q, jitter: -0.2 },
+  { kind: 'worklight', x: 25.2, z: 22.2, yaw: -Q, jitter: 0.35 },
+];
+
+/** Axis-aligned collider of a clutter item (tyre stacks grow with their count). */
+export function dressingSolid(d: Dressing): SolidBox {
+  const s = DRESSING_SIZE[d.kind];
+  const quarter = Math.abs(Math.sin(d.yaw)) > 0.7;
+  const h = d.kind === 'tyre' ? s.h * (d.stack ?? 1) : s.h;
+  return {
+    id: `${d.kind}@${d.x.toFixed(1)},${d.z.toFixed(1)}`,
+    center: { x: d.x, y: h / 2, z: d.z },
+    half: { x: quarter ? s.hz : s.hx, y: h / 2, z: quarter ? s.hx : s.hz },
+  };
+}
+
 /** Every solid of this module, for physics and for tests that need the walkable area. */
 export function structureSolids(): SolidBox[] {
   const masts: SolidBox[] = FLOOD_LIGHTS.map((f) => ({ id: `mast-${f.id}`, center: { x: f.x, y: f.height / 2, z: f.z }, half: { x: 0.22, y: f.height / 2, z: 0.22 } }));
   const props = PROPS.map(propSolid).filter((s): s is SolidBox => s !== null);
-  return [...craneSolids(), ...masts, ...props, ...VEHICLES.map(vehicleSolid)];
+  return [...craneSolids(), ...masts, ...props, ...VEHICLES.map(vehicleSolid), ...DRESSING.map(dressingSolid)];
 }
