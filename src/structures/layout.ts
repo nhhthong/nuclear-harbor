@@ -180,6 +180,10 @@ export interface Vehicle {
   yaw: number;
   /** Multiplies the baked paint (white body panels take the colour, black parts stay black). */
   tint: number;
+  /** Wrecks lie on a side or on the roof (the roll is about the vehicle's length axis). */
+  wreck?: 'side' | 'roof';
+  /** Flames on the wreck and a smoke column. */
+  burning?: boolean;
 }
 
 const Q = Math.PI / 2;
@@ -189,6 +193,8 @@ const RED = 0x9a2a22;
 const NAVY = 0x5a7bb0;
 const OLIVE = 0x6d7550;
 const ORANGE = 0xd9772a;
+/** Burnt-out paint: multiplies the baked colours down to charcoal. */
+const BURNT = 0x3b332d;
 
 /**
  * Hand-placed, final-frame coordinates: a staff car park and a truck waiting at the gate (apron, inside the
@@ -214,16 +220,55 @@ export const VEHICLES: readonly Vehicle[] = [
   { kind: 'truck', x: -27, z: -43, yaw: Q, tint: ORANGE },
   { kind: 'van', x: 16, z: -85.4, yaw: Q, tint: SILVER },
   { kind: 'semi', x: 25, z: -75.5, yaw: Q, tint: WHITE },
+  // burning wrecks: the robots got here first
+  { kind: 'sedan', x: 28, z: 23, yaw: 0, tint: BURNT, wreck: 'side', burning: true },
+  { kind: 'van', x: -21, z: -29.5, yaw: Q, tint: BURNT, wreck: 'roof', burning: true },
+  { kind: 'hatchback', x: -22, z: -46.5, yaw: 0, tint: BURNT, wreck: 'side', burning: true },
 ];
+
+/** Half extents of the vehicle body in its own frame after the wreck roll (x across, y up, z along). */
+export function vehicleBodyHalf(v: Vehicle): { x: number; y: number; z: number } {
+  const s = VEHICLE_SIZE[v.kind];
+  if (v.wreck === 'side') return { x: s.h / 2, y: s.hx, z: s.hz };
+  return { x: s.hx, y: s.h / 2, z: s.hz };
+}
+
+export interface FireSpot {
+  x: number;
+  y: number;
+  z: number;
+  /** Flame width and height (m). */
+  w: number;
+  h: number;
+  /** 0..1, de-synchronises the flame animation. */
+  seed: number;
+}
+
+/** Flames of a burning vehicle: a big one in the middle of the body and a smaller one towards one end. */
+export function vehicleFires(v: Vehicle): FireSpot[] {
+  if (!v.burning) return [];
+  const half = vehicleBodyHalf(v);
+  const top = half.y * 2 - 0.35;
+  const spot = (along: number, w: number, h: number, seed: number): FireSpot => ({
+    x: v.x + Math.sin(v.yaw) * along,
+    y: top,
+    z: v.z + Math.cos(v.yaw) * along,
+    w,
+    h,
+    seed,
+  });
+  const frac = (n: number) => ((n % 1) + 1) % 1;
+  return [spot(0, 2.2, 3.2, frac(v.x * 0.37 + v.z * 0.11)), spot(half.z * 0.55, 1.4, 2.1, frac(v.x * 0.13 + v.z * 0.29 + 0.5))];
+}
 
 /** Axis-aligned collider of a parked vehicle (the whole body, ground to roof). */
 export function vehicleSolid(v: Vehicle): SolidBox {
-  const s = VEHICLE_SIZE[v.kind];
+  const b = vehicleBodyHalf(v);
   const quarter = Math.abs(Math.sin(v.yaw)) > 0.7;
   return {
     id: `${v.kind}@${v.x.toFixed(1)},${v.z.toFixed(1)}`,
-    center: { x: v.x, y: s.h / 2, z: v.z },
-    half: { x: quarter ? s.hz : s.hx, y: s.h / 2, z: quarter ? s.hx : s.hz },
+    center: { x: v.x, y: b.y, z: v.z },
+    half: { x: quarter ? b.z : b.x, y: b.y, z: quarter ? b.x : b.z },
   };
 }
 
