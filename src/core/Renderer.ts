@@ -52,6 +52,7 @@ const GRADE_SHADER = {
     uVignette: { value: 0.4 },
     uGrain: { value: 0.03 },
     uAberration: { value: 0.0015 },
+    uDesat: { value: 0.35 },
   },
   vertexShader: /* glsl */ `
     varying vec2 vUv;
@@ -63,6 +64,7 @@ const GRADE_SHADER = {
     uniform float uVignette;
     uniform float uGrain;
     uniform float uAberration;
+    uniform float uDesat;
     varying vec2 vUv;
     float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
     void main() {
@@ -73,11 +75,15 @@ const GRADE_SHADER = {
       col.r = texture2D(tDiffuse, vUv + off).r;
       col.g = texture2D(tDiffuse, vUv).g;
       col.b = texture2D(tDiffuse, vUv - off).b;
-      // grade: lift shadows towards teal, push highlights warm, a touch more contrast
+      // grade: cold and drained. Desaturate, shadows towards blue-green, highlights towards cold grey,
+      // crushed blacks; saturated warm lamps keep a little of their colour so they read as the only warmth
       float luma = dot(col, vec3(0.2126, 0.7152, 0.0722));
-      col = mix(col, col * vec3(0.90, 1.0, 1.10), (1.0 - smoothstep(0.0, 0.45, luma)) * 0.55);
-      col = mix(col, col * vec3(1.06, 1.0, 0.92), smoothstep(0.45, 1.0, luma) * 0.5);
-      col = (col - 0.5) * 1.06 + 0.5;
+      float warm = clamp((col.r - col.b) * 2.0, 0.0, 1.0) * smoothstep(0.5, 0.9, luma);
+      col = mix(col, vec3(luma), uDesat * (1.0 - warm * 0.7));
+      col = mix(col, col * vec3(0.84, 0.97, 1.12), (1.0 - smoothstep(0.0, 0.5, luma)) * 0.7);
+      col = mix(col, col * vec3(0.95, 1.0, 1.06), smoothstep(0.4, 1.0, luma) * 0.5 * (1.0 - warm));
+      col = max(col - 0.015, 0.0) * 1.03;
+      col = (col - 0.5) * 1.1 + 0.5;
       col *= 1.0 - uVignette * smoothstep(0.12, 0.75, r2 * 2.0);
       float n = hash(vUv * vec2(1920.0, 1080.0) + fract(uTime) * 91.7) - 0.5;
       col += n * uGrain * (1.0 - 0.6 * luma);
@@ -228,6 +234,7 @@ export class Renderer {
       (this.gradePass.uniforms.uVignette as { value: number }).value = g.vignette;
       (this.gradePass.uniforms.uGrain as { value: number }).value = g.grain;
       (this.gradePass.uniforms.uAberration as { value: number }).value = g.aberration;
+      (this.gradePass.uniforms.uDesat as { value: number }).value = g.desaturate;
       composer.addPass(this.gradePass);
       this.composer = composer;
       this.composerScene = scene;

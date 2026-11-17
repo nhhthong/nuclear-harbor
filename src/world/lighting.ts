@@ -34,6 +34,9 @@ uniform vec3 uGround;
 uniform vec3 uSunDir;
 uniform vec3 uSunTint;
 uniform float uTime;
+uniform float uCover;
+uniform vec3 uCloudLit;
+uniform vec3 uCloudShade;
 varying vec3 vDir;
 
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
@@ -66,15 +69,16 @@ void main() {
   if (d.y > 0.01) {
     vec2 uv = d.xz / (d.y + 0.16) * 1.15 + vec2(uTime * 0.004, uTime * 0.0015);
     float deck = fbm(uv);
-    float c = smoothstep(0.46, 0.82, deck);
-    float fade = smoothstep(0.01, 0.2, d.y);
-    // under-lit clouds: glowing orange-pink near the sun, slate with pink rims away from it
-    vec3 lit = mix(vec3(0.42, 0.36, 0.48), uSunTint * 1.5 + vec3(0.25, 0.05, 0.08), pow(side, 1.6) * (0.55 + 0.45 * (1.0 - up)));
-    vec3 shade = vec3(0.16, 0.16, 0.26);
-    vec3 cloud = mix(lit, shade, smoothstep(0.62, 0.95, deck) * 0.7);
-    col = mix(col, cloud, c * fade * 0.85);
+    // overcast deck: coverage moves the threshold, the sun only brightens the deck a little on its side
+    float lo = mix(0.6, 0.18, uCover);
+    float c = smoothstep(lo, lo + 0.3, deck);
+    float fade = smoothstep(0.0, 0.16, d.y);
+    vec3 lit = mix(uCloudLit, uCloudLit + uSunTint * 0.18, pow(side, 2.0) * pow(s, 2.0));
+    vec3 cloud = mix(lit, uCloudShade, smoothstep(0.5, 0.95, deck) * 0.8);
+    col = mix(col, cloud, c * fade * 0.95);
   }
-  col += uSunTint * (pow(s, 40.0) * 0.3 + pow(s, 1200.0) * 1.5);
+  // pale sun smear behind the deck instead of a disc
+  col += uSunTint * (pow(s, 24.0) * 0.18 + pow(s, 300.0) * 0.25) * (1.0 - 0.6 * uCover);
   col = mix(uGround, col, smoothstep(-0.1, 0.0, d.y));
   gl_FragColor = vec4(col, 1.0);
   #include <tonemapping_fragment>
@@ -139,6 +143,9 @@ export function createLighting(ctx: GameContext): Lighting {
     uGround: { value: new Color(cfg.sky.ground) },
     uSunDir: { value: sunDir.clone() },
     uSunTint: { value: new Color(cfg.sky.sunTint) },
+    uCover: { value: cfg.sky.cloudCover },
+    uCloudLit: { value: new Color(...cfg.sky.cloudLit) },
+    uCloudShade: { value: new Color(...cfg.sky.cloudShade) },
     uTime: { value: 0 },
   };
   const dome = new Mesh(
