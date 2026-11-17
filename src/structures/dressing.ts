@@ -38,11 +38,12 @@ const one = new Vector3(1, 1, 1);
 
 /** Instance matrices of one placement (a tyre stack yields one matrix per tyre, each turned a little). */
 export function dressingMatrices(d: Dressing): Matrix4[] {
-  const count = d.kind === 'tyre' ? Math.max(1, d.stack ?? 1) : 1;
+  const stacked = d.kind === 'tyre' || d.kind === 'pallet';
+  const count = stacked ? Math.max(1, d.stack ?? 1) : 1;
   const h = DRESSING_SIZE[d.kind].h;
   const out: Matrix4[] = [];
   for (let i = 0; i < count; i++) {
-    q.setFromAxisAngle(UP, d.yaw + (d.jitter ?? 0) + i * 0.9);
+    q.setFromAxisAngle(UP, d.yaw + (d.jitter ?? 0) + i * (d.kind === 'tyre' ? 0.9 : 0.05));
     p.set(d.x + (i % 2) * 0.03, i * h, d.z - (i % 3) * 0.02);
     out.push(new Matrix4().compose(p, q, one));
   }
@@ -75,11 +76,15 @@ export function buildDressingMeshes(models: Map<DressingKind, DressingModel>): I
   return meshes;
 }
 
+/** Loads both clutter GLBs; a file that fails leaves its kinds as box stand-ins. */
 export async function loadDressingModels(loader: DressingLoader = defaultLoader): Promise<Map<DressingKind, DressingModel>> {
-  try {
-    return dressingModelsFrom(await loader(STRUCTURES.dressingUrl));
-  } catch (err) {
-    console.warn('[structures] clutter models unavailable, using boxes', err);
-    return new Map();
+  const out = new Map<DressingKind, DressingModel>();
+  for (const url of [STRUCTURES.dressingUrl, STRUCTURES.terminalUrl]) {
+    try {
+      for (const [k, m] of dressingModelsFrom(await loader(url))) out.set(k, m);
+    } catch (err) {
+      console.warn('[structures] clutter models unavailable, using boxes', url, err);
+    }
   }
+  return out;
 }

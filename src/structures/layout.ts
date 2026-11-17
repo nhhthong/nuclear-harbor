@@ -229,7 +229,21 @@ export function vehicleSolid(v: Vehicle): SolidBox {
 
 // ---- scanned industrial clutter (models: public/assets/props/industrial.glb, built by industrial.py) ----
 
-export type DressingKind = 'cabinet_a' | 'cabinet_b' | 'barrier' | 'barrel_red' | 'barrel_blue' | 'tyre' | 'generator' | 'worklight';
+export type DressingKind =
+  // industrial.glb (Poly Haven scans)
+  | 'cabinet_a' | 'cabinet_b' | 'barrier' | 'barrel_red' | 'barrel_blue' | 'tyre' | 'generator' | 'worklight'
+  // terminal.glb (3DModelsCC0 packs)
+  | 'water_tower' | 'dumpster' | 'ac_unit' | 'cable_drum' | 'switchgear' | 'street_box' | 'gas_cylinder'
+  | 'water_barrel' | 'light_tower' | 'cement_mixer' | 'pallet' | 'portaloo' | 'roadblock' | 'trash_bin';
+
+/** Which GLB a clutter kind comes from. */
+export const DRESSING_FILE: Record<DressingKind, 'industrial' | 'terminal'> = {
+  cabinet_a: 'industrial', cabinet_b: 'industrial', barrier: 'industrial', barrel_red: 'industrial',
+  barrel_blue: 'industrial', tyre: 'industrial', generator: 'industrial', worklight: 'industrial',
+  water_tower: 'terminal', dumpster: 'terminal', ac_unit: 'terminal', cable_drum: 'terminal', switchgear: 'terminal',
+  street_box: 'terminal', gas_cylinder: 'terminal', water_barrel: 'terminal', light_tower: 'terminal',
+  cement_mixer: 'terminal', pallet: 'terminal', portaloo: 'terminal', roadblock: 'terminal', trash_bin: 'terminal',
+};
 
 /** Footprint half extents (hx across, hz deep at yaw 0) and height, as printed by industrial.py. */
 export const DRESSING_SIZE: Record<DressingKind, { hx: number; hz: number; h: number }> = {
@@ -241,6 +255,20 @@ export const DRESSING_SIZE: Record<DressingKind, { hx: number; hz: number; h: nu
   tyre: { hx: 0.3, hz: 0.3, h: 0.17 },
   generator: { hx: 0.41, hz: 0.29, h: 0.58 },
   worklight: { hx: 0.39, hz: 0.64, h: 1.79 },
+  water_tower: { hx: 1.05, hz: 0.96, h: 6.04 },
+  dumpster: { hx: 1.02, hz: 0.61, h: 1.37 },
+  ac_unit: { hx: 0.25, hz: 0.51, h: 0.81 },
+  cable_drum: { hx: 0.66, hz: 0.5, h: 1.31 },
+  switchgear: { hx: 0.46, hz: 0.94, h: 2.12 },
+  street_box: { hx: 0.19, hz: 0.41, h: 1.61 },
+  gas_cylinder: { hx: 0.2, hz: 0.2, h: 0.71 },
+  water_barrel: { hx: 0.23, hz: 0.23, h: 0.8 },
+  light_tower: { hx: 0.59, hz: 0.54, h: 1.78 },
+  cement_mixer: { hx: 0.65, hz: 0.43, h: 1.5 },
+  pallet: { hx: 0.6, hz: 0.55, h: 0.12 },
+  portaloo: { hx: 0.72, hz: 1.04, h: 2.71 },
+  roadblock: { hx: 0.5, hz: 0.21, h: 0.72 },
+  trash_bin: { hx: 0.3, hz: 0.34, h: 1.34 },
 };
 
 export interface Dressing {
@@ -250,7 +278,7 @@ export interface Dressing {
   /** Multiples of PI/2 for the collider; `jitter` turns the model a little without moving the collider. */
   yaw: number;
   jitter?: number;
-  /** Tyres only: how many lie on top of each other. */
+  /** Tyres and pallets: how many lie on top of each other. */
   stack?: number;
 }
 
@@ -290,13 +318,53 @@ export const DRESSING: readonly Dressing[] = [
   // generator and work light by the east barrier wall
   { kind: 'generator', x: 25.1, z: 24.1, yaw: Q, jitter: -0.2 },
   { kind: 'worklight', x: 25.2, z: 22.2, yaw: -Q, jitter: 0.35 },
+  // site office: water tower and cable drums behind the cabin
+  { kind: 'water_tower', x: 33.2, z: 31.9, yaw: 0 },
+  { kind: 'cable_drum', x: 28.6, z: 31.6, yaw: 0, jitter: 0.2 },
+  { kind: 'cable_drum', x: 30.2, z: 32.1, yaw: Q, jitter: -0.1 },
+  { kind: 'street_box', x: 26.0, z: 31.9, yaw: Q },
+
+  // relay court, west: a small construction site
+  { kind: 'cement_mixer', x: -24.5, z: -30.2, yaw: 0, jitter: 0.4 },
+  { kind: 'pallet', x: -21.8, z: -29.8, yaw: 0, stack: 4 },
+  { kind: 'pallet', x: -20.4, z: -30.6, yaw: Q, stack: 2, jitter: 0.1 },
+  { kind: 'gas_cylinder', x: -22.9, z: -31.3, yaw: 0 },
+  { kind: 'gas_cylinder', x: -22.4, z: -31.5, yaw: 0, jitter: 1.2 },
+  { kind: 'light_tower', x: -27.2, z: -30.0, yaw: Q, jitter: 0.3 },
+  { kind: 'roadblock', x: -24.8, z: -28.5, yaw: 0 },
+  { kind: 'roadblock', x: -21.6, z: -28.4, yaw: 0, jitter: 0.08 },
+
+  // quay, north-east: refuse and site services
+  { kind: 'dumpster', x: 24.4, z: -41.6, yaw: 0 },
+  { kind: 'trash_bin', x: 22.5, z: -41.3, yaw: 0, jitter: 0.3 },
+  { kind: 'trash_bin', x: 22.5, z: -42.2, yaw: 0, jitter: -0.4 },
+  { kind: 'portaloo', x: 27.6, z: -42.0, yaw: Math.PI },
+  { kind: 'portaloo', x: 29.2, z: -42.0, yaw: Math.PI },
+  { kind: 'switchgear', x: 25.0, z: -45.0, yaw: Q },
+  { kind: 'street_box', x: 26.6, z: -45.0, yaw: Q },
+  { kind: 'light_tower', x: 22.8, z: -44.8, yaw: 0, jitter: -0.4 },
+
+  // quay, west: water tower with its pumps
+  { kind: 'water_tower', x: -33.6, z: -45.2, yaw: 0 },
+  { kind: 'ac_unit', x: -31.6, z: -44.6, yaw: 0 },
+  { kind: 'ac_unit', x: -31.6, z: -45.8, yaw: 0, jitter: 0.05 },
+  { kind: 'water_barrel', x: -33.0, z: -42.8, yaw: 0 },
+  { kind: 'water_barrel', x: -33.6, z: -42.5, yaw: 0, jitter: 1.0 },
+  { kind: 'water_barrel', x: -34.1, z: -42.9, yaw: 0, jitter: 2.0 },
+
+  // quay edge, south: roadblocks and cable drums waiting to be loaded
+  { kind: 'roadblock', x: 4.0, z: -84.6, yaw: 0 },
+  { kind: 'roadblock', x: 5.1, z: -84.6, yaw: 0, jitter: 0.06 },
+  { kind: 'roadblock', x: 6.2, z: -84.6, yaw: 0, jitter: -0.05 },
+  { kind: 'cable_drum', x: 9.0, z: -84.3, yaw: Q },
+  { kind: 'cable_drum', x: 10.6, z: -84.5, yaw: Q, jitter: 0.15 },
 ];
 
 /** Axis-aligned collider of a clutter item (tyre stacks grow with their count). */
 export function dressingSolid(d: Dressing): SolidBox {
   const s = DRESSING_SIZE[d.kind];
   const quarter = Math.abs(Math.sin(d.yaw)) > 0.7;
-  const h = d.kind === 'tyre' ? s.h * (d.stack ?? 1) : s.h;
+  const h = d.kind === 'tyre' || d.kind === 'pallet' ? s.h * (d.stack ?? 1) : s.h;
   return {
     id: `${d.kind}@${d.x.toFixed(1)},${d.z.toFixed(1)}`,
     center: { x: d.x, y: h / 2, z: d.z },
