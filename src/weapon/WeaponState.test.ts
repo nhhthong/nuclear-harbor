@@ -27,6 +27,38 @@ function run(w: WeaponState, seconds: number, input: WeaponInput) {
   return totals;
 }
 
+describe('WeaponState auto reload', () => {
+  const auto: WeaponInput = { ...hold, autoReload: true };
+  it('starts reloading when the last round is fired', () => {
+    const w = new WeaponState(cfg);
+    w.mag = 1;
+    const r = w.step(DT, auto);
+    expect(r.shot).toBe(true);
+    expect(r.reloadStarted).toBe(true);
+    expect(w.reloading).toBe(true);
+  });
+  it('does not start without the flag; the next trigger pull still reloads', () => {
+    const w = new WeaponState(cfg);
+    w.mag = 1;
+    expect(w.step(DT, hold).reloadStarted).toBe(false);
+    expect(w.reloading).toBe(false);
+    expect(run(w, 0.2, hold).started).toBe(1);
+  });
+  it('does nothing with an empty reserve', () => {
+    const w = new WeaponState(cfg);
+    w.mag = 1;
+    w.reserve = 0;
+    expect(w.step(DT, auto).reloadStarted).toBe(false);
+  });
+  it('refills the magazine afterwards', () => {
+    const w = new WeaponState(cfg);
+    w.mag = 1;
+    w.step(DT, auto);
+    run(w, WEAPON.reloadDuration + 0.1, idle);
+    expect(w.mag).toBe(cfg.magSize);
+  });
+});
+
 describe('WeaponState', () => {
   it('starts with 30 + 180', () => {
     const w = new WeaponState(cfg);

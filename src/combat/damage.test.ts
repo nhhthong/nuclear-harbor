@@ -27,7 +27,7 @@ describe('resolveDamage', () => {
 });
 
 describe('ammo budget (GDD 5.4)', () => {
-  it('needs about 345 hits (whole roster and the boss) and the supply covers 50% accuracy', () => {
+  it('needs about 345 hits (whole roster and the boss) and the supply covers the assumed accuracy', () => {
     const hits =
       ENEMY_COUNTS.army * shotsToKill(ARMY_ROBOT.hp) +
       ENEMY_COUNTS.spot * shotsToKill(SPOT.hp) +
@@ -40,7 +40,7 @@ describe('ammo budget (GDD 5.4)', () => {
       WEAPON.magazineSize +
       WEAPON.reserveAmmo +
       (ECONOMY.ammoCratesInZones + ECONOMY.ammoCratesInBossArena) * ECONOMY.ammoCrateAmount;
-    expect(supply).toBe(690);
+    expect(supply).toBe(540);
     expect(supply).toBeGreaterThanOrEqual(hits / ECONOMY.assumedAccuracy);
   });
 });

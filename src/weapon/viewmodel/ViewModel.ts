@@ -7,6 +7,8 @@ export interface ViewModelState {
   sprinting: boolean;
   /** Seconds of simulated time, for idle sway. */
   time: number;
+  /** 0..1 blend hip -> aimed (centre the rifle on screen). */
+  aim: number;
 }
 
 /**

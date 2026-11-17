@@ -159,7 +159,7 @@ export class GlbViewModel implements ViewModel {
 
   update(dt: number, state: ViewModelState): void {
     const sprint = state.sprinting ? 1 : 0;
-    this.rig.position.set(0, -sprint * VM.sprintLowerMetres, 0);
+    this.rig.position.set(GLB_VIEW.ads.x * state.aim, -sprint * VM.sprintLowerMetres + GLB_VIEW.ads.y * state.aim, GLB_VIEW.ads.z * state.aim);
     this.rig.rotation.set(0, sprint * VM.sprintTiltRad, 0);
 
     if (this.animated) {

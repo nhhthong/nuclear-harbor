@@ -66,25 +66,32 @@ export const WORLD_LOCAL = {
     blockerHeight: 40,
     parapetColor: 0x8d9296,
   },
-  ocean: { size: 1600, deep: 0x0b2030, shallow: 0x6b5a5c, waveSpeed: 0.5 },
-  /** Sunset after rain: low warm sun, pink-orange horizon, violet zenith, light haze. Colours are sRGB hex. */
+  ocean: { size: 1600, deep: 0x070d13, shallow: 0x2c363e, waveSpeed: 0.5 },
+  /**
+   * Owner request: gloomy, cold, "Dark Souls" mood. Heavy overcast, the sun a pale smear behind the deck,
+   * cold grey-blue haze; the warm lamps are the only warm colours left. Colours are sRGB hex.
+   */
   sky: {
-    horizon: 0xf2a268,
-    zenith: 0x2c3a6e,
-    /** Colour of the band opposite the sun (the "anti-twilight" side), so no direction is black. */
-    antiSun: 0x7a6f9a,
-    sunTint: 0xffb070,
+    horizon: 0x6a7682,
+    zenith: 0x2e3a4a,
+    /** Colour of the band opposite the sun, so no direction is black. */
+    antiSun: 0x55606c,
+    sunTint: 0xa8b8c8,
     /** Colour below the horizon (reflection probe only). */
-    ground: 0x3a3230,
-    fog: 0xc79a86,
-    fogDensity: 0.0052,
+    ground: 0x15171b,
+    /** Cloud deck: share of the sky covered (0..1), lit and shaded colours (linear-ish RGB 0..1). */
+    cloudCover: 0.82,
+    cloudLit: [0.42, 0.46, 0.51] as readonly [number, number, number],
+    cloudShade: [0.2, 0.225, 0.26] as readonly [number, number, number],
+    fog: 0x66727e,
+    fogDensity: 0.0085,
     /** Must stay inside the far plane of every quality preset (low = 300 m) or the dome is clipped. */
     radius: 260,
-    environmentIntensity: 1.25,
+    environmentIntensity: 0.95,
   },
   /** The sun is the only real light in the level (performance): one shadow map, no spot lights. */
-  sun: { color: 0xffa868, intensity: 3.4, elevationDeg: 11, azimuthDeg: 248, distance: 220, frustumHalf: 74, frustumHalfHeight: 42, centerZ: -27 },
-  hemi: { sky: 0x9aa2d0, ground: 0x6a4a38, intensity: 1.35 },
+  sun: { color: 0xc4d2e2, intensity: 2.6, elevationDeg: 22, azimuthDeg: 248, distance: 220, frustumHalf: 74, frustumHalfHeight: 42, centerZ: -27 },
+  hemi: { sky: 0x8495a8, ground: 0x34373d, intensity: 1.35 },
   ground: {
     asphalt: 0x2a2c30,
   },

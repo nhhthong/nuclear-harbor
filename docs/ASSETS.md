@@ -15,3 +15,20 @@
 - Units and axes: inches to metres (0.0254); GoldSrc X-forward/Z-up to -Z forward/+Y up.
 - Runtime: `?viewmodel=glb` loads it lazily from the same origin; the procedural model stays the default and the fallback on any load error. Entry point: `createViewModel` in `src/weapon/viewmodel/createViewModel.ts`. `src/weapon/index.ts` calls it (the T-18 foundation request is applied).
 - Credit to keep in the game credits: G36C view model by funnky, used with the author's permission as stated by the project owner.
+
+## Props: vehicles and industrial clutter (owner-approved free models)
+The constitution asks for procedural content; the owner approved free CC0 and CC-BY models for vehicles and clutter. Raw downloads are NOT in git (they were fetched into a scratch directory); each build script lists the exact source files. Shipped files are in `public/assets/props/`.
+
+| File | Source | Licence | Script | Size |
+|---|---|---|---|---|
+| `vehicles.glb` | [Free Low Poly Vehicles Pack](https://opengameart.org/content/free-low-poly-vehicles-pack) by Rgsdev (truck, truck with trailer, van, pickup, SUV, sedan, hatchback) | CC0 (the pack ships `License.txt`: public domain, no credit required) | `tools/asset-pipeline/props.py` | 0.3 MB |
+| `vehicles.glb` (forklift) | [JUNGHEINRICH DFG 425s forklift](https://opengameart.org/content/forklift-jungheinrich-dfg-425s) by luke1985 | **CC-BY 4.0: credit required** (in-game Credits screen) | `props.py` (decimated to 4.5k triangles, recoloured) | included above |
+| `industrial.glb` | [Poly Haven](https://polyhaven.com) by James Ray Cock and contributors: `utility_box_01`, `utility_box_02`, `concrete_road_barrier_02`, `Barrel_01`, `barrel_03`, `old_tyre`, `portable_generator`, `flood_lights` (standing double A only) | CC0 (site-wide) | `tools/asset-pipeline/industrial.py` (1k glTF -> 512 px JPEG, decimated, glass dropped) | 1.8 MB |
+| `terminal.glb` | [3DModelsCC0 packs on itch.io](https://3dmodelscc0.itch.io): City Environment Pack 1 and 2, Industrial 3D Models, Industrial Props Pack 2 (listing says "No generative AI was used") | CC0 public domain (listing text) | `tools/asset-pipeline/terminal.py` | 2.2 MB |
+
+Notes:
+- The 3DModelsCC0 shop closed; the packs are pay-what-you-want on itch.io and were downloaded at no cost. The licence statement is the one on each itch.io page.
+- A hand pallet truck from the Industrial pack was dropped: the FBX has wrong units (173 m tall).
+- Poly Haven, Rgsdev and 3DModelsCC0 do not require credit; the README credits them anyway.
+- Candidates that were checked and rejected: GameBanana weapon models (CC BY-NC-ND, mostly ports of commercial games), Sketchfab CC-BY models (need an API token), Kenney (blocks bots), CGTrader and RenderHub cranes (paid).
+

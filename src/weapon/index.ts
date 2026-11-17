@@ -1,5 +1,6 @@
 import { Vector3 } from 'three';
-import { WEAPON } from '@/config/tunables';
+import { ADS, CAMERA, WEAPON } from '@/config/tunables';
+import { aimFovDeg, aimScale, stepAim } from '@/core/ads';
 import type { GameContext } from '@/core/GameContext';
 import type { GameModule } from '@/core/GameModule';
 import { QueryGroups } from '@/physics/groups';
@@ -29,6 +30,7 @@ export function createWeaponModule(): GameModule {
   // edges latched in update(), consumed in fixedUpdate()
   let latchFire = false;
   let latchReload = false;
+  let appliedFov: number = CAMERA.fovDeg;
 
   const input: WeaponInput = { fireHeld: false, firePressed: false, reloadPressed: false };
   const eye = new Vector3();
@@ -65,7 +67,7 @@ export function createWeaponModule(): GameModule {
     if (right.lengthSq() < 1e-8) right.set(1, 0, 0);
     right.normalize();
     up.crossVectors(right, dir).normalize();
-    sampleSpread(spread.currentDeg, Math.random(), Math.random(), offset);
+    sampleSpread(spread.currentDeg * aimScale(ADS.spreadScale, c.player.aimAmount), Math.random(), Math.random(), offset);
     shotDir.copy(dir).addScaledVector(right, offset.x).addScaledVector(up, offset.y).normalize();
 
     const hit = c.physics.raycast(eye, shotDir, WEAPON.range, { groups: QueryGroups.playerShot });
@@ -110,8 +112,9 @@ export function createWeaponModule(): GameModule {
 
     // recoil + spread growth + presentation
     const kick = recoil.onShot(Math.random());
-    c.player.pitch = Math.max(-PITCH_LIMIT, Math.min(PITCH_LIMIT, c.player.pitch + kick.pitchRad));
-    c.player.yaw += kick.yawRad;
+    const kickScale = aimScale(ADS.recoilScale, c.player.aimAmount);
+    c.player.pitch = Math.max(-PITCH_LIMIT, Math.min(PITCH_LIMIT, c.player.pitch + kick.pitchRad * kickScale));
+    c.player.yaw += kick.yawRad * kickScale;
     spread.onShot();
 
     if (viewModel && effects) {
@@ -217,11 +220,21 @@ export function createWeaponModule(): GameModule {
       if (c.input.wasPressed('fire')) latchFire = true;
       if (c.input.wasPressed('reload')) latchReload = true;
 
-      viewModel.object3d.visible = canFire(c);
+      const free = canFire(c);
+      viewModel.object3d.visible = free;
+      const wantAim = free && !state.reloading && c.input.isDown('aim');
+      c.player.aimAmount = stepAim(c.player.aimAmount, wantAim ? 1 : 0, dt);
+      const fov = aimFovDeg(c.player.aimAmount);
+      if (Math.abs(fov - appliedFov) > 1e-3) {
+        appliedFov = fov;
+        c.camera.fov = fov;
+        c.camera.updateProjectionMatrix();
+      }
       viewModel.update(dt, {
         speed: Math.hypot(c.player.velocity.x, c.player.velocity.z),
         sprinting: c.player.sprinting,
         time: c.clock.simTime,
+        aim: c.player.aimAmount,
       });
       effects.update(dt);
     },
@@ -232,6 +245,7 @@ export function createWeaponModule(): GameModule {
       if (!canFire(c)) {
         latchFire = false;
         latchReload = false;
+        c.player.aimAmount = 0;
         spread.update(dt, { sprinting: false, moving: false });
         return;
       }
@@ -241,12 +255,14 @@ export function createWeaponModule(): GameModule {
         moving: speed > WEAPON_LOCAL.moveSpeedThreshold,
       });
       const back = recoil.recover(dt);
-      c.player.pitch = Math.max(-PITCH_LIMIT, Math.min(PITCH_LIMIT, c.player.pitch + back.pitchRad));
-      c.player.yaw += back.yawRad;
+      const backScale = aimScale(ADS.recoilScale, c.player.aimAmount);
+      c.player.pitch = Math.max(-PITCH_LIMIT, Math.min(PITCH_LIMIT, c.player.pitch + back.pitchRad * backScale));
+      c.player.yaw += back.yawRad * backScale;
 
       input.fireHeld = c.input.isDown('fire');
       input.firePressed = latchFire;
       input.reloadPressed = latchReload;
+      input.autoReload = c.settings.get('autoReload');
       latchFire = false;
       latchReload = false;
       handle(c, state.step(dt, input));
@@ -260,6 +276,9 @@ export function createWeaponModule(): GameModule {
       viewModel?.dispose();
       viewModel = null;
       if (ctx) {
+        ctx.player.aimAmount = 0;
+        ctx.camera.fov = CAMERA.fovDeg;
+        ctx.camera.updateProjectionMatrix();
         delete ctx.testHooks.weapon;
         ctx.resources.scope('weapon').dispose();
       }

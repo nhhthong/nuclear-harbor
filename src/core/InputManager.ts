@@ -12,6 +12,7 @@ export type Action =
   | 'moveRight'
   | 'fire'
   | 'reload'
+  | 'aim'
   | 'jump'
   | 'sprint'
   | 'interact'
@@ -20,14 +21,15 @@ export type Action =
 
 export type Bindings = Record<Action, string[]>;
 
-/** GDD 4 defaults. REVIEW #1: right mouse reloads (GDD), `R` is an alias. Space jumps (double jump); the grapple was removed. */
+/** Defaults: right mouse aims (hold), `R` reloads (GDD said right mouse reloads; changed on owner request). Space jumps (double jump); the grapple was removed. */
 export const DEFAULT_BINDINGS: Bindings = {
   moveForward: ['KeyW', 'ArrowUp'],
   moveBackward: ['KeyS', 'ArrowDown'],
   moveLeft: ['KeyA', 'ArrowLeft'],
   moveRight: ['KeyD', 'ArrowRight'],
   fire: ['Mouse0'],
-  reload: ['Mouse2', 'KeyR'],
+  reload: ['KeyR'],
+  aim: ['Mouse2'],
   jump: ['Space'],
   sprint: ['ShiftLeft', 'ShiftRight'],
   interact: ['KeyE'],

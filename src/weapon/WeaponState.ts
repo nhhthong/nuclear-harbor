@@ -19,6 +19,8 @@ export interface WeaponInput {
   fireHeld: boolean;
   firePressed: boolean;
   reloadPressed: boolean;
+  /** Start a reload as soon as the magazine runs empty (Settings: Auto reload). Default off. */
+  autoReload?: boolean;
 }
 
 export interface WeaponStepResult {
@@ -90,6 +92,7 @@ export class WeaponState {
         this.cooldown += 1 / this.cfg.fireRate;
         r.shot = true;
         r.changed = true;
+        if (this.mag === 0 && input.autoReload) this.tryStartReload(r);
       } else if (this.reserve > 0) {
         this.tryStartReload(r);
       } else {

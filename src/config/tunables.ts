@@ -28,14 +28,14 @@ export const PLAYER = {
   walkSpeed: 6.5,
   sprintSpeed: 10,
   /**
-   * Owner request: higher, longer jumps. The player has its own, lower gravity (the world value
-   * `SIM.gravity` stays -24): a ground jump rises 3.9 m and lasts 1.4 s (about 14 m at sprint speed),
+   * Owner request: high jumps that do not feel floaty. The player has its own gravity (the world value
+   * `SIM.gravity` stays -24): a ground jump rises 3.9 m and lasts 1.0 s (about 10 m at sprint speed),
    * the air jump adds 3.3 m (7.2 m when chained at the apex). Two-high stacks (5.2 m) are reachable,
-   * three-high ones (7.8 m) are not.
+   * three-high ones (7.8 m) are not. Speeds follow v = sqrt(2 g h) so heights stay when g changes.
    */
-  gravity: -15,
-  jumpSpeed: 10.8,
-  airJumpSpeed: 10,
+  gravity: -30,
+  jumpSpeed: 15.3,
+  airJumpSpeed: 14.1,
   airJumps: 1,
   /** Jump still allowed this long after walking off an edge (s). */
   coyoteTime: 0.1,
@@ -124,23 +124,24 @@ export const WEAPON = {
 /** GDD 5.4 */
 export const ECONOMY = {
   ammoCrateAmount: 30,
-  ammoCratesInZones: 10,
-  ammoCratesInBossArena: 6,
+  /** Owner request: fewer supplies (was 10 + 6 crates, 4 + 2 medkits). */
+  ammoCratesInZones: 7,
+  ammoCratesInBossArena: 4,
   medkitHeal: 40,
-  medkitsInZones: 4,
-  medkitsInBossArena: 2,
+  medkitsInZones: 2,
+  medkitsInBossArena: 1,
   /** GDD 5.4: chance for a destroyed robot to drop ammo. */
-  enemyAmmoDropChance: 0.15,
+  enemyAmmoDropChance: 0.1,
   /** proposed: size of an enemy drop. */
   enemyAmmoDropAmount: 15,
   /** proposed: cap on drops per zone ("limited by the per-zone ammo budget"). */
-  maxEnemyDropsPerZone: 2,
+  maxEnemyDropsPerZone: 1,
   /** proposed */
   pickupRadius: 1.2,
   /** proposed: dropped pickups despawn after this long. */
   dropLifetime: 60,
-  /** GDD 5.4: assumed accuracy used by the ammo budget test. */
-  assumedAccuracy: 0.5,
+  /** Assumed accuracy used by the ammo budget test (GDD 5.4 said 0.5; raised with the smaller supply). */
+  assumedAccuracy: 0.65,
 } as const;
 
 export const ENEMY_COUNTS = {
@@ -250,7 +251,7 @@ export const PERFORMANCE = {
   /** Bloom post-process (medium/high presets): only HDR-bright pixels (emissives, muzzle flash, sun glints) glow. */
   bloom: { strength: 0.4, radius: 0.6, threshold: 1.0, msaaSamples: 4 },
   /** Final grade (display space): vignette, film grain, chromatic aberration, lift/gain tint. */
-  grade: { vignette: 0.32, grain: 0.02, aberration: 0.0004, exposure: 1.0 },
+  grade: { vignette: 0.34, grain: 0.02, aberration: 0.0004, exposure: 1.05, desaturate: 0.25 },
   quality: {
     // T-17: fogFraction = [near, far] as a share of viewDistance; dynamicShadowHz = refresh rate of the
     // otherwise static sun shadow for moving casters (0 = static only).
@@ -284,6 +285,21 @@ export const CAMERA = {
   far: 600,
 } as const;
 
+/** Aim down sights (hold right mouse). `aimAmount` 0..1 blends hip -> aimed. */
+export const ADS = {
+  /** Camera FOV at full aim (hip FOV is `CAMERA.fovDeg`). */
+  fovDeg: 55,
+  /** Exponential response (1/s): about 0.2 s to 95%. */
+  response: 14,
+  /** Walk speed multiplier at full aim. */
+  moveSpeedScale: 0.7,
+  /** Spread and camera recoil multipliers at full aim. */
+  spreadScale: 0.5,
+  recoilScale: 0.5,
+  /** Below this aim amount sprint is still allowed (it is blocked while the aim button is held anyway). */
+  sprintBlockAbove: 0.1,
+} as const;
+
 export const TUNABLES = {
   SIM,
   PLAYER,
@@ -298,6 +314,7 @@ export const TUNABLES = {
   PERFORMANCE,
   WORLD,
   CAMERA,
+  ADS,
 } as const;
 
 export type QualityPreset = keyof typeof PERFORMANCE.quality;

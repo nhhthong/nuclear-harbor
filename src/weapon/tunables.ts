@@ -15,6 +15,10 @@ export const WEAPON_LOCAL = {
   viewModel: {
     /** Position of the rifle in camera space (metres). */
     offset: { x: 0.2, y: -0.19, z: -0.42 },
+    /** Rig shift (camera space, metres) at full aim: puts the sights on the crosshair. */
+    ads: { x: -0.2, y: 0.115, z: 0.04 },
+    /** Bob / sway left at full aim (0..1). */
+    adsSwayKeep: 0.15,
     kickBackMetres: 0.045,
     kickPitchRad: 0.05,
     kickRecoverPerSec: 18,

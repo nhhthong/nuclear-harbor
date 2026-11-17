@@ -27,7 +27,7 @@ describe('shouldDrop', () => {
     expect(shouldDrop(() => 0, ECONOMY.maxEnemyDropsPerZone)).toBe(false);
     expect(shouldDrop(() => 0, ECONOMY.maxEnemyDropsPerZone - 1)).toBe(true);
   });
-  it('is about 15% over many rolls', () => {
+  it('matches the configured drop chance over many rolls', () => {
     let seed = 12345;
     const rng = () => {
       seed = (seed * 1664525 + 1013904223) % 4294967296;
@@ -35,8 +35,8 @@ describe('shouldDrop', () => {
     };
     let n = 0;
     for (let i = 0; i < 20000; i++) if (shouldDrop(rng, 0)) n++;
-    expect(n / 20000).toBeGreaterThan(0.13);
-    expect(n / 20000).toBeLessThan(0.17);
+    expect(n / 20000).toBeGreaterThan(ECONOMY.enemyAmmoDropChance - 0.02);
+    expect(n / 20000).toBeLessThan(ECONOMY.enemyAmmoDropChance + 0.02);
   });
 });
 
