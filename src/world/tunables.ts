@@ -72,26 +72,26 @@ export const WORLD_LOCAL = {
    * cold grey-blue haze; the warm lamps are the only warm colours left. Colours are sRGB hex.
    */
   sky: {
-    horizon: 0x3d464f,
-    zenith: 0x161c25,
+    horizon: 0x6a7682,
+    zenith: 0x2e3a4a,
     /** Colour of the band opposite the sun, so no direction is black. */
-    antiSun: 0x323b46,
-    sunTint: 0x8e9fb0,
+    antiSun: 0x55606c,
+    sunTint: 0xa8b8c8,
     /** Colour below the horizon (reflection probe only). */
     ground: 0x15171b,
     /** Cloud deck: share of the sky covered (0..1), lit and shaded colours (linear-ish RGB 0..1). */
     cloudCover: 0.82,
-    cloudLit: [0.25, 0.28, 0.31] as readonly [number, number, number],
-    cloudShade: [0.08, 0.09, 0.105] as readonly [number, number, number],
-    fog: 0x3b444c,
-    fogDensity: 0.016,
+    cloudLit: [0.42, 0.46, 0.51] as readonly [number, number, number],
+    cloudShade: [0.2, 0.225, 0.26] as readonly [number, number, number],
+    fog: 0x66727e,
+    fogDensity: 0.0085,
     /** Must stay inside the far plane of every quality preset (low = 300 m) or the dome is clipped. */
     radius: 260,
-    environmentIntensity: 0.65,
+    environmentIntensity: 0.95,
   },
   /** The sun is the only real light in the level (performance): one shadow map, no spot lights. */
-  sun: { color: 0xb4c4d8, intensity: 1.7, elevationDeg: 22, azimuthDeg: 248, distance: 220, frustumHalf: 74, frustumHalfHeight: 42, centerZ: -27 },
-  hemi: { sky: 0x66778a, ground: 0x24262b, intensity: 1.05 },
+  sun: { color: 0xc4d2e2, intensity: 2.6, elevationDeg: 22, azimuthDeg: 248, distance: 220, frustumHalf: 74, frustumHalfHeight: 42, centerZ: -27 },
+  hemi: { sky: 0x8495a8, ground: 0x34373d, intensity: 1.35 },
   ground: {
     asphalt: 0x2a2c30,
   },
