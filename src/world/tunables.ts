@@ -72,7 +72,7 @@ export const WORLD_LOCAL = {
    * cold grey-blue haze; the warm lamps are the only warm colours left. Colours are sRGB hex.
    */
   sky: {
-    horizon: 0x4f5a64,
+    horizon: 0x3d464f,
     zenith: 0x161c25,
     /** Colour of the band opposite the sun, so no direction is black. */
     antiSun: 0x323b46,
@@ -81,10 +81,10 @@ export const WORLD_LOCAL = {
     ground: 0x15171b,
     /** Cloud deck: share of the sky covered (0..1), lit and shaded colours (linear-ish RGB 0..1). */
     cloudCover: 0.82,
-    cloudLit: [0.36, 0.4, 0.45] as readonly [number, number, number],
-    cloudShade: [0.1, 0.115, 0.14] as readonly [number, number, number],
-    fog: 0x4a545e,
-    fogDensity: 0.0105,
+    cloudLit: [0.25, 0.28, 0.31] as readonly [number, number, number],
+    cloudShade: [0.08, 0.09, 0.105] as readonly [number, number, number],
+    fog: 0x3b444c,
+    fogDensity: 0.016,
     /** Must stay inside the far plane of every quality preset (low = 300 m) or the dome is clipped. */
     radius: 260,
     environmentIntensity: 0.65,
