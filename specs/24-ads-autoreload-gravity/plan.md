@@ -23,7 +23,7 @@ TypeScript strict, Three.js, Vitest. Files: `src/core/{InputManager,Settings,Pla
 - `aimAmount` is smoothed with `1 - exp(-k dt)` in the weapon `update(dt)` (frame rate) so FOV is smooth at any refresh rate.
 - ADS target = RMB held && alive && controls free && not reloading && not sprinting.
 - View model: `ViewModelState.aim` shifts the rig towards a per-model ADS offset and damps bob/sway.
-- Gravity -22 keeps jump apex: v = sqrt(2 g h): 3.9 m -> 13.1 m/s, air jump 3.3 m -> 12.0 m/s.
+- Gravity (-22 at first, now -30) keeps jump apex: v = sqrt(2 g h): 3.9 m -> 13.1 m/s, air jump 3.3 m -> 12.0 m/s.
 
 ## Complexity Tracking
 None.

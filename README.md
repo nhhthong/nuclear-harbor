@@ -2,7 +2,7 @@
 
 # LAST STAND: NUCLEAR HARBOR
 
-**A single-player browser FPS on a container quay at sunset, still wet from the rain and taken over by military robots.**
+**A single-player browser FPS on a cold, overcast container quay, wet underfoot and taken over by military robots.**
 Fight through the yard, bring down STINGER-7, the mecha scorpion that guards the relay tower, then TITAN-04, before the countdown ends.
 
 ### [▶ Play the live demo](https://nhhthong.github.io/nuclear-harbor/)
@@ -17,7 +17,7 @@ Fight through the yard, bring down STINGER-7, the mecha scorpion that guards the
 [![Platform](https://img.shields.io/badge/Platform-Web%20(offline%20capable)-blue)](#offline-play)
 [![Status](https://img.shields.io/badge/Status-prototype-orange)](#project-status)
 
-<a href="https://nhhthong.github.io/nuclear-harbor/"><img src="docs/media/hero.jpg" alt="Gate apron at sunset: wet asphalt reflecting the sky, port-style container stacks, a safe container with a green cross, and the in-game HUD with radar" width="920"></a>
+<a href="https://nhhthong.github.io/nuclear-harbor/"><img src="docs/media/hero.jpg" alt="Gate apron under the overcast sky: wet asphalt reflecting the clouds, container stacks, barrier walls and the in-game HUD with radar" width="920"></a>
 
 <sub>No install, no account, no network after the first load. Desktop browser with WebGL2 and a GPU recommended; pick the Low preset on integrated graphics.</sub>
 
@@ -46,8 +46,8 @@ Fight through the yard, bring down STINGER-7, the mecha scorpion that guards the
 
 ## Overview
 
-You are the only survivor of a container quay whose defence robots have been hijacked. The rain has just stopped, the sun is going
-down, and the nuclear control system is counting down from **08:00**. Push through the port-style container yard, reach
+You are the only survivor of a container quay whose defence robots have been hijacked. Under a heavy, cold overcast, the
+nuclear control system is counting down from **08:00**. Push through the port-style container yard, reach
 the relay tower in the court behind it, where **STINGER-7** (a mecha scorpion) rises out of the ground, and hold **E**
 to activate the tower while the robots close in. Then **TITAN-04**,
 a four-legged spherical war machine that can only be hurt through its lights, drops onto the quay.
@@ -56,9 +56,11 @@ The game runs entirely in the browser on **Three.js + TypeScript**, with **Rapie
 simulation, procedural audio and procedurally built models. There is no backend and no network access at runtime.
 
 > **Honest scope note.** One small level (72 x 122 m), built to look as good as code-generated content can:
-> modelled containers, wet ground with a real planar reflection, a low sun with one shadow map, a procedural
-> sunset sky, bloom, ambient occlusion and a film grade. There are no scanned or sculpted assets, so it does not match a
-> AAA production; see [Project status](#project-status).
+> modelled containers, wet ground with a real planar reflection, a pale sun with one shadow map, a procedural
+> overcast sky, bloom, ambient occlusion and a cold, desaturated film grade. The robots, containers and crane are
+> procedural; the vehicles and the clutter (cabinets, barriers, barrels, water towers, pallets) are free CC0 or CC-BY
+> models, see [Credits and licenses](#credits-and-licenses). It does not match an AAA production; see
+> [Project status](#project-status).
 
 ## Screenshots
 
@@ -68,18 +70,18 @@ simulation, procedural audio and procedurally built models. There is no backend 
   <img src="docs/media/map-overhead.jpg" alt="Overhead view of the whole quay: gate apron at the bottom, the irregular container yard, the relay court, and the quay with the gantry crane at the top" width="460">
 </div>
 
-<sub>Straight down, north at the top: the gate apron (spawn, no robots) at the bottom, then the container yard, the relay court around the tower, and the quay with the gantry crane and the boss arena. White boxes are the safe containers.</sub>
+<sub>Straight down, north at the top (the sky dome is enlarged for this shot): the gate apron (spawn, no robots) at the bottom with its car parks, barrier walls and clutter, then the container yard, the relay court around the tower, and the quay with the gantry crane and the boss arena. White boxes are the safe containers.</sub>
 
 ### Zone tour
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/media/zone-c-gate-apron.jpg" alt="Gate apron seen from above at an angle"><br><sub><b>C, gate apron.</b> Spawn, site office, barriers; no robots within 32 m.</sub></td>
+    <td width="50%"><img src="docs/media/zone-c-gate-apron.jpg" alt="Gate apron seen from above at an angle"><br><sub><b>C, gate apron.</b> Spawn, car parks, a truck queue, barrier walls; no robots within 32 m.</sub></td>
     <td width="50%"><img src="docs/media/zone-a-container-yard.jpg" alt="Container yard seen from above at an angle"><br><sub><b>A, container yard.</b> Rows, columns and loose dumps between off-centre lanes.</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/media/zone-b-relay-court.jpg" alt="Relay court with the tower, STINGER-7 and army mechs"><br><sub><b>B, relay court.</b> The tower and its guardian, STINGER-7.</sub></td>
-    <td width="50%"><img src="docs/media/zone-d-quay.jpg" alt="Quay with the gantry crane, staged containers and the moored ship"><br><sub><b>D, quay.</b> Gantry crane, staged boxes, the boss arena and the moored ship.</sub></td>
+    <td width="50%"><img src="docs/media/zone-b-relay-court.jpg" alt="Relay court with the tower, STINGER-7 and army mechs"><br><sub><b>B, relay court.</b> The tower and its guardian, STINGER-7, and a small construction site.</sub></td>
+    <td width="50%"><img src="docs/media/zone-d-quay.jpg" alt="Quay with the gantry crane, staged containers and the moored ship"><br><sub><b>D, quay.</b> Gantry crane, staged boxes, water towers, the boss arena and the moored ship.</sub></td>
   </tr>
 </table>
 
@@ -87,12 +89,12 @@ simulation, procedural audio and procedurally built models. There is no backend 
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/media/menu.jpg" alt="Main menu over a crane shot of the quay"><br><sub>Main menu: live crane shot of the level, mission briefing</sub></td>
-    <td width="50%"><img src="docs/media/yard.jpg" alt="A lane through the container yard with a samurai at the far end"><br><sub>Container yard: a cyber samurai at the end of the lane; HUD with radar, heading tape, health and magazine bars</sub></td>
+    <td width="50%"><img src="docs/media/menu.jpg" alt="Main menu over a crane shot of the quay under an overcast sky"><br><sub>Main menu: live crane shot of the level, mission briefing</sub></td>
+    <td width="50%"><img src="docs/media/yard.jpg" alt="A lane through the container yard with an army mech at the far end"><br><sub>Container yard: an army mech at the end of the lane and an ammo crate; HUD with radar, heading tape, health and magazine bars</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/media/court.jpg" alt="Relay court at sunset with the tower beam"><br><sub>Relay court, looking into the low sun</sub></td>
-    <td width="50%"><img src="docs/media/quay.jpg" alt="Gantry crane on the quay between stacks of containers"><br><sub>Quay: gantry crane, concrete slabs, a safe container on the right</sub></td>
+    <td width="50%"><img src="docs/media/court.jpg" alt="Relay court under the overcast sky: a small construction site with a cement mixer, pallets and a light tower"><br><sub>Relay court: a small construction site, a safe container behind it</sub></td>
+    <td width="50%"><img src="docs/media/quay.jpg" alt="Dumpsters, a portable toilet and switchgear on the quay in front of a container stack"><br><sub>Quay: dumpsters, a portable toilet, switchgear and a light tower</sub></td>
   </tr>
 </table>
 
@@ -109,17 +111,18 @@ simulation, procedural audio and procedurally built models. There is no backend 
   </tr>
 </table>
 
-<sub>All images were captured from the production build with software rendering (no GPU), quality preset "medium"; the overhead and zone shots use a free camera, the others show the real first-person view.</sub>
+<sub>All images were captured from the production build with software rendering (no GPU), quality preset "medium"; the overhead and zone shots use a free camera, the others show the real first-person view. The robot close-ups predate the move from the sunset look to the cold overcast mood.</sub>
 
 ## Features
 
 **Combat**
 - Automatic rifle with magazine, reserve ammo, reload, spread and recoil, critical hits (2x), pooled tracers, muzzle flash with a real point light and ejected casings.
+- **Aim down sights** (hold the right mouse button): zoom (75 to 55 degrees), the rifle moves to the centre of the screen, half the spread and recoil, slower walking, no sprint while aiming. **Auto reload** when the magazine runs empty is a setting (on by default); `R` reloads by hand.
 - Hit zones on enemies: Duck and Spot noses/heads crit, armour absorbs, the boss only takes damage through its weak points.
-- Pickups: ammo crates and medkits placed around towers and lanes, plus a chance of an ammo drop from destroyed robots.
+- Pickups: a deliberately small supply of ammo crates and medkits placed around towers and lanes, plus a 10% chance of an ammo drop from destroyed robots (at most one per area).
 
 **Movement**
-- Rapier kinematic capsule controller: walk, sprint, **high jump and double jump** (3.9 m, 7.2 m chained: two-high stacks are climbable, three-high ones are not), step-up, coyote time and jump buffering.
+- Rapier kinematic capsule controller: walk, sprint, **high jump and double jump** with a heavy gravity so jumps feel snappy (3.9 m, 7.2 m chained: two-high stacks are climbable, three-high ones are not), step-up, coyote time and jump buffering.
 - **Safe containers**: five containers with the doors open. Step inside and the walls stop bullets; standing there heals 12 HP/s once nothing has hit you for a moment. Robots cannot enter.
 - Level boundaries and invisible walls so every run stays inside the quay.
 
@@ -138,13 +141,14 @@ simulation, procedural audio and procedurally built models. There is no backend 
 - **TITAN-04 final boss** (about 9 m tall): falls from the sky after the tower is activated, four knee-light weak points, then an exposed core.
 
 **World and rendering**
-- One quay at sunset (72 x 122 m): gate apron, container yard, relay court and the quay with a gantry crane.
+- One quay under a cold overcast (72 x 122 m): gate apron, container yard, relay court and the quay with a gantry crane.
+- **Dressing**: parked trucks, cars and a forklift; electrical cabinets and switchgear, concrete barrier walls, barrels, tyre and pallet stacks, generators and work lights, cable drums, dumpsters, portable toilets, a cement mixer, gas cylinders and two water towers. All of it has colliders (cover) and is checked by tests so it never blocks a lane, a robot route, a supply spot or a safe container.
 - **Port-style yard**: fixed off-centre lanes, and every block between them is filled in its own style (long rows, short columns or a loose dump with boxes set down at an angle) with uneven stacks, holes and ragged ends, all from a seeded generator.
 - **Containers as geometry**, not textured boxes: corrugated walls and roof, frame, doors with locking bars, corner castings, livery decals; one shader adds chipped paint, rust and grime.
 - **Wet ground shader**: asphalt and concrete slabs, cracks, worn paint, crane rails, still puddles and a **planar reflection** of the whole scene (a third of the resolution and every other frame on medium, half resolution every frame on high).
-- **Lighting**: the low sun is the only real light (one shadow map), plus a hemisphere fill, a procedural sunset sky with drifting cloud, light haze and a sky reflection probe. Lamp heads are emissive only.
-- **Post-processing**: MSAA HDR target, ambient occlusion (high preset), bloom, ACES tone mapping, a NaN guard in front of the bloom, then a grade pass with vignette, film grain and slight chromatic aberration.
-- Detailed gantry crane, chain-link fence, site office, barriers, drums, pallets, bollards; ocean shader and a moored ship with lit windows.
+- **Lighting**: a pale, cold sun is the only real light (one shadow map), plus a hemisphere fill, a procedural overcast sky with drifting cloud, thick grey-blue haze and a sky reflection probe. Lamp heads are emissive only, so the warm lamps are the only warm colours left.
+- **Post-processing**: MSAA HDR target, ambient occlusion (high preset), bloom, ACES tone mapping, a NaN guard in front of the bloom, then a grade pass: desaturation, shadows pushed towards blue-green, vignette, film grain and slight chromatic aberration (medium and high presets).
+- Detailed gantry crane, chain-link fence, site office, bollards; ocean shader and a moored ship with lit windows.
 
 **Engineering**
 - Module registry with explicit init and update order, a typed event bus, a single `tunables` file for gameplay numbers.
@@ -167,7 +171,7 @@ Gate apron (empty) -> container yard -> relay court: STINGER-7, hold the tower
 | Robots | roster of 21, streamed in around you (10 alive at most): 5 army mechs, 8 Spot dogs, 5 Bomber Ducks, 3 cyber samurai |
 | Semi-boss | STINGER-7, 1300 HP, guards the relay tower |
 | Final boss | TITAN-04: 4 weak points x 500 HP, then core 4000 HP; Heavy Cannon, Ground Slam and Missile Barrage |
-| Supplies | 16 ammo crates and 6 medkits (6 + 2 of them around the boss arena); two on container tops (double jump) |
+| Supplies | 11 ammo crates and 3 medkits (4 + 1 of them around the boss arena); two on container tops (double jump) |
 | Recovery | Five safe containers heal 12 HP/s while you stand inside |
 
 Enemy and weapon numbers are starting values and have **not** been balanced by play-testing.
@@ -258,11 +262,11 @@ src/
   core/        game loop (fixed 60 Hz + interpolated render), renderer, input, event bus, settings, shared types
   config/      level layout (level.ts) and every gameplay number (tunables.ts)
   physics/     Rapier wrapper: character controller, static boxes, ray and shape queries, collision groups
-  world/       wet ground + planar reflection, modelled containers, sunset sky, sun, haze, ocean, ship, kerb
-  structures/  gantry crane, flood-light masts (emissive lamps), fence, props
+  world/       wet ground + planar reflection, modelled containers, overcast sky, sun, haze, ocean, ship, kerb
+  structures/  gantry crane, flood-light masts (emissive lamps), fence, props, parked vehicles and GLB clutter (instanced)
   shelters/    safe containers: heal while the player stands inside
   player/      first-person controller (walk, sprint, jump, double jump)
-  weapon/      rifle logic, recoil, procedural and GLB view models, pooled weapon effects
+  weapon/      rifle logic, aim down sights, recoil, procedural and GLB view models, pooled weapon effects
   combat/      damage and hit resolution
   scorpion/    STINGER-7 semi-boss: model, skills, telegraph shaders, drops
   enemies/     framework, army mech, Spot, Bomber Duck, cyber samurai, nav grid, AI scheduler, area streaming, gait
@@ -296,7 +300,7 @@ Design rules (full text in [`.specify/memory/constitution.md`](.specify/memory/c
 | Enemies | roster of 21 robots (18 regular, 3 samurai) streamed by area (10 alive at most), STINGER-7 and the boss |
 | Shadows | one sun shadow map, static content refreshed at 6 Hz (medium) or 12 Hz (high) for moving casters |
 | Presets | low: no shadows, reflection or bloom; medium: shadows, reflection, bloom; high: adds ambient occlusion |
-| Bundle | about 5.3 MB (Rapier's WASM is about 80% of it), split into three chunks |
+| Bundle | about 5.3 MB of code (Rapier's WASM is about 80% of it), split into three chunks, plus about 4.5 MB of models: vehicles 0.2 MB, clutter 4 MB, G36C 2.3 MB |
 
 The numbers above come from the debug overlay and the smoke test on **software rendering**. No benchmark on real
 hardware has been recorded yet: run `?autostart&bench=20` on your machine and see
@@ -305,13 +309,13 @@ hardware has been recorded yet: run `?autostart&bench=20` on your machine and se
 ## Offline play
 
 The production build registers a hand-written service worker that precaches every built file (including the
-weapon model). Open the game once while online and wait a few seconds; afterwards it starts without a network and
+weapon, vehicle and clutter models). Open the game once while online and wait a few seconds; afterwards it starts without a network and
 the browser can install it as an app. Details, updates and cache reset: [`docs/OFFLINE.md`](docs/OFFLINE.md).
 The service worker is not registered by `npm run dev`.
 
 ## Quality assurance
 
-- `npm run typecheck`, `npm test` (**437 unit tests in 67 files**) and `npm run build` pass on the current branch and run in CI on every push.
+- `npm run typecheck`, `npm test` (**463 unit tests in 73 files**) and `npm run build` pass on the current branch and run in CI on every push.
 - `npm run smoke` and `npm run offline` passed on an earlier map and were not re-run after the later reworks.
 - **The `tests/e2e/` files are out of date.** They still contain old-map coordinates, four towers and steps for the removed grappling hook, so they were not run after the level rework. Update them before relying on them.
 - Nobody has play-tested a full run (tower, boss, victory) yet, so difficulty and pacing are unverified.
@@ -323,7 +327,8 @@ The service worker is not registered by `npm run dev`.
 
 Known limitations:
 
-- Visuals are procedural; there is no authored art, so realism is limited by design. The robots and the scorpion are built from primitives and read as low-poly next to the environment.
+- The robots and the scorpion are built from primitives and read as low-poly next to the scanned clutter and vehicles, which look more realistic. The cabin, containers and crane are procedural too.
+- Dense clutter only exists on the gate apron, the relay court and the quay; the container yard is still open lanes (robot routes), so it is not as cramped as it could be.
 - The heavy shaders (planar reflection, shadow map, bloom, AO) target a desktop GPU; use the low preset on integrated graphics.
 - Gameplay balance (damage, robot density, walking distances, countdown length, the heal rate of the safe containers) is untested.
 - The boss attacks were checked by unit tests and short scripted runs only.
@@ -372,7 +377,12 @@ workflow described in [`docs/SPECKIT.md`](docs/SPECKIT.md); the repository's `sp
 | [TypeScript](https://www.typescriptlang.org/) | Apache-2.0 | Language |
 | G36C view model (`assets-src/weapons/g36c/`, `public/assets/weapons/g36c/`) | **Not covered by the MIT license** | Model by **funnky**, used with the author's permission as stated by the project owner. No licence text ships with the file, so confirm the terms before redistributing or selling the game. |
 
-Everything else (models, textures, sounds, UI) is generated procedurally by this repository's code.
+| Parked vehicles: truck, semi, van, pickup, SUV, sedan, hatchback ([Free Low Poly Vehicles Pack](https://opengameart.org/content/free-low-poly-vehicles-pack) by Rgsdev) | CC0 | Re-scaled, painted per instance (`public/assets/props/vehicles.glb`, built by `tools/asset-pipeline/props.py`) |
+| Forklift ([JUNGHEINRICH DFG 425s](https://opengameart.org/content/forklift-jungheinrich-dfg-425s) by luke1985) | CC-BY 4.0 | Decimated and recoloured; credited in the in-game Credits screen |
+| Cabinets, barrier, barrels, tyre, generator, work light ([Poly Haven](https://polyhaven.com): `utility_box_01/02`, `concrete_road_barrier_02`, `Barrel_01`, `barrel_03`, `old_tyre`, `portable_generator`, `flood_lights`) | CC0 | 512 px textures, decimated (`public/assets/props/industrial.glb`, `industrial.py`) |
+| Water tower, dumpster, AC unit, cable drum, switchgear, street box, gas cylinder, water barrel, light tower, cement mixer, pallet, portable toilet, roadblock, trash bin ([3DModelsCC0](https://3dmodelscc0.itch.io) packs: City Environment 1 and 2, Industrial 1 and 2) | CC0 | 512 px textures, decimated (`public/assets/props/terminal.glb`, `terminal.py`) |
+
+Everything else (the robots, containers, crane, sounds, UI) is generated procedurally by this repository's code. The raw source downloads are not committed; each build script lists the exact source files.
 
 **Acknowledgements.** The reference models in [`docs/reference-models/`](docs/reference-models) inspired the robot
 designs; they are visual references only. This project was developed with substantial help from AI coding agents

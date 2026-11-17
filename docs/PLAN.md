@@ -20,7 +20,7 @@ Inputs: [`docs/GDD.md`](GDD.md) (design spec), [`docs/REVIEW.md`](REVIEW.md) (ac
 
 ## Current state (authoritative, matches the code)
 
-**Game:** one 72 x 122 m quay at sunset, no rain, the sun is the only real light. Objective: activate 1 tower (guarded by the mecha scorpion STINGER-7), survive the nuclear countdown, defeat the half-size final boss. No grapple.
+**Game:** one 72 x 122 m quay under a cold overcast (no rain), a pale sun is the only real light. Objective: activate 1 tower (guarded by the mecha scorpion STINGER-7), survive the nuclear countdown, defeat the half-size final boss. No grapple.
 
 **Modules** (registration order in `src/modules.ts`): sandbox, world, structures, player, weapon, enemies, boss, scorpion, objectives, pickups, shelters, vfx, audio, ui, flow, debug. `GameContext` still has `grappleAnchors` (legacy, unused).
 
@@ -31,9 +31,11 @@ Container yard: seeded generator `src/world/containerLayout.ts`. Five safe conta
 **Enemies:** 21 robots = army 5, spot 8, duck 5 (regular, 18) + 3 cyber samurai elites (`src/enemies/samurai`). Distribution per zone (`ENEMY_DISTRIBUTION`), samurai included: A {3,4,3,2}, B {1,2,1,0}, C none, D {1,2,1,1} (army, spot, duck, samurai). The spawn area is empty. Robots are streamed by area (`src/enemies/areaSpawner.ts`, 10 alive at most). All robots walk with stepping legs paced by distance (`src/enemies/gait.ts`).
 Scorpion (`src/scorpion`): charge, venom, tail slam, hex shield blocks 80% of frontal damage. Samurai: leap cleave, spinning polearm deflect, two lightning dashes.
 
-**Economy:** crates 10 + 6, medkits 4 + 2 (see `ECONOMY`). Ammo budget now 345 hits / 690 rounds.
+**Economy:** crates 7 + 4, medkits 2 + 1, enemy ammo drop 10% (see `ECONOMY`). Ammo budget: 345 hits needed, 540 rounds supplied, assumed accuracy 65%.
 
-**Player:** `PLAYER.gravity` -22 (own gravity; jump 13.1 m/s and air jump 12 m/s keep the 3.9 m / 3.3 m heights). Hold right mouse to aim down sights (`ADS` tunables, `PlayerState.aimAmount`, `src/core/ads.ts`: FOV 55, slower walk, no sprint, half spread and recoil). `R` reloads; Settings `autoReload` (default on) reloads when the magazine empties. Fixed 60 Hz sim.
+**Dressing:** `structures/layout.ts` holds `VEHICLES` and `DRESSING` (pure data + colliders + tests); `vehicles.ts` and `dressing.ts` draw them as instanced GLB meshes (`public/assets/props/{vehicles,industrial,terminal}.glb`, built by `tools/asset-pipeline/{props,industrial,terminal}.py`). Mood: cold overcast (`WORLD_LOCAL.sky/sun/hemi`, `PERFORMANCE.grade`).
+
+**Player:** `PLAYER.gravity` -30 (own gravity; jump 15.3 m/s and air jump 14.1 m/s keep the 3.9 m / 3.3 m heights). Hold right mouse to aim down sights (`ADS` tunables, `PlayerState.aimAmount`, `src/core/ads.ts`: FOV 55, slower walk, no sprint, half spread and recoil). `R` reloads; Settings `autoReload` (default on) reloads when the magazine empties. Fixed 60 Hz sim.
 
 **Tunables sections** (`src/config/tunables.ts`): SIM, PLAYER, WEAPON, ECONOMY, ENEMY_COUNTS, ENEMY_DISTRIBUTION, ARMY_ROBOT, AI_SCHEDULING, OBJECTIVES, BOSS, PERFORMANCE, WORLD, CAMERA (GRAPPLE section may remain as dead data). Feature-local numbers stay in `src/<feature>/tunables.ts`.
 
@@ -41,7 +43,7 @@ Scorpion (`src/scorpion`): charge, venom, tail slam, hex shield blocks 80% of fr
 
 **Query params:** `autostart`, `sandbox`, `debug`, `colliders`, `enemies=army,spot,duck|none` (sandbox), `countdown`, `towers`, `boss`, `bossphase`, `scorpion` (sandbox), `viewmodel=procedural`, `bench`, `seed`, `vfxtest`, `audiotest`.
 
-**Verification policy (owner):** run `npx tsc --noEmit`, unit tests (450 in 69 files) and `npm run build`. Do NOT run `npm run smoke` / `npm run e2e` unless the owner asks. All `tests/e2e/*.mjs` are stale (old coordinates, four towers, grapple); rewrite before use. CI (`.github/workflows/pages.yml`) runs typecheck + unit tests + build only; deploys to GitHub Pages on `main`.
+**Verification policy (owner):** run `npx tsc --noEmit`, unit tests (463 in 73 files) and `npm run build`. Do NOT run `npm run smoke` / `npm run e2e` unless the owner asks. All `tests/e2e/*.mjs` are stale (old coordinates, four towers, grapple); rewrite before use. CI (`.github/workflows/pages.yml`) runs typecheck + unit tests + build only; deploys to GitHub Pages on `main`.
 
 **Process:** Spec Kit was used for T-01..T-22 only (`specs/README.md`). Later reworks were done without it. Rules: `docs/SPECKIT.md`.
 

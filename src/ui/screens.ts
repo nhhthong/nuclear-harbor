@@ -86,7 +86,7 @@ export function createScreens(ctx: GameContext, parent: HTMLElement): Screens {
   el(menu, 'div', 'nh-menu-shade');
   el(menu, 'div', 'nh-menu-bars');
   const left = el(menu, 'div', 'nh-menu-left');
-  el(left, 'div', 'nh-eyebrow', 'Single-player operation // Dusk');
+  el(left, 'div', 'nh-eyebrow', 'Single-player operation // Overcast');
   el(left, 'div', 'nh-title', 'Last Stand');
   el(left, 'div', 'nh-sub', 'Nuclear Harbor');
   const nav = el(left, 'div', 'nh-nav');

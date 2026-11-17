@@ -29,7 +29,7 @@ Falling and jumping feel less floaty. Jump heights stay the same (ground 3.9 m, 
 - **FR-002** Saved bindings that still give `Mouse2` to `reload` are migrated (Mouse2 removed from `reload`).
 - **FR-003** New setting `autoReload: boolean`, default true, shown in Settings, persisted.
 - **FR-004** `PlayerState.aimAmount` (0..1) is written by the weapon module and read by the player controller and the HUD.
-- **FR-005** `PLAYER.gravity` = -22; `jumpSpeed` and `airJumpSpeed` re-derived so heights are unchanged.
+- **FR-005** `PLAYER.gravity` = -22 (later -30, see `docs/DEVIATIONS.md`); `jumpSpeed` and `airJumpSpeed` re-derived so heights are unchanged (13.1 / 12.0 m/s at -22, 15.3 / 14.1 m/s at -30).
 - **FR-006** All new numbers live in `src/config/tunables.ts` (`ADS`) or the existing `PLAYER`.
 - **FR-007** No new events, no new runtime dependency, no allocation per frame.
 
