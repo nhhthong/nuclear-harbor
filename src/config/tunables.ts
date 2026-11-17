@@ -29,13 +29,13 @@ export const PLAYER = {
   sprintSpeed: 10,
   /**
    * Owner request: high jumps that do not feel floaty. The player has its own gravity (the world value
-   * `SIM.gravity` stays -24): a ground jump rises 3.9 m and lasts 1.2 s (about 12 m at sprint speed),
+   * `SIM.gravity` stays -24): a ground jump rises 3.9 m and lasts 1.0 s (about 10 m at sprint speed),
    * the air jump adds 3.3 m (7.2 m when chained at the apex). Two-high stacks (5.2 m) are reachable,
    * three-high ones (7.8 m) are not. Speeds follow v = sqrt(2 g h) so heights stay when g changes.
    */
-  gravity: -22,
-  jumpSpeed: 13.1,
-  airJumpSpeed: 12,
+  gravity: -30,
+  jumpSpeed: 15.3,
+  airJumpSpeed: 14.1,
   airJumps: 1,
   /** Jump still allowed this long after walking off an edge (s). */
   coyoteTime: 0.1,
@@ -124,23 +124,24 @@ export const WEAPON = {
 /** GDD 5.4 */
 export const ECONOMY = {
   ammoCrateAmount: 30,
-  ammoCratesInZones: 10,
-  ammoCratesInBossArena: 6,
+  /** Owner request: fewer supplies (was 10 + 6 crates, 4 + 2 medkits). */
+  ammoCratesInZones: 7,
+  ammoCratesInBossArena: 4,
   medkitHeal: 40,
-  medkitsInZones: 4,
-  medkitsInBossArena: 2,
+  medkitsInZones: 2,
+  medkitsInBossArena: 1,
   /** GDD 5.4: chance for a destroyed robot to drop ammo. */
-  enemyAmmoDropChance: 0.15,
+  enemyAmmoDropChance: 0.1,
   /** proposed: size of an enemy drop. */
   enemyAmmoDropAmount: 15,
   /** proposed: cap on drops per zone ("limited by the per-zone ammo budget"). */
-  maxEnemyDropsPerZone: 2,
+  maxEnemyDropsPerZone: 1,
   /** proposed */
   pickupRadius: 1.2,
   /** proposed: dropped pickups despawn after this long. */
   dropLifetime: 60,
-  /** GDD 5.4: assumed accuracy used by the ammo budget test. */
-  assumedAccuracy: 0.5,
+  /** Assumed accuracy used by the ammo budget test (GDD 5.4 said 0.5; raised with the smaller supply). */
+  assumedAccuracy: 0.65,
 } as const;
 
 export const ENEMY_COUNTS = {

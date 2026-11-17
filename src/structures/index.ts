@@ -17,9 +17,10 @@ import type { GameContext } from '@/core/GameContext';
 import type { GameModule } from '@/core/GameModule';
 import { applyWeatheredPaint } from '@/world/containerModel';
 import { WORLD_LOCAL } from '@/world/tunables';
-import { CRANE, FLOOD_LIGHTS, PROPS, structureSolids, type Prop, type PropKind } from './layout';
+import { CRANE, FLOOD_LIGHTS, PROPS, VEHICLES, structureSolids, type Prop, type PropKind } from './layout';
 import { buildBarrier, buildBollard, buildCabin, buildCone, buildCrane, buildDrum, buildFence, buildMast, buildPallet } from './models';
 import { STRUCTURES } from './tunables';
+import { buildVehicleMeshes, loadVehicleGeometries } from './vehicles';
 
 const MODULE_ID = 'structures';
 
@@ -198,6 +199,17 @@ export function createStructuresModule(): GameModule {
       const windows = instanced(cabin.windows, windowMat, byKind('cabin'));
       if (windows) windows.castShadow = false;
 
+      // ---- parked vehicles (async GLB; the colliders below exist from the first frame) -------------
+      let vehiclesShown = 0;
+      void loadVehicleGeometries().then((geos) => {
+        if (res !== scope) return; // disposed while loading
+        for (const mesh of buildVehicleMeshes(geos)) {
+          add(mesh);
+          vehiclesShown += mesh.count;
+        }
+        ctx.renderer.markShadowsDirty();
+      });
+
       // ---- colliders ----------------------------------------------------------------------------
       for (const s of structureSolids()) {
         colliders.push(ctx.physics.addStaticBox({ center: s.center, halfExtents: s.half, meta: { kind: 'static' } }));
@@ -216,7 +228,7 @@ export function createStructuresModule(): GameModule {
       });
 
       ctx.testHooks[MODULE_ID] = {
-        summary: () => ({ floodLights: FLOOD_LIGHTS.length, props: PROPS.length, cranes: CRANE_SITES.length, colliders: colliders.length }),
+        summary: () => ({ floodLights: FLOOD_LIGHTS.length, props: PROPS.length, vehicles: VEHICLES.length, vehiclesShown, cranes: CRANE_SITES.length, colliders: colliders.length }),
       };
     },
 

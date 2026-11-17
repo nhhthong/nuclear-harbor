@@ -54,7 +54,7 @@ function stackTopNear(x: number, z: number): [number, number] {
 }
 
 /**
- * Zone placement for the quay: 10 crates and 4 medkits. Two of them sit on one-high container
+ * Zone placement for the quay: 7 crates and 2 medkits. Two of them sit on one-high container
  * stacks (2.6 m) and need the double jump. `placements.test.ts` checks every position against the
  * generated container layout and the props.
  */
@@ -62,20 +62,15 @@ export const ZONE_PLACEMENTS: readonly PickupCandidate[] = [
   // C Gate Apron
   c('C', -24, fromLegacyZ(27)),
   c('C', 26, fromLegacyZ(23)),
-  c('C', -14, fromLegacyZ(30.5)),
-  m('C', 16, fromLegacyZ(28.5)),
   // A Container Yard: lane and aisle crossings (always free), plus two supplies on one-high stacks
   c('A', -11, 9),
   c('A', 9, -8),
-  c('A', 25, -15.5),
   c('A', ...stackTopNear(-21, -8), true), // one-high stack, west blocks
   m('A', ...stackTopNear(0, -24), true), // one-high stack facing the relay court
   // B Relay Court
   c('B', -4, fromLegacyZ(-16.5)),
-  m('B', 24, fromLegacyZ(-15.5)),
   // D Quay, east of the boss arena
   c('D', 30, fromLegacyZ(-26)),
-  c('D', 7, fromLegacyZ(-21.5)),
   m('D', 28, fromLegacyZ(-35)),
 ];
 

@@ -1,4 +1,6 @@
 /** Numbers of the quay structures. Placement lives in `layout.ts`. */
 export const STRUCTURES = {
   fenceHeight: 2.6,
+  /** Same-origin, relative to the page (CC0 / CC-BY models, see docs/ASSETS.md). */
+  vehiclesUrl: 'assets/props/vehicles.glb',
 } as const;

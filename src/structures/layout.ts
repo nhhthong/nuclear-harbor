@@ -156,9 +156,80 @@ export function propSolid(p: Prop): SolidBox | null {
   };
 }
 
+// ---- parked vehicles (models: public/assets/props/vehicles.glb, built by tools/asset-pipeline/props.py) ----
+
+export type VehicleKind = 'truck' | 'semi' | 'van' | 'pickup' | 'suv' | 'sedan' | 'hatchback' | 'forklift';
+
+/** Footprint half extents (hx = width, hz = length, at yaw 0) and height, as printed by props.py. */
+export const VEHICLE_SIZE: Record<VehicleKind, { hx: number; hz: number; h: number }> = {
+  truck: { hx: 1.62, hz: 2.56, h: 3.05 },
+  semi: { hx: 1.62, hz: 6.38, h: 3.84 },
+  van: { hx: 1.16, hz: 2.42, h: 2.22 },
+  pickup: { hx: 1.16, hz: 2.07, h: 1.81 },
+  suv: { hx: 1.16, hz: 2.07, h: 1.88 },
+  sedan: { hx: 1.16, hz: 2.15, h: 1.65 },
+  hatchback: { hx: 1.16, hz: 2.1, h: 1.65 },
+  forklift: { hx: 0.72, hz: 2.17, h: 2.58 },
+};
+
+export interface Vehicle {
+  kind: VehicleKind;
+  x: number;
+  z: number;
+  /** Multiples of PI/2 only: the collider is axis-aligned. */
+  yaw: number;
+  /** Multiplies the baked paint (white body panels take the colour, black parts stay black). */
+  tint: number;
+}
+
+const Q = Math.PI / 2;
+const WHITE = 0xffffff;
+const SILVER = 0xb8bcc0;
+const RED = 0x9a2a22;
+const NAVY = 0x5a7bb0;
+const OLIVE = 0x6d7550;
+const ORANGE = 0xd9772a;
+
+/**
+ * Hand-placed, final-frame coordinates: a staff car park and a truck waiting at the gate (apron, inside the
+ * robot-free spawn disc), a forklift at the pallet dump, a pickup in the relay court, a box truck and a van
+ * on the quay, and a semi parked between the crane legs. All of them stay off the yard lanes, the patrol
+ * routes, the supply spots and the safe-container doors (`structures/layout.test.ts`).
+ */
+export const VEHICLES: readonly Vehicle[] = [
+  // gate apron: west car park, nose to the fence
+  { kind: 'sedan', x: -31, z: 19.3, yaw: 0, tint: SILVER },
+  { kind: 'hatchback', x: -28, z: 19.3, yaw: 0, tint: RED },
+  { kind: 'suv', x: -25, z: 19.3, yaw: 0, tint: NAVY },
+  // gate apron: east car park
+  { kind: 'van', x: 17.6, z: 18.4, yaw: 0, tint: WHITE },
+  { kind: 'pickup', x: 21, z: 18.2, yaw: 0, tint: OLIVE },
+  // truck with trailer queuing at the gate
+  { kind: 'semi', x: -12, z: 24, yaw: Q, tint: WHITE },
+  // forklift at the south-west pallet dump, forks towards the pallets
+  { kind: 'forklift', x: -21, z: 31.2, yaw: -Q, tint: WHITE },
+  // relay court, west edge
+  { kind: 'pickup', x: -30, z: -39.2, yaw: Q, tint: SILVER },
+  // quay
+  { kind: 'truck', x: -27, z: -43, yaw: Q, tint: ORANGE },
+  { kind: 'van', x: 16, z: -85.4, yaw: Q, tint: SILVER },
+  { kind: 'semi', x: 25, z: -75.5, yaw: Q, tint: WHITE },
+];
+
+/** Axis-aligned collider of a parked vehicle (the whole body, ground to roof). */
+export function vehicleSolid(v: Vehicle): SolidBox {
+  const s = VEHICLE_SIZE[v.kind];
+  const quarter = Math.abs(Math.sin(v.yaw)) > 0.7;
+  return {
+    id: `${v.kind}@${v.x.toFixed(1)},${v.z.toFixed(1)}`,
+    center: { x: v.x, y: s.h / 2, z: v.z },
+    half: { x: quarter ? s.hz : s.hx, y: s.h / 2, z: quarter ? s.hx : s.hz },
+  };
+}
+
 /** Every solid of this module, for physics and for tests that need the walkable area. */
 export function structureSolids(): SolidBox[] {
   const masts: SolidBox[] = FLOOD_LIGHTS.map((f) => ({ id: `mast-${f.id}`, center: { x: f.x, y: f.height / 2, z: f.z }, half: { x: 0.22, y: f.height / 2, z: 0.22 } }));
   const props = PROPS.map(propSolid).filter((s): s is SolidBox => s !== null);
-  return [...craneSolids(), ...masts, ...props];
+  return [...craneSolids(), ...masts, ...props, ...VEHICLES.map(vehicleSolid)];
 }
