@@ -12,11 +12,27 @@ export const CREDITS: readonly CreditEntry[] = [
     note: 'Used with the permission of the project owner (see docs/ASSETS.md).',
   },
   {
-    name: 'luke1985',
-    role: 'Forklift model (JUNGHEINRICH DFG 425s)',
-    note: 'CC-BY 4.0, opengameart.org/content/forklift-jungheinrich-dfg-425s (decimated, recoloured)',
+    name: 'Daniel Zhabotinsky',
+    role: "Parked cars: Kiri '10, Milano '95, Urban '10, Shvan '92, Conquer '89 Pickup, LCT 3000 '07",
+    note: 'CC-BY 4.0, sketchfab.com/DanielZhabotinsky (decimated, textures resized)',
   },
-  { name: 'Rgsdev', role: 'Low poly vehicles pack', note: 'CC0, opengameart.org/content/free-low-poly-vehicles-pack' },
+  {
+    name: 'Chenzoss',
+    role: 'Semi-truck with trailer (Yellow semi-truck with trailer)',
+    note: 'CC-BY 4.0, sketchfab.com/3d-models/ee0a8763bd8941f1bc546b43332d4001 (decimated, textures resized)',
+  },
+  {
+    name: 'louis-muir',
+    role: 'Forklift (Forklift Truck)',
+    note: 'CC-BY 4.0, sketchfab.com/3d-models/060f3f8bc7de4e6ca2f348d414702e9d (textures resized)',
+  },
+  {
+    name: 'Basic Hsu (Hsu.Pei.Ge)',
+    role: 'Mobile crane truck (Ural KS3574 / interior)',
+    note: 'CC-BY 4.0, sketchfab.com/3d-models/317c5dbcad974d9f99efd079060d4344 (interior dropped, decimated)',
+  },
+  { name: 'Poly Haven', role: 'Cabinets, barrier, barrels, tyre, generator, work light', note: 'CC0, polyhaven.com' },
+  { name: '3DModelsCC0', role: 'Water tower, dumpster and other yard clutter', note: 'CC0, 3dmodelscc0.itch.io' },
   { name: 'Three.js', role: '3D rendering', note: 'MIT licence, threejs.org' },
   { name: 'Rapier', role: 'Physics engine (@dimforge/rapier3d-compat)', note: 'Apache-2.0, rapier.rs' },
 ];

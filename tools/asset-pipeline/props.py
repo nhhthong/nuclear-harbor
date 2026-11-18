@@ -1,5 +1,5 @@
 """
-Build public/assets/props/vehicles.glb from the CC0 / CC-BY sources listed in docs/ASSETS.md.
+Superseded by vehicles_sf.py (kept for history). Built the old public/assets/props/vehicles.glb from the CC0 / CC-BY sources once listed in docs/ASSETS.md.
 
     blender -b --factory-startup --python tools/asset-pipeline/props.py -- <vehicles pack dir> <forklift.blend> <out.glb>
 

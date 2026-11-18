@@ -300,7 +300,7 @@ Design rules (full text in [`.specify/memory/constitution.md`](.specify/memory/c
 | Enemies | roster of 21 robots (18 regular, 3 samurai) streamed by area (10 alive at most), STINGER-7 and the boss |
 | Shadows | one sun shadow map, static content refreshed at 6 Hz (medium) or 12 Hz (high) for moving casters |
 | Presets | low: no shadows, reflection or bloom; medium: shadows, reflection, bloom; high: adds ambient occlusion |
-| Bundle | about 5.3 MB of code (Rapier's WASM is about 80% of it), split into three chunks, plus about 4.5 MB of models: vehicles 0.2 MB, clutter 4 MB, G36C 2.3 MB |
+| Bundle | about 5.3 MB of code (Rapier's WASM is about 80% of it), split into three chunks, plus about 10 MB of models: vehicles 5.5 MB, clutter 4 MB, G36C 2.3 MB |
 
 The numbers above come from the debug overlay and the smoke test on **software rendering**. No benchmark on real
 hardware has been recorded yet: run `?autostart&bench=20` on your machine and see
@@ -377,8 +377,10 @@ workflow described in [`docs/SPECKIT.md`](docs/SPECKIT.md); the repository's `sp
 | [TypeScript](https://www.typescriptlang.org/) | Apache-2.0 | Language |
 | G36C view model (`assets-src/weapons/g36c/`, `public/assets/weapons/g36c/`) | **Not covered by the MIT license** | Model by **funnky**, used with the author's permission as stated by the project owner. No licence text ships with the file, so confirm the terms before redistributing or selling the game. |
 
-| Parked vehicles: truck, semi, van, pickup, SUV, sedan, hatchback ([Free Low Poly Vehicles Pack](https://opengameart.org/content/free-low-poly-vehicles-pack) by Rgsdev) | CC0 | Re-scaled, painted per instance (`public/assets/props/vehicles.glb`, built by `tools/asset-pipeline/props.py`) |
-| Forklift ([JUNGHEINRICH DFG 425s](https://opengameart.org/content/forklift-jungheinrich-dfg-425s) by luke1985) | CC-BY 4.0 | Decimated and recoloured; credited in the in-game Credits screen |
+| Parked cars: sedan ([Kiri '10](https://sketchfab.com/3d-models/7fd6e15785fa4aa9bfd6e31eb7c97ba6)), hatchback ([Milano '95](https://sketchfab.com/3d-models/122a22d210234596ad23623588d0d166)), SUV ([Urban '10](https://sketchfab.com/3d-models/2866efdfa943484391ef8313768e074d)), van ([Shvan '92](https://sketchfab.com/3d-models/09d718c9cf72401b8534d265a06a803f)), pickup ([Conquer '89 Pickup](https://sketchfab.com/3d-models/6c48c94be8974dc7a5932f697c0ba68f)), box truck ([LCT 3000 '07](https://sketchfab.com/3d-models/3be03b6a43aa41898c9ca806b8787052)), all by **Daniel Zhabotinsky** | CC-BY 4.0 | Decimated, 512 px textures, painted per instance (`public/assets/props/vehicles.glb`, built by `tools/asset-pipeline/vehicles_sf.py`); credited in the in-game Credits screen |
+| Semi-truck ([Yellow semi-truck with trailer](https://sketchfab.com/3d-models/ee0a8763bd8941f1bc546b43332d4001) by **Chenzoss**) | CC-BY 4.0 | Decimated, 512 px textures; in-game Credits |
+| Forklift ([Forklift Truck](https://sketchfab.com/3d-models/060f3f8bc7de4e6ca2f348d414702e9d) by **louis-muir**) | CC-BY 4.0 | 512 px textures; in-game Credits |
+| Mobile crane truck ([Ural KS3574 / interior](https://sketchfab.com/3d-models/317c5dbcad974d9f99efd079060d4344) by **Basic Hsu** (Hsu.Pei.Ge)) | CC-BY 4.0 | Interior dropped, decimated, 1024 px textures; in-game Credits |
 | Cabinets, barrier, barrels, tyre, generator, work light ([Poly Haven](https://polyhaven.com): `utility_box_01/02`, `concrete_road_barrier_02`, `Barrel_01`, `barrel_03`, `old_tyre`, `portable_generator`, `flood_lights`) | CC0 | 512 px textures, decimated (`public/assets/props/industrial.glb`, `industrial.py`) |
 | Water tower, dumpster, AC unit, cable drum, switchgear, street box, gas cylinder, water barrel, light tower, cement mixer, pallet, portable toilet, roadblock, trash bin ([3DModelsCC0](https://3dmodelscc0.itch.io) packs: City Environment 1 and 2, Industrial 1 and 2) | CC0 | 512 px textures, decimated (`public/assets/props/terminal.glb`, `terminal.py`) |
 
