@@ -156,20 +156,21 @@ export function propSolid(p: Prop): SolidBox | null {
   };
 }
 
-// ---- parked vehicles (models: public/assets/props/vehicles.glb, built by tools/asset-pipeline/props.py) ----
+// ---- parked vehicles (models: public/assets/props/vehicles.glb, built by tools/asset-pipeline/vehicles_sf.py) ----
 
-export type VehicleKind = 'truck' | 'semi' | 'van' | 'pickup' | 'suv' | 'sedan' | 'hatchback' | 'forklift';
+export type VehicleKind = 'truck' | 'semi' | 'van' | 'pickup' | 'suv' | 'sedan' | 'hatchback' | 'forklift' | 'crane_truck';
 
-/** Footprint half extents (hx = width, hz = length, at yaw 0) and height, as printed by props.py. */
+/** Footprint half extents (hx = width, hz = length, at yaw 0) and height, as printed by vehicles_sf.py. */
 export const VEHICLE_SIZE: Record<VehicleKind, { hx: number; hz: number; h: number }> = {
-  truck: { hx: 1.62, hz: 2.56, h: 3.05 },
-  semi: { hx: 1.62, hz: 6.38, h: 3.84 },
-  van: { hx: 1.16, hz: 2.42, h: 2.22 },
-  pickup: { hx: 1.16, hz: 2.07, h: 1.81 },
-  suv: { hx: 1.16, hz: 2.07, h: 1.88 },
-  sedan: { hx: 1.16, hz: 2.15, h: 1.65 },
-  hatchback: { hx: 1.16, hz: 2.1, h: 1.65 },
-  forklift: { hx: 0.72, hz: 2.17, h: 2.58 },
+  truck: { hx: 1.22, hz: 2.93, h: 2.84 },
+  semi: { hx: 1.21, hz: 6.41, h: 3.93 },
+  van: { hx: 1.17, hz: 2.45, h: 1.93 },
+  pickup: { hx: 1.05, hz: 2.61, h: 1.85 },
+  suv: { hx: 0.94, hz: 2.14, h: 1.52 },
+  sedan: { hx: 0.85, hz: 2.18, h: 1.48 },
+  hatchback: { hx: 0.96, hz: 1.93, h: 1.44 },
+  forklift: { hx: 0.66, hz: 1.81, h: 2.28 },
+  crane_truck: { hx: 1.39, hz: 5.06, h: 3.63 },
 };
 
 export interface Vehicle {
@@ -178,7 +179,7 @@ export interface Vehicle {
   z: number;
   /** Multiples of PI/2 only: the collider is axis-aligned. */
   yaw: number;
-  /** Multiplies the baked paint (white body panels take the colour, black parts stay black). */
+  /** Car paint colour (body material only; the semi, forklift and crane truck keep their textures). */
   tint: number;
 }
 
@@ -193,7 +194,7 @@ const ORANGE = 0xd9772a;
 /**
  * Hand-placed, final-frame coordinates: a staff car park and a truck waiting at the gate (apron, inside the
  * robot-free spawn disc), a forklift at the pallet dump, a pickup in the relay court, a box truck and a van
- * on the quay, and a semi parked between the crane legs. All of them stay off the yard lanes, the patrol
+ * on the quay, a semi parked between the crane legs and a mobile crane truck at the quay edge. All of them stay off the yard lanes, the patrol
  * routes, the supply spots and the safe-container doors (`structures/layout.test.ts`).
  */
 export const VEHICLES: readonly Vehicle[] = [
@@ -214,6 +215,8 @@ export const VEHICLES: readonly Vehicle[] = [
   { kind: 'truck', x: -27, z: -43, yaw: Q, tint: ORANGE },
   { kind: 'van', x: 16, z: -85.4, yaw: Q, tint: SILVER },
   { kind: 'semi', x: 25, z: -75.5, yaw: Q, tint: WHITE },
+  // mobile crane truck parked along the quay edge, boom folded over the cab
+  { kind: 'crane_truck', x: 27, z: -83.5, yaw: Q, tint: WHITE },
 ];
 
 /** Axis-aligned collider of a parked vehicle (the whole body, ground to roof). */
