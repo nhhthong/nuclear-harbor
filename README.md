@@ -57,8 +57,8 @@ simulation, procedural audio and procedurally built models. There is no backend 
 
 > **Honest scope note.** One small level (72 x 122 m), built to look as good as code-generated content can:
 > modelled containers, wet ground with a real planar reflection, a pale sun with one shadow map, a procedural
-> overcast sky, bloom, ambient occlusion and a cold, desaturated film grade. The robots, containers and crane are
-> procedural; the vehicles and the clutter (cabinets, barriers, barrels, water towers, pallets) are free CC0 or CC-BY
+> overcast sky, bloom, ambient occlusion and a cold, desaturated film grade. The containers, crane and most
+> robots are procedural; the samurai, the vehicles and the clutter (cabinets, barriers, barrels, water towers, pallets) are free CC0 or CC-BY
 > models, see [Credits and licenses](#credits-and-licenses). It does not match an AAA production; see
 > [Project status](#project-status).
 
@@ -90,7 +90,7 @@ simulation, procedural audio and procedurally built models. There is no backend 
 <table>
   <tr>
     <td width="50%"><img src="docs/media/menu.jpg" alt="Main menu over a crane shot of the quay under an overcast sky"><br><sub>Main menu: live crane shot of the level, mission briefing</sub></td>
-    <td width="50%"><img src="docs/media/yard.jpg" alt="A lane through the container yard with an army mech at the far end"><br><sub>Container yard: an army mech at the end of the lane and an ammo crate; HUD with radar, heading tape, health and magazine bars</sub></td>
+    <td width="50%"><img src="docs/media/yard.jpg" alt="A lane through the container yard with an army mech at the far end"><br><sub>Container yard: a robot at the end of the lane and an ammo crate; HUD with radar, heading tape, health and magazine bars</sub></td>
   </tr>
   <tr>
     <td width="50%"><img src="docs/media/court.jpg" alt="Relay court under the overcast sky: a small construction site with a cement mixer, pallets and a light tower"><br><sub>Relay court: a small construction site, a safe container behind it</sub></td>
@@ -102,16 +102,16 @@ simulation, procedural audio and procedurally built models. There is no backend 
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/media/scorpion.jpg" alt="STINGER-7, the mecha scorpion semi-boss, seen from the side"><br><sub>STINGER-7, the relay guardian</sub></td>
-    <td width="50%"><img src="docs/media/scorpion-venom.jpg" alt="Green venom pool left by the scorpion's venom shot"><br><sub>Venom shot: the pool keeps hurting for five seconds</sub></td>
+    <td width="50%"><img src="docs/media/scorpion.jpg" alt="STINGER-7, the mecha scorpion semi-boss, between container stacks"><br><sub>STINGER-7, the relay guardian, in the container lanes</sub></td>
+    <td width="50%"><img src="docs/media/scorpion-venom.jpg" alt="Green venom pool left by the scorpion's venom shot, with its tail beams"><br><sub>Venom shot: the pool keeps hurting for five seconds</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/media/samurai.jpg" alt="Cyber samurai with a gold crest, red sash and a double-bladed polearm"><br><sub>Cyber samurai, the elite</sub></td>
-    <td width="50%"><img src="docs/media/samurai-dash.jpg" alt="Faint lightning left behind by the samurai's dashes"><br><sub>Lightning dashes leave a fading trail</sub></td>
+    <td width="50%"><img src="docs/media/samurai.jpg" alt="Cyber samurai in purple armour with a horned helmet and a naginata"><br><sub>Cyber samurai, the elite, with its naginata</sub></td>
+    <td width="50%"><img src="docs/media/samurai-dash.jpg" alt="Cyber samurai winding up a cut"><br><sub>The quick cut up close (the body is split at the hips and knees, so the same walk cycle drives it)</sub></td>
   </tr>
 </table>
 
-<sub>All images were captured from the production build with software rendering (no GPU), quality preset "medium"; the overhead and zone shots use a free camera, the others show the real first-person view. The robot close-ups predate the move from the sunset look to the cold overcast mood.</sub>
+<sub>All images were captured from the production build with software rendering (no GPU), quality preset "medium"; the overhead and zone shots use a free camera, the others show the real first-person view.</sub>
 
 ## Features
 
@@ -135,7 +135,7 @@ simulation, procedural audio and procedurally built models. There is no backend 
 - **Vanguard army mech** (5): slow patrols, then smooth, disciplined advance and rocket salvos.
 - **Spot dog** (8): weak and fast, lunges and rams.
 - **Bomber Duck** (5): hops toward you, arms a **3-2-1** countdown and blows up for 15 damage.
-- **Cyber samurai** (3, elite): 300 HP, twice a regular robot. One per area (yard, gate apron, quay), never in the scorpion's court. A quick cut up close, a **leap and cleave** from up to 17 m, a **spinning polearm** that deflects 85% of frontal fire for 3 s when it is being shot, and twice per life (below 70% and 35% HP) a burst of six **lightning dashes** across an 8.5 m area that leaves faint lightning behind.
+- **Cyber samurai** (3, elite; an authored CC-BY armour model split at the joints, holding a CC0 naginata): 300 HP, twice a regular robot. One per area (yard, gate apron, quay), never in the scorpion's court. A quick cut up close, a **leap and cleave** from up to 17 m, a **spinning naginata** that deflects 85% of frontal fire for 3 s when it is being shot, and twice per life (below 70% and 35% HP) a burst of six **lightning dashes** across an 8.5 m area that leaves faint lightning behind.
 - **STINGER-7 semi-boss** (mecha scorpion, about 6 m long, 1300 HP): rises behind the relay tower when you approach it. Three telegraphed skills: a **charge** that throws you straight back, a **venom shot** (green glob, burst damage and a pool that hurts for 5 s) and a **tail slam** whose blasts run out in a fan in front of it. Under sustained fire it crosses its claws and raises a **hexagon shield** that blocks 80% of frontal damage for a few seconds, so flank it or wait. It is stunned after ramming a wall and enrages below 40% HP. Weak spots: head sensors and the stinger bulb.
 - **Area streaming**: no robot exists at load. Posts around you wake up as you walk (within 46 m, never closer than 18 m, never within 32 m of the spawn), at most 10 are alive at once, and survivors far behind you are removed again.
 - **TITAN-04 final boss** (about 9 m tall): falls from the sky after the tower is activated, four knee-light weak points, then an exposed core.
@@ -315,7 +315,7 @@ The service worker is not registered by `npm run dev`.
 
 ## Quality assurance
 
-- `npm run typecheck`, `npm test` (**463 unit tests in 73 files**) and `npm run build` pass on the current branch and run in CI on every push.
+- `npm run typecheck`, `npm test` (**468 unit tests in 74 files**) and `npm run build` pass on the current branch and run in CI on every push.
 - `npm run smoke` and `npm run offline` passed on an earlier map and were not re-run after the later reworks.
 - **The `tests/e2e/` files are out of date.** They still contain old-map coordinates, four towers and steps for the removed grappling hook, so they were not run after the level rework. Update them before relying on them.
 - Nobody has play-tested a full run (tower, boss, victory) yet, so difficulty and pacing are unverified.
@@ -386,7 +386,7 @@ workflow described in [`docs/SPECKIT.md`](docs/SPECKIT.md); the repository's `sp
 | Cyber samurai body ([Cyberpunk Samurai Robot](https://sketchfab.com/3d-models/cyberpunk-samurai-robot-6b7c89af7c5b4a17a94f890e0ec3eedf) by byhoangtran) | **CC-BY 4.0** | Split at the hips and knees, katana removed; credited in the in-game Credits screen (`public/assets/enemies/samurai.glb`, `tools/asset-pipeline/samurai.py`) |
 | Samurai naginata ([Naginata](https://opengameart.org/content/naginata) by Bioxx) | CC0 | Held forward from the wrist (`samurai.glb`) |
 
-Everything else (the robots, containers, crane, sounds, UI) is generated procedurally by this repository's code. The raw source downloads are not committed; each build script lists the exact source files.
+Everything else (the other robots, containers, crane, sounds, UI) is generated procedurally by this repository's code. The raw source downloads are not committed; each build script lists the exact source files.
 
 **Acknowledgements.** The reference models in [`docs/reference-models/`](docs/reference-models) inspired the robot
 designs; they are visual references only. This project was developed with substantial help from AI coding agents
