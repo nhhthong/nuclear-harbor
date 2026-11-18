@@ -20,7 +20,7 @@ import {
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { ResourceTracker } from '@/assets/ResourceTracker';
 import { getArmorTextures } from './BossTextures';
-import { BOSS_LOCAL, WEAK_POINT_LEG_ANGLE } from './tunables';
+import { BOSS_LOCAL, FALLBACK_LEG_ANGLE } from './tunables';
 
 /**
  * Spherical walker (docs/reference-models/final_boss.html) as a procedural port. Model space of
@@ -36,7 +36,7 @@ export const BODY_R = BOSS_LOCAL.model.hullRadiusUnits * K;
 export const EYE_LOCAL = new Vector3(0, BOSS_LOCAL.model.eyeUnits.y * K, -(BOSS_LOCAL.model.eyeUnits.z + 0.08) * K);
 
 const R = 1.02;
-const LEG_COUNT = WEAK_POINT_LEG_ANGLE.length;
+const LEG_COUNT = FALLBACK_LEG_ANGLE.length;
 const HIP_RADIUS = 0.88;
 const BODY_UNIT_Y = BOSS_LOCAL.model.bodyCenterUnits;
 const Z_AXIS = new Vector3(0, 0, 1);
@@ -54,6 +54,10 @@ export interface BodyAnim {
   cannonCharge: number;
   /** 0..1 collapse progress (legs fold like the reference sphere mode). */
   collapse: number;
+  /** Crab look only: current spin rate (rad/s), 0..1 spin wind-up, 0..1 skill charge glow. */
+  spin?: number;
+  windup?: number;
+  charge?: number;
 }
 
 interface Leg {
@@ -238,7 +242,7 @@ export class BossBody {
 
   private buildLegs(m: Record<'legArmor' | 'gun' | 'black', MeshStandardMaterial>): void {
     for (let i = 0; i < LEG_COUNT; i++) {
-      const angle = WEAK_POINT_LEG_ANGLE[i] ?? 0;
+      const angle = FALLBACK_LEG_ANGLE[i] ?? 0;
       const hip = new Group();
       hip.rotation.order = 'YXZ';
       hip.position.set(Math.sin(angle) * HIP_RADIUS, -0.18, Math.cos(angle) * HIP_RADIUS);
@@ -294,7 +298,7 @@ export class BossBody {
 
   private buildPistons(gun: MeshStandardMaterial, chrome: MeshStandardMaterial): void {
     for (let i = 0; i < LEG_COUNT; i++) {
-      const angle = WEAK_POINT_LEG_ANGLE[i] ?? 0;
+      const angle = FALLBACK_LEG_ANGLE[i] ?? 0;
       const a = new Object3D();
       a.position.set(Math.sin(angle) * 0.42, -0.78, Math.cos(angle) * 0.42);
       this.body.add(a);

@@ -27,15 +27,15 @@ describe('resolveDamage', () => {
 });
 
 describe('ammo budget (GDD 5.4)', () => {
-  it('needs about 345 hits (whole roster and the boss) and the supply covers the assumed accuracy', () => {
+  it('needs about 337 hits (whole roster and the boss) and the supply covers the assumed accuracy', () => {
     const hits =
       ENEMY_COUNTS.army * shotsToKill(ARMY_ROBOT.hp) +
       ENEMY_COUNTS.spot * shotsToKill(SPOT.hp) +
       ENEMY_COUNTS.duck * shotsToKill(DUCK.hp) +
       ENEMY_COUNTS.samurai * shotsToKill(SAMURAI.hp) +
-      BOSS.weakPointCount * shotsToKill(BOSS.weakPointHp) +
-      shotsToKill(BOSS.coreHp);
-    expect(hits).toBe(345);
+      shotsToKill(BOSS.hp);
+    // 337 here; 348 after the roster rework (roster 116); the crab boss is 232 hits (5800 HP, no weak points)
+    expect(hits).toBe(337);
     const supply =
       WEAPON.magazineSize +
       WEAPON.reserveAmmo +

@@ -221,24 +221,23 @@ export const OBJECTIVES = {
   countdownCriticalSeconds: 120,
 } as const;
 
-/** GDD 9 */
+/**
+ * Final boss: the Gunslinger Crab Mech (spec 27-crab-boss; GDD 9 described TITAN-04 with weak points,
+ * see docs/DEVIATIONS.md). One tanky HP pool, no weak points, no core stage. The skill numbers live in
+ * `src/boss/tunables.ts`.
+ */
 export const BOSS = {
-  name: 'TITAN-04',
-  coreHp: 4000,
-  weakPointCount: 4,
-  weakPointHp: 500,
+  name: 'GUNSLINGER CRAB MECH',
+  /** Single HP pool: 232 hits at 25 damage (ammo budget, `src/combat/damage.test.ts`). */
+  hp: 5800,
+  /** Walk speed of the full-size boss (m/s, scaled by the boss scale). */
   speed: 2.5,
-  /** GDD 9.2: armour is immune ("cannot finish the boss"). */
+  /** Legacy: the crab has no armour zone (every hit does full damage); kept for the armour unit test. */
   armorDamageMultiplier: 0,
-  /** proposed (REVIEW #2): perch heights around the arena. */
-  perchHeights: [8, 14, 20],
-  /** proposed */
+  /** Awakening (landing cinematic) length, seconds. */
   awakeningDuration: 4,
-  attackInterval: 5,
-  heavyCannon: { damage: 30, telegraph: 1.2, projectileSpeed: 40, splashRadius: 4, cooldown: 6 },
-  groundSlam: { damage: 35, telegraph: 1.5, radius: 14, cooldown: 9 },
-  missileBarrage: { damage: 18, telegraph: 2.0, count: 6, splashRadius: 4.5, cooldown: 12 },
-  maxProjectiles: 16,
+  /** Pause between two skills (s). */
+  attackInterval: 2.2,
 } as const;
 
 /** GDD 13.9 / 10 / 13.6 */

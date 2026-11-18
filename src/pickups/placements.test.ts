@@ -30,8 +30,7 @@ describe('placement budget', () => {
       ENEMY_COUNTS.army * shotsToKill(ARMY_ROBOT.hp) +
       ENEMY_COUNTS.spot * shotsToKill(SPOT.hp) +
       ENEMY_COUNTS.duck * shotsToKill(DUCK.hp) +
-      BOSS.weakPointCount * shotsToKill(BOSS.weakPointHp) +
-      shotsToKill(BOSS.coreHp);
+      shotsToKill(BOSS.hp);
     const crates = count(ZONE_PLACEMENTS, 'ammo') + count(BOSS_PLACEMENTS, 'ammo');
     const supply = supplyBudget(WEAPON.magazineSize + WEAPON.reserveAmmo, crates);
     expect(supply).toBe(WEAPON.magazineSize + WEAPON.reserveAmmo + (ECONOMY.ammoCratesInZones + ECONOMY.ammoCratesInBossArena) * ECONOMY.ammoCrateAmount);

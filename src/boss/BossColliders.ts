@@ -2,21 +2,20 @@ import { Quaternion, Vector3 } from 'three';
 import type { Damageable, DamageInfo, DamageResult } from '@/core/types';
 import { Groups } from '@/physics/groups';
 import type { PhysicsWorld, RAPIER } from '@/physics/PhysicsWorld';
-import { BODY_R, BODY_Y, EYE_LOCAL } from './BossBody';
-import { BOSS_LOCAL } from './tunables';
+import type { LegBone } from './crabAssets';
+import { CRAB } from './tunables';
 
-export interface ZoneHandlers {
-  armor(info: DamageInfo): DamageResult;
-  weakPoint(index: number, info: DamageInfo): DamageResult;
-  core(info: DamageInfo): DamageResult;
+export interface BossHandlers {
+  /** Any hit on the body (one HP pool, no zones). */
+  hit(info: DamageInfo): DamageResult;
   /** True while the boss can still be hit at all (not collapsed). */
   alive(): boolean;
 }
 
-class ZoneDamageable implements Damageable {
+class BodyDamageable implements Damageable {
   readonly kind = 'boss' as const;
+  readonly id = 'crab-boss';
   constructor(
-    readonly id: string,
     private readonly apply: (info: DamageInfo) => DamageResult,
     private readonly isAlive: () => boolean,
   ) {}
@@ -33,87 +32,63 @@ class ZoneDamageable implements Damageable {
 const UP = new Vector3(0, 1, 0);
 const q = new Quaternion();
 const dir = new Vector3();
-const wpScratch = { x: 0, y: 0, z: 0 };
 
 /**
- * One kinematic body in Groups.enemy: hull ball = armor, a ball on each knee = weak point (follows
- * the animated knee), leg boxes = armor, eye ball = core (created when exposed).
+ * One kinematic body in Groups.enemy built from Rapier primitives only (spec 27): a cuboid for the hull,
+ * one for the rear launcher, a two-segment cuboid chain per leg and a cuboid per gun arm. Every collider
+ * shares one damageable (the single HP pool), zone `body`, so a hit anywhere does full damage.
  */
 export class BossColliders {
   readonly body: RAPIER.RigidBody;
-  private readonly weakPoints: Array<RAPIER.Collider | null> = [];
-  private core: RAPIER.Collider | null = null;
-  private readonly armorZone: ZoneDamageable;
-  private readonly coreZone: ZoneDamageable;
-  private readonly wpZones: ZoneDamageable[] = [];
+  readonly colliderCount: number;
 
   constructor(
     private readonly physics: PhysicsWorld,
-    private readonly scale: number,
-    handlers: ZoneHandlers,
-    knees: readonly Vector3[],
-    bones: ReadonlyArray<{ hip: Vector3; knee: Vector3; foot: Vector3 }>,
+    private readonly k: number,
+    handlers: BossHandlers,
+    legs: Iterable<LegBone>,
+    arms: Iterable<{ shoulder: Vector3; tip: Vector3 }>,
   ) {
     const R = physics.rapier;
     this.body = physics.world.createRigidBody(R.RigidBodyDesc.kinematicPositionBased());
-    const s = scale;
-    this.armorZone = new ZoneDamageable('titan-04:armor', (i) => handlers.armor(i), handlers.alive);
-    this.coreZone = new ZoneDamageable('titan-04:core', (i) => handlers.core(i), handlers.alive);
-
-    physics.addCollider(
-      R.ColliderDesc.ball(BODY_R * s).setTranslation(0, BODY_Y * s, 0).setCollisionGroups(Groups.enemy),
-      { kind: 'boss', damageable: this.armorZone, hitZone: 'armor' },
-      this.body,
-    );
-
-    knees.forEach((k, i) => {
-      const zone = new ZoneDamageable(`titan-04:weakpoint-${i}`, (info) => handlers.weakPoint(i, info), handlers.alive);
-      this.wpZones.push(zone);
-      const c = physics.addCollider(
-        R.ColliderDesc.ball(BOSS_LOCAL.weakPointHitRadius * s)
-          .setTranslation(k.x * s, k.y * s, k.z * s)
-          .setCollisionGroups(Groups.enemy),
-        { kind: 'boss', damageable: zone, hitZone: 'weakpoint', owner: { weakPoint: i } },
-        this.body,
-      );
-      this.weakPoints.push(c);
-    });
-
-    for (const b of bones) {
-      this.addLegBox(b.hip, b.knee, 2.2, s);
-      this.addLegBox(b.knee, b.foot, 2.4, s);
+    const zone = new BodyDamageable((i) => handlers.hit(i), handlers.alive);
+    const meta = { kind: 'boss' as const, damageable: zone, hitZone: 'body' as const };
+    const s = k;
+    let n = 0;
+    const box = (hx: number, hy: number, hz: number, x: number, y: number, z: number): void => {
+      physics.addCollider(R.ColliderDesc.cuboid(hx * s, hy * s, hz * s).setTranslation(x * s, y * s, z * s).setCollisionGroups(Groups.enemy), meta, this.body);
+      n++;
+    };
+    const H = CRAB.hull;
+    box(H.halfX, H.halfY, H.halfZ, 0, H.y, H.z);
+    const L = CRAB.launcher;
+    box(L.halfX, L.halfY, L.halfZ, 0, L.y, L.z);
+    for (const b of legs) {
+      this.addBar(b.hip, b.knee, CRAB.legThickness, meta);
+      this.addBar(b.knee, b.foot, CRAB.legThickness, meta);
+      n += 2;
     }
+    for (const a of arms) {
+      this.addBar(a.shoulder, a.tip, CRAB.armThickness, meta);
+      n++;
+    }
+    this.colliderCount = n;
   }
 
-  /** Keep the weak point balls on the animated knees. */
-  syncWeakPoints(knees: readonly Vector3[]): void {
-    const s = this.scale;
-    for (let i = 0; i < knees.length; i++) {
-      const k = knees[i];
-      const c = this.weakPoints[i];
-      if (!k || !c) continue;
-      wpScratch.x = k.x * s;
-      wpScratch.y = k.y * s;
-      wpScratch.z = k.z * s;
-      c.setTranslationWrtParent(wpScratch);
-    }
-  }
-
-  private addLegBox(a: Vector3, b: Vector3, thickness: number, s: number): void {
+  private addBar(a: Vector3, b: Vector3, thickness: number, meta: { kind: 'boss'; damageable: Damageable; hitZone: 'body' }): void {
     const R = this.physics.rapier;
+    const s = this.k;
     dir.copy(b).sub(a);
     const len = dir.length();
+    if (len < 1e-4) return;
     dir.multiplyScalar(1 / len);
     q.setFromUnitVectors(UP, dir);
-    const mx = (a.x + b.x) / 2;
-    const my = (a.y + b.y) / 2;
-    const mz = (a.z + b.z) / 2;
     this.physics.addCollider(
       R.ColliderDesc.cuboid((thickness / 2) * s, (len / 2) * s, (thickness / 2) * s)
-        .setTranslation(mx * s, my * s, mz * s)
+        .setTranslation(((a.x + b.x) / 2) * s, ((a.y + b.y) / 2) * s, ((a.z + b.z) / 2) * s)
         .setRotation({ x: q.x, y: q.y, z: q.z, w: q.w })
         .setCollisionGroups(Groups.enemy),
-      { kind: 'boss', damageable: this.armorZone, hitZone: 'armor' },
+      meta,
       this.body,
     );
   }
@@ -128,31 +103,7 @@ export class BossColliders {
     this.body.setNextKinematicRotation(r);
   }
 
-  /** The destroyed weak point no longer takes hits: shots reach the armour behind it. */
-  removeWeakPoint(index: number): void {
-    const c = this.weakPoints[index];
-    if (!c) return;
-    this.physics.removeCollider(c);
-    this.weakPoints[index] = null;
-  }
-
-  /** Core ball on the eye, slightly proud of the lens (only exists once exposed). */
-  addCore(): void {
-    if (this.core) return;
-    const R = this.physics.rapier;
-    const s = this.scale;
-    this.core = this.physics.addCollider(
-      R.ColliderDesc.ball(BOSS_LOCAL.coreRadius * s)
-        .setTranslation(EYE_LOCAL.x * s, EYE_LOCAL.y * s, EYE_LOCAL.z * s)
-        .setCollisionGroups(Groups.enemy),
-      { kind: 'boss', damageable: this.coreZone, hitZone: 'core' },
-      this.body,
-    );
-  }
-
   dispose(): void {
     this.physics.removeBody(this.body);
-    this.weakPoints.length = 0;
-    this.core = null;
   }
 }
