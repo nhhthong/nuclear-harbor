@@ -130,13 +130,13 @@ export function isKeepClear(x: number, z: number, margin = 0): boolean {
 export const SHIP_BACKDROP = { position: { x: -34, y: SEA_LEVEL_Y, z: -148 } as Vec3Like, yaw: 0.1 } as const;
 
 /** Enemy roster per zone; sums to ENEMY_COUNTS. The gate apron (player spawn) stays empty. */
-export const ENEMY_DISTRIBUTION: Readonly<Record<ZoneId, { army: number; spot: number; duck: number; samurai: number }>> = {
+export const ENEMY_DISTRIBUTION: Readonly<Record<ZoneId, { army: number; spot: number; duck: number; biped: number; samurai: number }>> = {
   // The gate apron (spawn) is empty. No samurai in the relay court (the scorpion's ground); the
   // yard takes two of them, the quay one.
-  A: { army: 3, spot: 4, duck: 3, samurai: 2 },
-  B: { army: 1, spot: 2, duck: 1, samurai: 0 },
-  C: { army: 0, spot: 0, duck: 0, samurai: 0 },
-  D: { army: 1, spot: 2, duck: 1, samurai: 1 },
+  A: { army: 3, spot: 3, duck: 2, biped: 2, samurai: 2 },
+  B: { army: 1, spot: 1, duck: 1, biped: 0, samurai: 0 },
+  C: { army: 0, spot: 0, duck: 0, biped: 0, samurai: 0 },
+  D: { army: 1, spot: 2, duck: 1, biped: 2, samurai: 1 },
 };
 
 export function zoneAt(x: number, z: number): ZoneId | null {

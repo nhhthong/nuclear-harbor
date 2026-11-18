@@ -147,21 +147,23 @@ export const ECONOMY = {
 export const ENEMY_COUNTS = {
   /** Whole roster over all areas. Robots are streamed by area, see `ENEMY_LOCAL.area` (live cap). */
   army: 5,
-  spot: 8,
-  duck: 5,
+  spot: 6,
+  duck: 4,
+  biped: 4,
   /** Elites: twice the HP and damage of a regular robot, one per area. */
   samurai: 3,
-  total: 21,
+  total: 22,
 } as const;
 
 /**
- * GDD 6.1 role (14 of them), now the T-20 Vanguard army mech: slow patrol, disciplined combat movement,
- * telegraphed rocket salvos. HP, speeds and ranges are proposals (ROBOT-REFRESH T-20).
+ * GDD 6.1 role (14 of them), now the Medium Mech Striker (spec 26): slow patrol, disciplined combat movement,
+ * 3-round bursts and, now and then, a telegraphed rocket with splash damage. HP, speeds and ranges are
+ * proposals; the weapon numbers live in `src/enemies/army/tunables.ts` (`STRIKER`).
  */
 export const ARMY_ROBOT = {
   hp: 150,
   /** Rocket centre damage (splash falls off linearly to 0 at `splashRadius`). */
-  damage: 12,
+  damage: 14,
   /** Patrol walk speed (m/s). */
   speed: 1.5,
   /** Combat speeds (m/s). */
@@ -172,19 +174,13 @@ export const ARMY_ROBOT = {
   accel: 1.8,
   decel: 2.6,
   turnRate: 1.1,
-  detectionRange: 30,
+  detectionRange: 36,
   /** Preferred firing band to the player (m) and the distance below which the mech backs off. */
-  bandMin: 18,
-  bandMax: 25,
+  bandMin: 14,
+  bandMax: 30,
   retreatDistance: 8,
-  rocketSpeed: 25,
-  splashRadius: 3,
-  /** Salvo size range, delay between rockets, telegraph before the first one, cooldown after the last (s). */
-  salvoMin: 2,
-  salvoMax: 3,
-  shotInterval: 0.5,
-  telegraphTime: 1.0,
-  cooldown: 3,
+  rocketSpeed: 24,
+  splashRadius: 4,
   loseTargetTime: 4,
 } as const;
 

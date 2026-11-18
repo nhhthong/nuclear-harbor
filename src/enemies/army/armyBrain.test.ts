@@ -13,21 +13,21 @@ const base: ArmyBrainInput = {
 const step = (state: ArmyState, over: Partial<ArmyBrainInput>): ArmyState => decideArmy({ ...base, state, ...over });
 
 describe('decideArmy', () => {
-  it('detects the player at 30 m with line of sight and advances', () => {
+  it('detects the player inside the detection range with line of sight and advances', () => {
     expect(step('patrol', { distance: ARMY_ROBOT.detectionRange - 0.5, hasLos: true })).toBe('advance');
     expect(step('patrol', { distance: ARMY_ROBOT.detectionRange + 5, hasLos: true })).toBe('patrol');
     expect(step('patrol', { distance: 20, hasLos: false })).toBe('patrol');
   });
 
   it('engages once inside the firing band with line of sight', () => {
-    expect(step('advance', { distance: 28, hasLos: true, timeSinceSeen: 0 })).toBe('advance');
-    expect(step('advance', { distance: 24, hasLos: true, timeSinceSeen: 0 })).toBe('engage');
+    expect(step('advance', { distance: ARMY_ROBOT.bandMax + 3, hasLos: true, timeSinceSeen: 0 })).toBe('advance');
+    expect(step('advance', { distance: ARMY_ROBOT.bandMax - 2, hasLos: true, timeSinceSeen: 0 })).toBe('engage');
   });
 
   it('keeps engaging inside the band, falls back to advance when the player is far or hidden', () => {
     expect(step('engage', { distance: 22, hasLos: true, timeSinceSeen: 0 })).toBe('engage');
-    expect(step('engage', { distance: 27, hasLos: true, timeSinceSeen: 0 })).toBe('engage'); // hysteresis
-    expect(step('engage', { distance: 29, hasLos: true, timeSinceSeen: 0 })).toBe('advance');
+    expect(step('engage', { distance: ARMY_ROBOT.bandMax + 1.5, hasLos: true, timeSinceSeen: 0 })).toBe('engage'); // hysteresis
+    expect(step('engage', { distance: ARMY_ROBOT.bandMax * 1.12 + 1, hasLos: true, timeSinceSeen: 0 })).toBe('advance');
     expect(step('engage', { distance: 22, hasLos: false, timeSinceSeen: 1 })).toBe('advance');
   });
 
@@ -36,7 +36,7 @@ describe('decideArmy', () => {
     expect(step('advance', { distance: 5, hasLos: true, timeSinceSeen: 0 })).toBe('retreat');
     expect(step('retreat', { distance: 9, hasLos: true, timeSinceSeen: 0 })).toBe('retreat');
     expect(step('retreat', { distance: 12, hasLos: true, timeSinceSeen: 0 })).toBe('engage');
-    expect(step('retreat', { distance: 28, hasLos: true, timeSinceSeen: 0 })).toBe('advance');
+    expect(step('retreat', { distance: ARMY_ROBOT.bandMax + 3, hasLos: true, timeSinceSeen: 0 })).toBe('advance');
   });
 
   it('forgets the player after the lose time and goes back to patrol', () => {
@@ -52,9 +52,9 @@ describe('decideArmy', () => {
 
 describe('radialIntent / engageGoal', () => {
   it('holds the middle of the band, closes in when far, backs off when near', () => {
-    expect(radialIntent(21.5)).toBe(0);
-    expect(radialIntent(25)).toBeGreaterThan(0);
-    expect(radialIntent(18)).toBeLessThan(0);
+    expect(radialIntent(22)).toBe(0);
+    expect(radialIntent(28)).toBeGreaterThan(0);
+    expect(radialIntent(16)).toBeLessThan(0);
   });
 
   it('strafes around the player and moves radially', () => {

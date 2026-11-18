@@ -1,3 +1,47 @@
+import { ARMY_ROBOT } from '@/config/tunables';
+
+/**
+ * Medium Mech Striker weapons and authored look (spec 26). The robot keeps the type id `army` and the stats in
+ * ARMY_ROBOT. Model: "Medium Mech Striker" (Sketchfab, CC-BY 4.0, MSGDI), built by tools/asset-pipeline/enemies_sf.py.
+ */
+export const STRIKER = {
+  /** Bursts of bullets: `size` rounds `interval` seconds apart, a new burst every `period` seconds (start to start). */
+  burst: { size: 3, interval: 0.09, period: 1.6, damage: 5, spread: 0.03, speed: 75, minRange: 8, maxRange: 35 },
+  /** A rocket now and then: telegraph (the pods glow, the mech stands still), launch, short recovery. */
+  rocket: {
+    minGap: 6,
+    maxGap: 9,
+    telegraph: 1.1,
+    recover: 0.8,
+    damage: ARMY_ROBOT.damage,
+    splashRadius: ARMY_ROBOT.splashRadius,
+    speed: ARMY_ROBOT.rocketSpeed,
+    /** The first rocket needs this long in the fight (s). */
+    firstGap: 3,
+  },
+  /** Muzzle points of the guns and the rocket pods in robot space (x mirrored per side, forward is -z, y above the feet). */
+  gun: { x: 1.15, y: 2.75, z: -1.3 },
+  pod: { x: 1.55, y: 3.45, z: -0.3 },
+  /** Recoil kick of the body per round (rad) and its decay (1/s). */
+  recoil: 0.018,
+  recoilDecay: 14,
+  skin: {
+    url: 'assets/enemies/striker.glb',
+    /** Ground speed (m/s) at which the `walk` / `run` clips at time scale 1 keep the feet planted (measured on the clips). */
+    walkSpeed: 3.4,
+    runSpeed: 3.6,
+    /** Above this speed the run clip plays instead of the walk clip. */
+    runAbove: 2.6,
+    /** Lift (m) so the feet rest on the ground. */
+    footLift: 0.07,
+    /** Time scale limits of the locomotion clips. */
+    minScale: 0.3,
+    maxScale: 1.6,
+    glowColor: 0xff7a2a,
+    glowRadius: 0.38,
+  },
+} as const;
+
 /** Feature-local numbers of the army mech (shared GDD/ticket numbers live in ARMY_ROBOT). */
 export const ARMY_LOCAL = {
   /** Centre height of the kinematic body above the ground (m); the model is offset down by this. */
