@@ -13,7 +13,7 @@ at the owner's request, **without Spec Kit** and without e2e. They have no folde
 | T-02-weapon | G36C, ammo, reload | kept |
 | T-03-world-greybox | 240 x 220 m harbor | replaced: 72 x 122 m quay, seeded irregular yard (`src/world`) |
 | T-04-cranes-and-anchors | cranes, perches, grapple anchors | cranes kept (`CRANE_SITES`); anchors/perches unused |
-| T-05-enemy-framework-sphere | enemy framework, army mech | kept; framework extended (areaSpawner, gait) |
+| T-05-enemy-framework-sphere | enemy framework, army mech | kept; framework extended (areaSpawner, gait, authored clips) |
 | T-06-hud-menus | HUD, menus | replaced: redesigned HUD, radar, cinematic menu |
 | T-07-audio | procedural audio | kept |
 | T-08-objectives | 4 towers, countdown | reduced to 1 tower |
@@ -23,15 +23,15 @@ at the owner's request, **without Spec Kit** and without e2e. They have no folde
 | T-12-grappling-hook | grapple | REMOVED (module deleted; `grappleAnchors` remains in `GameContext` as legacy) |
 | T-13-spider-robot | spider | replaced by Spot dog (T-19) |
 | T-14-charger-robot | charger | replaced by Bomber Duck (T-19) |
-| T-15-boss-titan04 | final boss | kept; half-size, cinematic by T-22 |
+| T-15-boss-titan04 | final boss | REPLACED by the Gunslinger Crab Mech (`27-crab-boss`): no weak points, one HP pool, four skills |
 | T-16-game-flow-integration | flow, population | partly kept; population replaced by `AreaSpawner` streaming |
 | T-17-optimization-offline | perf, offline | partly valid; see `docs/PERFORMANCE.md` banner |
 | T-18-weapon-asset-pipeline | MDL to GLB | kept (G36C GLB is the only binary asset) |
-| T-19-duck-spot | Bomber Duck, Spot | kept (ids `duck`, `spot`) |
-| T-20-army-robot | Vanguard army mech | kept (id `army`) |
+| T-19-duck-spot | Bomber Duck, Spot | Duck kept; Spot has the Walking Robotic Dog model (`26-enemy-models-and-biped`) |
+| T-20-army-robot | Vanguard army mech | REPLACED by the Medium Mech Striker (id `army` kept; bursts and AOE rockets, `26-enemy-models-and-biped`) |
 | T-21-dinosaur | dinosaur semi-boss | REPLACED by the mecha scorpion STINGER-7 (`src/scorpion`) |
-| T-22-final-boss | spherical boss, cinematic | kept |
+| T-22-final-boss | spherical boss, cinematic | landing cinematic kept for the crab; boss body replaced (`27-crab-boss`) |
 
-Folders numbered 24 and above (`24-ads-autoreload-gravity`, `25-world-dressing-and-mood`) are current and describe the game as built.
+Folders numbered 24 and above are current and describe the game as built: `24-ads-autoreload-gravity`, `25-world-dressing-and-mood`, `26-enemy-models-and-biped` (Biped, Striker, Spot model; roster 22) and `27-crab-boss` (Gunslinger Crab Mech, dragonfly drones; ammo budget 348 hits). Each has `spec.md`, `checklists/requirements.md`, `plan.md` and a fully ticked `tasks.md`.
 
 New work: follow `docs/SPECKIT.md` (current policy) and create a new folder only if the owner requires Spec Kit for it.
