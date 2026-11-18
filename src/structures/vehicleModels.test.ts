@@ -1,5 +1,5 @@
 import { readFileSync, statSync } from 'node:fs';
-import { Box3, BufferGeometry, Mesh, Vector3 } from 'three';
+import { Box3, Mesh, MeshStandardMaterial, Texture, Vector3 } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { describe, expect, it } from 'vitest';
 import { VEHICLE_SIZE, VEHICLES, type VehicleKind } from './layout';
@@ -10,26 +10,42 @@ const FILE = new URL('../../public/assets/props/vehicles.glb', import.meta.url);
 function parseShipped(): Promise<{ scene: Mesh['parent'] & object }> {
   const buf = readFileSync(FILE);
   const ab = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer;
-  return new Promise((resolve, reject) => new GLTFLoader().parse(ab, '', (g) => resolve(g as never), reject));
+  const loader = new GLTFLoader();
+  loader.register(() => ({ name: 'test_stub_textures', loadTexture: () => Promise.resolve(new Texture()) }));
+  return new Promise((resolve, reject) => loader.parse(ab, '', (g) => resolve(g as never), reject));
 }
 
 describe('shipped vehicle GLB', () => {
-  it('stays small', () => {
-    expect(statSync(FILE).size).toBeLessThan(512 * 1024);
+  it('stays within the 6 MB vehicle budget', () => {
+    expect(statSync(FILE).size).toBeLessThan(6 * 1024 * 1024);
   });
 
-  it('has every kind at the size the colliders assume, with baked colours', async () => {
-    const geos = geometriesFrom((await parseShipped()) as never);
+  it('has every kind at the size the colliders assume, with textured PBR materials', async () => {
+    const models = geometriesFrom((await parseShipped()) as never);
     const size = new Vector3();
     for (const kind of Object.keys(VEHICLE_SIZE) as VehicleKind[]) {
-      const g = geos.get(kind) as BufferGeometry;
-      expect(g, kind).toBeTruthy();
-      expect(g.getAttribute('color'), kind).toBeTruthy();
-      new Box3().setFromBufferAttribute(g.getAttribute('position') as never).getSize(size);
+      const parts = models.get(kind);
+      expect(parts?.length, kind).toBeGreaterThan(0);
+      const box = new Box3();
+      for (const p of parts ?? []) {
+        expect(p.geometry.getAttribute('normal'), kind).toBeTruthy();
+        box.union(new Box3().setFromBufferAttribute(p.geometry.getAttribute('position') as never));
+      }
+      expect(parts?.some((p) => (p.material as MeshStandardMaterial).map), `${kind} textured`).toBe(true);
+      box.getSize(size);
       const s = VEHICLE_SIZE[kind];
-      expect(size.x, `${kind} width`).toBeCloseTo(s.hx * 2, 0);
-      expect(size.z, `${kind} length`).toBeCloseTo(s.hz * 2, 0);
-      expect(size.y, `${kind} height`).toBeCloseTo(s.h, 0);
+      expect(size.x, `${kind} width`).toBeCloseTo(s.hx * 2, 1);
+      expect(size.z, `${kind} length`).toBeCloseTo(s.hz * 2, 1);
+      expect(size.y, `${kind} height`).toBeCloseTo(s.h, 1);
+      expect(box.min.y, `${kind} on the ground`).toBeCloseTo(0, 2);
+    }
+  });
+
+  it('keeps every vehicle game-ready (triangle budget)', async () => {
+    const models = geometriesFrom((await parseShipped()) as never);
+    for (const [kind, parts] of models) {
+      const tris = parts.reduce((n, p) => n + (p.geometry.index?.count ?? 0) / 3, 0);
+      expect(tris, kind).toBeLessThanOrEqual(kind === 'crane_truck' ? 30000 : 20000);
     }
   });
 });
@@ -44,5 +60,7 @@ describe('vehicle meshes', () => {
   it('fall back to boxes when the model cannot load', async () => {
     const geos = await loadVehicleGeometries(() => Promise.reject(new Error('offline')));
     expect(geos.size).toBe(0);
+    const meshes = buildVehicleMeshes(geos);
+    expect(meshes.length).toBe(new Set(VEHICLES.map((v) => v.kind)).size);
   });
 });
