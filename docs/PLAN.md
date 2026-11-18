@@ -43,7 +43,7 @@ Scorpion (`src/scorpion`): charge, venom, tail slam, hex shield blocks 80% of fr
 
 **Query params:** `autostart`, `sandbox`, `debug`, `colliders`, `enemies=army,spot,duck|none` (sandbox), `countdown`, `towers`, `boss`, `bossphase`, `scorpion` (sandbox), `viewmodel=procedural`, `bench`, `seed`, `vfxtest`, `audiotest`.
 
-**Verification policy (owner):** run `npx tsc --noEmit`, unit tests (463 in 73 files) and `npm run build`. Do NOT run `npm run smoke` / `npm run e2e` unless the owner asks. All `tests/e2e/*.mjs` are stale (old coordinates, four towers, grapple); rewrite before use. CI (`.github/workflows/pages.yml`) runs typecheck + unit tests + build only; deploys to GitHub Pages on `main`.
+**Verification policy (owner):** run `npx tsc --noEmit`, unit tests (468 in 74 files) and `npm run build`. Do NOT run `npm run smoke` / `npm run e2e` unless the owner asks. All `tests/e2e/*.mjs` are stale (old coordinates, four towers, grapple); rewrite before use. CI (`.github/workflows/pages.yml`) runs typecheck + unit tests + build only; deploys to GitHub Pages on `main`.
 
 **Process:** Spec Kit was used for T-01..T-22 only (`specs/README.md`). Later reworks were done without it. Rules: `docs/SPECKIT.md`.
 
