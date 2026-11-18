@@ -61,7 +61,7 @@ export const SPOT = {
     footLift: 0.02,
     /** Glow colours of the telegraph (lamps in the procedural model): the head glows red while it crouches. */
     glowColor: 0xff2a1a,
-    glowRadius: 0.32,
+    glowRadius: 0.2,
     glowBone: 'Joint_1_00_26',
   },
 } as const;

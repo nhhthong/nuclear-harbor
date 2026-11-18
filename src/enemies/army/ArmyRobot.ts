@@ -120,9 +120,10 @@ export class ArmyRobot extends BaseEnemy {
     const g = STRIKER.gun;
     const pd = STRIKER.pod;
     const sk = STRIKER.skin;
-    this.pods = new GlowCue(inst.root, [at(pd.x, pd.y, pd.z, sk.glowRadius, 'Shoulder_L_012'), at(-pd.x, pd.y, pd.z, sk.glowRadius, 'Shoulder_R_015')], sk.glowColor);
-    this.flashL = new GlowCue(inst.root, [at(g.x, g.y, g.z, 0.28, 'UpperTorso_011')], 0xffd27a);
-    this.flashR = new GlowCue(inst.root, [at(-g.x, g.y, g.z, 0.28, 'UpperTorso_011')], 0xffd27a);
+    // left bones are at -x, right bones at +x
+    this.pods = new GlowCue(inst.root, [at(-pd.x, pd.y, pd.z, sk.glowRadius, sk.podBones[0]), at(pd.x, pd.y, pd.z, sk.glowRadius, sk.podBones[1])], sk.glowColor);
+    this.flashL = new GlowCue(inst.root, [at(-g.x, g.y, g.z, 0.2, sk.gunBones[0])], 0xffd27a);
+    this.flashR = new GlowCue(inst.root, [at(g.x, g.y, g.z, 0.2, sk.gunBones[1])], 0xffd27a);
     inst.player.play('idle', { randomPhase: true, fade: 0 });
     this.visual.position.y = -ARMY_LOCAL.centerHeight + sk.footLift;
     this.visual.add(inst.root);
@@ -505,8 +506,8 @@ export class ArmyRobot extends BaseEnemy {
 
     // rocket pods glow during the telegraph; the muzzle of the gun that just fired flashes
     this.pods?.set(podGlow(this.attack));
-    this.flashL?.set(this.flashSide === 1 ? this.flash : 0);
-    this.flashR?.set(this.flashSide === -1 ? this.flash : 0);
+    this.flashR?.set(this.flashSide === 1 ? this.flash : 0);
+    this.flashL?.set(this.flashSide === -1 ? this.flash : 0);
   }
 
   private animateProcedural(dt: number, time: number): void {

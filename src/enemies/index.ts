@@ -54,8 +54,8 @@ export function createEnemiesModule(): GameModule {
 
       ctx.testHooks.enemies = {
         list: () => m.snapshot(),
-        spawn: (type: EnemyType, position: { x: number; y?: number; z: number }) => {
-          const e = m.spawn({ type, position: new Vector3(position.x, 0, position.z), patrol: [] });
+        spawn: (type: EnemyType, position: { x: number; y?: number; z: number }, patrol: Array<{ x: number; z: number }> = []) => {
+          const e = m.spawn({ type, position: new Vector3(position.x, 0, position.z), patrol: patrol.map((p) => new Vector3(p.x, 0, p.z)) });
           return e ? e.id : null;
         },
         killAll: () => m.killAll(),

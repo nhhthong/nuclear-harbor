@@ -65,8 +65,8 @@ export interface LeapPlan {
 }
 
 /**
- * Plans the jump from `(fromX, fromZ)` to where the player stood: the landing is the player's position, at most
- * `leap.max` away. `walkable` is the fraction (0..1) of the straight line that stays on walkable ground
+ * Plans the jump from `(fromX, fromZ)` to where the player stood: the landing is `leap.standOff` short of the player's
+ * position, at most `leap.max` away. `walkable` is the fraction (0..1) of the straight line that stays on walkable ground
  * (`NavGrid.raycastGrid`); the landing is pulled back to just before the first blocked cell.
  */
 export function planLeap(fromX: number, fromZ: number, targetX: number, targetZ: number, walkable = 1, out?: LeapPlan): LeapPlan {
@@ -74,7 +74,8 @@ export function planLeap(fromX: number, fromZ: number, targetX: number, targetZ:
   const dx = targetX - fromX;
   const dz = targetZ - fromZ;
   const d = Math.hypot(dx, dz);
-  const reach = Math.min(d, c.max) * Math.max(0, Math.min(1, walkable - (walkable < 1 ? 0.04 : 0)));
+  const wanted = Math.max(0, Math.min(d, c.max) - c.standOff);
+  const reach = wanted * Math.max(0, Math.min(1, walkable - (walkable < 1 ? 0.04 : 0)));
   const k = d > 1e-6 ? reach / d : 0;
   const plan = out ?? { fromX, fromZ, toX: 0, toZ: 0, distance: 0, airTime: 0, apex: 0 };
   plan.fromX = fromX;

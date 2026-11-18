@@ -163,6 +163,12 @@ export class Biped extends BaseEnemy {
           this.setGoal(this.commandTarget.x, this.commandTarget.z);
         }
         this.speedTarget = BIPED.chaseSpeed;
+        // next to the player: stop short, face them and wait for the swipe cooldown instead of walking into them
+        if (horizontal <= BIPED.holdDistance && p.playerAlive) {
+          this.speedTarget = 0;
+          this.lockFacing = true;
+          this.face(pl.x, pl.z);
+        }
         break;
       }
       default:

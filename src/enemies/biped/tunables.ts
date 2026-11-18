@@ -9,6 +9,8 @@ export const BIPED = {
   loseTargetTime: 4,
   patrolSpeed: 2.2,
   chaseSpeed: 5.5,
+  /** Stops this close to the player (m) and waits for the swipe instead of walking into them. */
+  holdDistance: 1.5,
   arriveRadius: 0.9,
   commandArriveRadius: 3,
   /** Body centre above the ground (m); the model is 2.2 m tall with its feet at the root. */
@@ -28,6 +30,8 @@ export const BIPED = {
     apexPerMetre: 0.22,
     minApex: 0.8,
     maxApex: 2.4,
+    /** Lands this far short of the locked position (m), so it does not end up inside the player. */
+    standOff: 0.9,
     damage: 14,
     /** Claw reach at landing (m) and in the air (m); feet this far above the ground dodge it (double jump). */
     radius: 2,

@@ -324,8 +324,7 @@ for o in tops:
     o.parent = root
     o.matrix_parent_inverse = mathutils.Matrix.Identity(4)
 # every source here faces -Y in Blender (+Z in glTF); the game frame faces -Z: turn 180 degrees about the up axis
-if not __import__('os').environ.get('NOROOT'):
-    root.matrix_world = mathutils.Matrix.Translation((0, 0, -mn.z * s)) @ mathutils.Matrix.Rotation(math.pi, 4, 'Z') @ mathutils.Matrix.Scale(s, 4)
+root.matrix_world = mathutils.Matrix.Translation((0, 0, -mn.z * s)) @ mathutils.Matrix.Rotation(math.pi, 4, 'Z') @ mathutils.Matrix.Scale(s, 4)
 bpy.context.view_layer.update()
 
 # ---- 6. export --------------------------------------------------------------------------------------------------------------

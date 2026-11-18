@@ -20,8 +20,8 @@ export const STRIKER = {
     firstGap: 3,
   },
   /** Muzzle points of the guns and the rocket pods in robot space (x mirrored per side, forward is -z, y above the feet). */
-  gun: { x: 1.15, y: 2.75, z: -1.3 },
-  pod: { x: 1.55, y: 3.45, z: -0.3 },
+  gun: { x: 0.72, y: 2.25, z: -1.15 },
+  pod: { x: 0.45, y: 3.4, z: -0.25 },
   /** Recoil kick of the body per round (rad) and its decay (1/s). */
   recoil: 0.018,
   recoilDecay: 14,
@@ -38,7 +38,10 @@ export const STRIKER = {
     minScale: 0.3,
     maxScale: 1.6,
     glowColor: 0xff7a2a,
-    glowRadius: 0.38,
+    glowRadius: 0.3,
+    /** Bones that carry the cues (left is -x): shoulders for the pods, forearms for the muzzle flashes. */
+    podBones: ['Shoulder_L_012', 'Shoulder_R_015'],
+    gunBones: ['LowerArm_L_014', 'LowerArm_R_017'],
   },
 } as const;
 

@@ -66,16 +66,18 @@ describe('timed transitions and cooldowns', () => {
 });
 
 describe('planLeap', () => {
-  it('lands where the player stood when it is within reach', () => {
+  it('lands just short of where the player stood when it is within reach', () => {
     const p = planLeap(0, 0, 0, -8);
     expect(p.toX).toBeCloseTo(0);
-    expect(p.toZ).toBeCloseTo(-8);
-    expect(p.distance).toBeCloseTo(8);
+    expect(p.toZ).toBeCloseTo(-(8 - BIPED.leap.standOff));
+    expect(p.distance).toBeCloseTo(8 - BIPED.leap.standOff);
+    // still inside the claw radius of the locked position
+    expect(BIPED.leap.standOff).toBeLessThan(BIPED.leap.radius);
   });
 
   it('never jumps farther than the leap maximum, along the same line', () => {
     const p = planLeap(0, 0, 30, 40);
-    expect(p.distance).toBeCloseTo(BIPED.leap.max);
+    expect(p.distance).toBeCloseTo(BIPED.leap.max - BIPED.leap.standOff);
     expect(p.toX / p.toZ).toBeCloseTo(30 / 40);
   });
 
@@ -88,7 +90,7 @@ describe('planLeap', () => {
 
   it('flies faster over short jumps than long ones, within the air time and apex limits', () => {
     const short = planLeap(0, 0, 0, -4);
-    const long = planLeap(0, 0, 0, -13);
+    const long = planLeap(0, 0, 0, -16);
     expect(short.airTime).toBeGreaterThanOrEqual(BIPED.leap.minAir);
     expect(long.airTime).toBeLessThanOrEqual(BIPED.leap.maxAir);
     expect(long.airTime).toBeGreaterThan(short.airTime);
@@ -101,7 +103,7 @@ describe('planLeap', () => {
     const out = planLeap(1, 1, 1, 1);
     expect(out.distance).toBe(0);
     expect(planLeap(0, 0, 3, 0, 1, out)).toBe(out);
-    expect(out.toX).toBeCloseTo(3);
+    expect(out.toX).toBeCloseTo(3 - BIPED.leap.standOff);
   });
 });
 
@@ -111,10 +113,10 @@ describe('leapAt and clawReaches', () => {
     const o = { x: 0, y: 0, z: 0 };
     expect(leapAt(plan, 0, o).y).toBe(0);
     expect(leapAt(plan, 1, o).y).toBeCloseTo(0);
-    expect(leapAt(plan, 1, o).z).toBeCloseTo(-10);
+    expect(leapAt(plan, 1, o).z).toBeCloseTo(plan.toZ);
     expect(leapAt(plan, 0.5, o).y).toBeCloseTo(plan.apex);
-    expect(leapAt(plan, 0.5, o).z).toBeCloseTo(-5);
-    expect(leapAt(plan, 2, o).z).toBeCloseTo(-10); // clamped
+    expect(leapAt(plan, 0.5, o).z).toBeCloseTo(plan.toZ / 2);
+    expect(leapAt(plan, 2, o).z).toBeCloseTo(plan.toZ); // clamped
   });
 
   it('claws within the radius unless the player is jumping over it', () => {

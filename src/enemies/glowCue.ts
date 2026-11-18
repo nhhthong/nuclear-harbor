@@ -57,7 +57,7 @@ export class GlowCue {
     const v = level <= 0.01 ? 0 : Math.min(1, level);
     if (v === this.level) return;
     this.level = v;
-    this.material.opacity = 0.85 * v;
+    this.material.opacity = 0.6 * v;
     for (let i = 0; i < this.meshes.length; i++) {
       const m = this.meshes[i] as Mesh;
       m.visible = v > 0;

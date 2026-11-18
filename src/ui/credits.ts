@@ -23,6 +23,21 @@ export const CREDITS: readonly CreditEntry[] = [
   },
   { name: 'Bioxx', role: 'Naginata', note: 'CC0, opengameart.org/content/naginata' },
   {
+    name: 'skudgee (Willy Decarpentrie)',
+    role: 'Biped robot (infantry "Biped robot")',
+    note: 'CC-BY 4.0, sketchfab.com/3d-models/801d2a245e4a4405a0c2152b35b5e486 (display base removed, decimated, run, crouch, leap and claw clips added)',
+  },
+  {
+    name: 'MSGDI',
+    role: 'Medium Mech Striker (army robot)',
+    note: 'CC-BY 4.0, sketchfab.com/3d-models/27ba717c173a40b7841d2f2c6a89d823 (decimated, textures resized, three of its clips used)',
+  },
+  {
+    name: 'reececreoplan (CreoPlan Ltd)',
+    role: 'Walking Robotic Dog (Spot dog)',
+    note: 'CC-BY 4.0, sketchfab.com/3d-models/cb8157f40d39456d9f37865b4e6e7477 (decimated, textures resized, leg clips merged)',
+  },
+  {
     name: 'Chenzoss',
     role: 'Semi-truck with trailer (Yellow semi-truck with trailer)',
     note: 'CC-BY 4.0, sketchfab.com/3d-models/ee0a8763bd8941f1bc546b43332d4001 (decimated, textures resized)',

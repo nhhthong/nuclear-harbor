@@ -319,6 +319,30 @@ describe('EnemyManager (headless physics)', () => {
     expect(b.position.y).toBeCloseTo(BIPED.centerHeight, 5);
   });
 
+  it('the Biped swipes with both claws when adjacent and stops short of the player instead of walking into them', async () => {
+    const { w, m } = await setup();
+    w.ctx.player.position.set(0, 0, 0);
+    w.ctx.player.hp = 100000;
+    w.ctx.player.maxHp = 100000;
+    const b = m.spawn({ type: 'biped', position: new Vector3(0, 0, 2), patrol: [] }) as Biped;
+    const dt = w.clock.fixedDt;
+    let minDistance = Infinity;
+    const states = new Set<string>();
+    let hpDrop = 0;
+    for (let i = 0; i < 60 * 5; i++) {
+      w.clock.simTime += dt;
+      m.fixedUpdate(dt);
+      states.add(b.state);
+      minDistance = Math.min(minDistance, Math.hypot(b.position.x, b.position.z));
+    }
+    hpDrop = 100000 - w.ctx.player.hp;
+    expect(states.has('claw')).toBe(true);
+    expect(minDistance).toBeGreaterThan(BIPED.holdDistance - 0.3);
+    // one swipe per cooldown: at least two in five seconds, never more than the cooldown allows
+    expect(hpDrop).toBeGreaterThanOrEqual(2 * BIPED.claw.damage);
+    expect(hpDrop).toBeLessThanOrEqual(Math.ceil(5 / BIPED.claw.cooldown) * BIPED.claw.damage + BIPED.leap.damage);
+  });
+
   it('the Biped leap misses a player who jumps over it, and a player standing 5 m from the landing', async () => {
     const { w, m } = await setup();
     w.ctx.player.position.set(0, 0, 0);
