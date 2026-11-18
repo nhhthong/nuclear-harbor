@@ -16,6 +16,12 @@ export const CREDITS: readonly CreditEntry[] = [
     role: 'Forklift model (JUNGHEINRICH DFG 425s)',
     note: 'CC-BY 4.0, opengameart.org/content/forklift-jungheinrich-dfg-425s (decimated, recoloured)',
   },
+  {
+    name: 'byhoangtran',
+    role: 'Cyber samurai body ("Cyberpunk Samurai Robot")',
+    note: 'CC-BY 4.0, sketchfab.com/3d-models/cyberpunk-samurai-robot-6b7c89af7c5b4a17a94f890e0ec3eedf (split at the joints, katana removed)',
+  },
+  { name: 'Bioxx', role: 'Naginata', note: 'CC0, opengameart.org/content/naginata' },
   { name: 'Rgsdev', role: 'Low poly vehicles pack', note: 'CC0, opengameart.org/content/free-low-poly-vehicles-pack' },
   { name: 'Three.js', role: '3D rendering', note: 'MIT licence, threejs.org' },
   { name: 'Rapier', role: 'Physics engine (@dimforge/rapier3d-compat)', note: 'Apache-2.0, rapier.rs' },

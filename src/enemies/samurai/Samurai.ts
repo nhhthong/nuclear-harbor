@@ -18,6 +18,7 @@ import type { SharedAssets } from '../SharedAssets';
 import { approach, createGaitPose, gaitPose, strideLength } from '../gait';
 import { coneHit, dashUsesDue, deflectedDamage, distanceToSegment, pickDashPoint } from './logic';
 import { buildSamuraiModel, type SamuraiModel } from './model';
+import { samuraiSkin } from './skin';
 import { SAMURAI } from './tunables';
 
 export type SamuraiState = 'patrol' | 'chase' | 'cutWindup' | 'cutRecover' | 'leapTelegraph' | 'leap' | 'leapRecover' | 'spin' | 'dashCharge' | 'dash' | 'dashRecover' | 'destroyed';
@@ -123,6 +124,10 @@ export class Samurai extends BaseEnemy {
   private readonly fan: Mesh;
   private readonly fanMat: MeshBasicMaterial;
   private readonly glow: MeshStandardMaterial;
+  /** Per-instance clone of the skin's armour material (tinted by the charge-up glow), null without the skin. */
+  private readonly skinMat: MeshStandardMaterial | null = null;
+  /** The skin's weapon points forward: pose angles become pitch (about X) and yaw (about Y). */
+  private readonly skinned: boolean;
   private readonly trails: Trail[] = [];
   private trailNext = 0;
   private readonly restAngle: number;
@@ -138,9 +143,17 @@ export class Samurai extends BaseEnemy {
     this.lastZ = this.position.z;
     this.seed = (spawn.position.x * 12.9898 + spawn.position.z * 78.233) % 1;
     const { shared, ctx } = deps;
-    const m = modelFor(shared);
+    const skin = samuraiSkin();
+    const m = skin ? skin.model : modelFor(shared);
+    this.skinned = skin !== null;
     this.restAngle = m.restAngle;
-    const armor = shared.get('samurai:mat', () => createVertexColorMaterial(0.34, 0.8, { key: 'samurai', wear: 0.3, bottomY: -1.5, height: 3.4, detail: 4 }));
+    if (skin) {
+      const sm = (skin.bodyMaterial as MeshStandardMaterial).clone();
+      sm.emissive.setHex(0xff1408);
+      sm.emissiveIntensity = 0;
+      this.skinMat = sm;
+    }
+    const armor = this.skinMat ?? shared.get('samurai:mat', () => createVertexColorMaterial(0.34, 0.8, { key: 'samurai', wear: 0.3, bottomY: -1.5, height: 3.4, detail: 4 }));
     const clothMat = shared.get('samurai:cloth-mat', () => {
       const mat = createVertexColorMaterial(0.85, 0);
       mat.side = DoubleSide;
@@ -148,7 +161,7 @@ export class Samurai extends BaseEnemy {
     });
     // the glow pulses per samurai (charge-up), so it is the one per-instance material
     this.glow = new MeshStandardMaterial({ color: 0x300404, emissive: 0xff1408, emissiveIntensity: 2.4 });
-    const geo = <T extends import('three').BufferGeometry>(key: string, g: T): T => shared.get(`samurai:${key}`, () => g);
+    const geo = <T extends import('three').BufferGeometry>(key: string, g: T): T => shared.get(`samurai:${skin ? 'skin:' : ''}${key}`, () => g);
 
     // upper body (torso, arms, weapon, sash) turns and leans as one group above the hips
     const body = new Mesh(geo('body', m.body), armor);
@@ -168,7 +181,7 @@ export class Samurai extends BaseEnemy {
     };
     [this.thighL, this.shinL] = makeLeg(m.thighL, m.shinL, 'L');
     [this.thighR, this.shinR] = makeLeg(m.thighR, m.shinR, 'R');
-    const blade = new Mesh(geo('weapon', m.weapon), armor);
+    const blade = new Mesh(geo('weapon', m.weapon), skin ? skin.weaponMaterial : armor);
     blade.castShadow = true;
     // blades: mirror steel with a bright ground bevel, no paint wear
     const bladeMat = shared.get('samurai:blade-mat', () => createVertexColorMaterial(0.2, 0.9));
@@ -176,10 +189,11 @@ export class Samurai extends BaseEnemy {
     edge.castShadow = true;
     this.weapon.add(blade, edge, new Mesh(geo('weaponGlow', m.weaponGlow), this.glow));
     this.weapon.position.copy(m.grip);
-    this.weapon.rotation.z = m.restAngle;
+    if (!this.skinned) this.weapon.rotation.z = m.restAngle;
     this.upper.add(this.weapon);
     this.cloth = new Mesh(geo('cloth', m.cloth), clothMat);
     this.cloth.position.copy(m.clothPivot);
+    this.cloth.visible = !skin;
     this.upper.add(this.cloth);
     this.model.add(this.upper);
     // blur disc of the spinning polearm
@@ -188,6 +202,8 @@ export class Samurai extends BaseEnemy {
     this.fan = new Mesh(shared.get('samurai:fan-geo', () => new CircleGeometry(3.25, 40)), this.fanMat);
     this.fan.position.copy(m.grip);
     this.fan.visible = false;
+    // the skin spins its forward-pointing naginata like a propeller beside the body (sagittal plane)
+    if (this.skinned) this.fan.rotation.y = Math.PI / 2;
     this.fan.userData.noReflect = true;
     this.upper.add(this.fan);
     this.root.add(this.model);
@@ -575,12 +591,14 @@ export class Samurai extends BaseEnemy {
   protected override onDestroyed(): void {
     this.removeTrails();
     this.glow.dispose();
+    this.skinMat?.dispose();
     this.fanMat.dispose();
   }
 
   override dispose(): void {
     this.removeTrails();
     this.glow.dispose();
+    this.skinMat?.dispose();
     this.fanMat.dispose();
     super.dispose();
   }
@@ -714,10 +732,16 @@ export class Samurai extends BaseEnemy {
     // the torso leans into the run, sways over the standing leg and twists against the legs
     this.upper.rotation.set(-lean, pose.twist, pose.sway);
     this.model.rotation.x = 0;
-    this.weapon.rotation.z = weaponZ;
-    this.weapon.rotation.x = weaponX;
+    if (this.skinned) {
+      // forward-pointing naginata: raise / lower it about X, turn it aside about Y
+      this.weapon.rotation.set(weaponZ - this.restAngle, weaponX, 0);
+    } else {
+      this.weapon.rotation.z = weaponZ;
+      this.weapon.rotation.x = weaponX;
+    }
     this.cloth.rotation.x = 0.25 * f * this.walkAmount + Math.abs(pose.left.hip) * 0.2 + Math.sin(time * 3 + this.seed * 9) * 0.06 + (state === 'leap' || state === 'dash' ? 0.6 : 0);
     this.glow.emissiveIntensity = glow;
+    if (this.skinMat) this.skinMat.emissiveIntensity = Math.max(0, glow - 2.4) * SAMURAI.skinGlowTint;
     if (this.fan.visible) {
       const k = Math.min(1, t * 6) * Math.min(1, (SAMURAI.spin.seconds - t) * 6);
       this.fanMat.opacity = Math.max(0, 0.11 * k) * (0.8 + 0.2 * Math.sin(time * 50));

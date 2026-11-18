@@ -3,6 +3,7 @@ import type { GameContext } from '@/core/GameContext';
 import type { GameModule } from '@/core/GameModule';
 import type { EnemyType } from '@/core/types';
 import { EnemyManager } from './EnemyManager';
+import { loadSamuraiSkin, setSamuraiSkin } from './samurai/skin';
 
 /**
  * Robot framework: manager, AI scheduler, navigation, robot types (GDD 6, 13.7).
@@ -21,6 +22,8 @@ export function createEnemiesModule(): GameModule {
       const res = ctx.resources.scope('enemies');
       const m = new EnemyManager(ctx, res);
       manager = m;
+      // authored samurai look; robots stream in well after load, so the GLB is normally ready in time
+      if (typeof document !== 'undefined' && !ctx.flags.params.has('procedural-samurai')) void loadSamuraiSkin();
 
       offs.push(ctx.events.on('world:ready', () => m.start()));
       offs.push(ctx.events.on('objectives:defendStarted', (e) => m.onDefendStarted(e.position, e.radius)));
@@ -52,6 +55,7 @@ export function createEnemiesModule(): GameModule {
       offs.length = 0;
       manager?.dispose();
       manager = null;
+      setSamuraiSkin(null);
       if (ctxRef) {
         delete ctxRef.testHooks.enemies;
         ctxRef.resources.scope('enemies').dispose();

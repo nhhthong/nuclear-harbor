@@ -6,6 +6,14 @@ export const SAMURAI = {
   hp: 300,
   /** Model height about 3.2 m; the root sits at the body centre. */
   centerHeight: 1.5,
+  /** Authored look (CC-BY robot + CC0 naginata), see skin.ts; same-origin, relative to the page. */
+  skinUrl: 'assets/enemies/samurai.glb',
+  /** With the skin the pose's weapon angles are applied as pitch about the rest value, so the rest angle is 0. */
+  skinRestAngle: 0,
+  /** The skin's naginata points forward from the wrist, tip lowered by this much (rad), like the source katana. */
+  skinWeaponDroop: 0.15,
+  /** With the skin, the charge-up glow tints the whole armour: emissive per unit of glow above the rest value. */
+  skinGlowTint: 0.12,
   radius: 0.8,
   patrolSpeed: 2.4,
   chaseSpeed: 6.2,
