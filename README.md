@@ -3,7 +3,7 @@
 # LAST STAND: NUCLEAR HARBOR
 
 **A single-player browser FPS on a cold, overcast container quay, wet underfoot and taken over by military robots.**
-Fight through the yard, bring down STINGER-7, the mecha scorpion that guards the relay tower, then TITAN-04, before the countdown ends.
+Fight through the yard, bring down STINGER-7, the mecha scorpion that guards the relay tower, then the Gunslinger Crab Mech, before the countdown ends.
 
 ### [▶ Play the live demo](https://nhhthong.github.io/nuclear-harbor/)
 
@@ -49,16 +49,16 @@ Fight through the yard, bring down STINGER-7, the mecha scorpion that guards the
 You are the only survivor of a container quay whose defence robots have been hijacked. Under a heavy, cold overcast, the
 nuclear control system is counting down from **08:00**. Push through the port-style container yard, reach
 the relay tower in the court behind it, where **STINGER-7** (a mecha scorpion) rises out of the ground, and hold **E**
-to activate the tower while the robots close in. Then **TITAN-04**,
-a four-legged spherical war machine that can only be hurt through its lights, drops onto the quay.
+to activate the tower while the robots close in. Then the **Gunslinger Crab Mech**,
+a 10 m wide armoured crab with one huge health bar and four skills, drops onto the quay.
 
 The game runs entirely in the browser on **Three.js + TypeScript**, with **Rapier** physics, a fixed 60 Hz
 simulation, procedural audio and procedurally built models. There is no backend and no network access at runtime.
 
 > **Honest scope note.** One small level (72 x 122 m), built to look as good as code-generated content can:
 > modelled containers, wet ground with a real planar reflection, a pale sun with one shadow map, a procedural
-> overcast sky, bloom, ambient occlusion and a cold, desaturated film grade. The containers, crane and most
-> robots are procedural; the samurai, the vehicles and the clutter (cabinets, barriers, barrels, water towers, pallets) are free CC0 or CC-BY
+> overcast sky, bloom, ambient occlusion and a cold, desaturated film grade. The containers and crane are
+> procedural; the robots, the vehicles and the clutter (cabinets, barriers, barrels, water towers, pallets) are free CC0 or CC-BY
 > models, see [Credits and licenses](#credits-and-licenses). It does not match an AAA production; see
 > [Project status](#project-status).
 
@@ -118,7 +118,7 @@ simulation, procedural audio and procedurally built models. There is no backend 
 **Combat**
 - Automatic rifle with magazine, reserve ammo, reload, spread and recoil, critical hits (2x), pooled tracers, muzzle flash with a real point light and ejected casings.
 - **Aim down sights** (hold the right mouse button): zoom (75 to 55 degrees), the rifle moves to the centre of the screen, half the spread and recoil, slower walking, no sprint while aiming. **Auto reload** when the magazine runs empty is a setting (on by default); `R` reloads by hand.
-- Hit zones on enemies: Duck and Spot noses/heads crit, armour absorbs, the boss only takes damage through its weak points.
+- Hit zones on enemies: Duck and Spot noses/heads crit, armour absorbs, the crab boss has no weak points (one HP pool, 5800).
 - Pickups: a deliberately small supply of ammo crates and medkits placed around towers and lanes, plus a 10% chance of an ammo drop from destroyed robots (at most one per area).
 
 **Movement**
@@ -131,14 +131,15 @@ simulation, procedural audio and procedurally built models. There is no backend 
 - **Radar** (top left, 42 m, up is where you look): robots, elites and bosses, the relay tower and the safe containers.
 - Cinematic main menu over a live crane shot of the quay, with mission briefing and key chips.
 
-**Enemies** (a roster of 21 robots plus two bosses; all procedural models with LOD and walk cycles paced by the ground covered, so feet do not slide)
-- **Vanguard army mech** (5): slow patrols, then smooth, disciplined advance and rocket salvos.
-- **Spot dog** (8): weak and fast, lunges and rams.
-- **Bomber Duck** (5): hops toward you, arms a **3-2-1** countdown and blows up for 15 damage.
+**Enemies** (a roster of 22 robots plus two bosses; authored CC-BY models with their own animation clips, procedural fallbacks if a GLB fails to load)
+- **Medium Mech Striker** (5, the army robot): patrols, then advances and fires **3-round bursts** (5 damage each) from 8 to 35 m. Every 6 to 9 s it stops, glows its rocket pods for 1.1 s and fires an **AOE rocket** (14 damage at the centre, none beyond 4 m).
+- **Biped robot** (4, new infantry, 120 HP): patrols, then crouches for half a second with a glowing head and **leaps** onto the spot where you stood, with a **claw** on landing (14 damage) and a two-claw swipe up close (9). Double jump over the leap.
+- **Spot dog** (6, Walking Robotic Dog model): weak and fast, lunges and rams.
+- **Bomber Duck** (4): hops toward you, arms a **3-2-1** countdown and blows up for 15 damage.
 - **Cyber samurai** (3, elite; an authored CC-BY armour model split at the joints, holding a CC0 naginata): 300 HP, twice a regular robot. One per area (yard, gate apron, quay), never in the scorpion's court. A quick cut up close, a **leap and cleave** from up to 17 m, a **spinning naginata** that deflects 85% of frontal fire for 3 s when it is being shot, and twice per life (below 70% and 35% HP) a burst of six **lightning dashes** across an 8.5 m area that leaves faint lightning behind.
 - **STINGER-7 semi-boss** (mecha scorpion, about 6 m long, 1300 HP): rises behind the relay tower when you approach it. Three telegraphed skills: a **charge** that throws you straight back, a **venom shot** (green glob, burst damage and a pool that hurts for 5 s) and a **tail slam** whose blasts run out in a fan in front of it. Under sustained fire it crosses its claws and raises a **hexagon shield** that blocks 80% of frontal damage for a few seconds, so flank it or wait. It is stunned after ramming a wall and enrages below 40% HP. Weak spots: head sensors and the stinger bulb.
 - **Area streaming**: no robot exists at load. Posts around you wake up as you walk (within 46 m, never closer than 18 m, never within 32 m of the spawn), at most 10 are alive at once, and survivors far behind you are removed again.
-- **TITAN-04 final boss** (about 9 m tall): falls from the sky after the tower is activated, four knee-light weak points, then an exposed core.
+- **Gunslinger Crab Mech final boss** (10 m wide, 5800 HP, one health bar, no weak points): falls from the sky after the tower is activated. Four telegraphed skills: **carpet bombs** (marked line and ring, 5 m AOE), **dragonfly drones** (3 to 4 flyers that circle and fire bolts, re-released when fewer than 2 are left), a **360 degree spin** for close range (knockback, jump to avoid) and a slow **four-way laser** that rotates 180 degrees (jump over the beams).
 
 **World and rendering**
 - One quay under a cold overcast (72 x 122 m): gate apron, container yard, relay court and the quay with a gantry crane.
@@ -160,7 +161,7 @@ simulation, procedural audio and procedurally built models. There is no backend 
 
 ```
 Gate apron (empty) -> container yard -> relay court: STINGER-7, hold the tower
-           -> TITAN-04 drops onto the quay -> destroy 4 weak points -> shoot the exposed core -> victory
+           -> the Gunslinger Crab Mech drops onto the quay -> wear down its single HP pool -> victory
 ```
 
 | Element | Details |
@@ -168,9 +169,9 @@ Gate apron (empty) -> container yard -> relay court: STINGER-7, hold the tower
 | Countdown | 8 minutes; reaching zero is a failure |
 | Tower | 1; stand within range and hold `E` (5 s). Leaving range or dying cancels the progress |
 | Death | Respawn at the last checkpoint when one exists (the activated tower, the boss start); the countdown keeps running |
-| Robots | roster of 21, streamed in around you (10 alive at most): 5 army mechs, 8 Spot dogs, 5 Bomber Ducks, 3 cyber samurai |
+| Robots | roster of 22, streamed in around you (10 alive at most): 5 Strikers, 6 Spot dogs, 4 Bomber Ducks, 4 Bipeds, 3 cyber samurai |
 | Semi-boss | STINGER-7, 1300 HP, guards the relay tower |
-| Final boss | TITAN-04: 4 weak points x 500 HP, then core 4000 HP; Heavy Cannon, Ground Slam and Missile Barrage |
+| Final boss | Gunslinger Crab Mech: 5800 HP, no weak points; bombs, drones, spin, four-way laser |
 | Supplies | 11 ammo crates and 3 medkits (4 + 1 of them around the boss arena); two on container tops (double jump) |
 | Recovery | Five safe containers heal 12 HP/s while you stand inside |
 
@@ -251,7 +252,7 @@ Handy for development and testing; none are required to play.
 | `?enemies=army,spot,duck` or `none` | Robots in the sandbox |
 | `?countdown=SECONDS` | Override the nuclear countdown |
 | `?towers=N` | Start with N towers already active |
-| `?boss` / `?bossphase=core` | Spawn TITAN-04 shortly after start / jump to the core phase |
+| `?boss` / `?bossphase=core` | Spawn the crab boss shortly after start / jump to the core phase |
 | `?viewmodel=procedural` | Use the placeholder rifle instead of the G36C model |
 | `?bench=SECONDS` | Run the benchmark and print a `BENCH {json}` line |
 
@@ -270,7 +271,7 @@ src/
   combat/      damage and hit resolution
   scorpion/    STINGER-7 semi-boss: model, skills, telegraph shaders, drops
   enemies/     framework, army mech, Spot, Bomber Duck, cyber samurai, nav grid, AI scheduler, area streaming, gait
-  boss/        TITAN-04: model, attacks, weak points, landing cinematic
+  boss/        Gunslinger Crab Mech: model, skills, drones, landing cinematic
   objectives/  towers and nuclear countdown
   pickups/     ammo, medkits and drops
   flow/        death, game over, victory, checkpoints
@@ -297,7 +298,7 @@ Design rules (full text in [`.specify/memory/constitution.md`](.specify/memory/c
 | Target | 60 FPS desktop, 30 FPS low-end fallback |
 | Draw calls | at most 350 per frame; measured about 100 to 180 including the reflection pass |
 | Triangles | about 0.45 to 0.6 million per frame with shadow and reflection passes (measured) |
-| Enemies | roster of 21 robots (18 regular, 3 samurai) streamed by area (10 alive at most), STINGER-7 and the boss |
+| Enemies | roster of 22 robots (19 regular, 3 samurai) streamed by area (10 alive at most), STINGER-7 and the boss |
 | Shadows | one sun shadow map, static content refreshed at 6 Hz (medium) or 12 Hz (high) for moving casters |
 | Presets | low: no shadows, reflection or bloom; medium: shadows, reflection, bloom; high: adds ambient occlusion |
 | Bundle | about 5.3 MB of code (Rapier's WASM is about 80% of it), split into three chunks, plus about 10 MB of models: vehicles 5.5 MB, clutter 4 MB, G36C 2.3 MB |
@@ -327,13 +328,12 @@ The service worker is not registered by `npm run dev`.
 
 Known limitations:
 
-- The robots and the scorpion are built from primitives and read as low-poly next to the scanned clutter and vehicles, which look more realistic. The cabin, containers and crane are procedural too.
+- The scorpion and the Bomber Duck are built from primitives and read as low-poly next to the authored robots and vehicles. The cabin, containers and crane are procedural too.
 - Dense clutter only exists on the gate apron, the relay court and the quay; the container yard is still open lanes (robot routes), so it is not as cramped as it could be.
 - The heavy shaders (planar reflection, shadow map, bloom, AO) target a desktop GPU; use the low preset on integrated graphics.
 - Gameplay balance (damage, robot density, walking distances, countdown length, the heal rate of the safe containers) is untested.
-- The boss attacks were checked by unit tests and short scripted runs only.
+- The crab's four skills were checked by unit tests and short scripted runs only; the crab can show a pale orange wash while a skill telegraphs.
 - The in-game Restart button reloads the page.
-- Optional boss attacks from the GDD (Shockwave, Target Lock, EMP Pulse) are not implemented.
 - Real-device performance numbers are missing.
 
 Where the game differs from the original design document is tracked in [`docs/DEVIATIONS.md`](docs/DEVIATIONS.md).
@@ -384,9 +384,14 @@ workflow described in [`docs/SPECKIT.md`](docs/SPECKIT.md); the repository's `sp
 | Cabinets, barrier, barrels, tyre, generator, work light ([Poly Haven](https://polyhaven.com): `utility_box_01/02`, `concrete_road_barrier_02`, `Barrel_01`, `barrel_03`, `old_tyre`, `portable_generator`, `flood_lights`) | CC0 | 512 px textures, decimated (`public/assets/props/industrial.glb`, `industrial.py`) |
 | Water tower, dumpster, AC unit, cable drum, switchgear, street box, gas cylinder, water barrel, light tower, cement mixer, pallet, portable toilet, roadblock, trash bin ([3DModelsCC0](https://3dmodelscc0.itch.io) packs: City Environment 1 and 2, Industrial 1 and 2) | CC0 | 512 px textures, decimated (`public/assets/props/terminal.glb`, `terminal.py`) |
 | Cyber samurai body ([Cyberpunk Samurai Robot](https://sketchfab.com/3d-models/cyberpunk-samurai-robot-6b7c89af7c5b4a17a94f890e0ec3eedf) by byhoangtran) | **CC-BY 4.0** | Split at the hips and knees, katana removed; credited in the in-game Credits screen (`public/assets/enemies/samurai.glb`, `tools/asset-pipeline/samurai.py`) |
+| Biped robot ([Biped robot](https://sketchfab.com/3d-models/801d2a245e4a4405a0c2152b35b5e486) by **skudgee (Willy Decarpentrie)**) | CC-BY 4.0 | Display base removed, decimated, run, crouch, leap and claw clips authored (`public/assets/enemies/`, `tools/asset-pipeline/enemies_sf.py`); in-game Credits |
+| Medium Mech Striker ([Medium Mech Striker](https://sketchfab.com/3d-models/27ba717c173a40b7841d2f2c6a89d823) by **MSGDI**) | CC-BY 4.0 | Decimated, 512 px textures, idle, walk and run clips; in-game Credits |
+| Spot dog ([Walking Robotic Dog](https://sketchfab.com/3d-models/cb8157f40d39456d9f37865b4e6e7477) by **reececreoplan (CreoPlan Ltd)**) | CC-BY 4.0 | Decimated, 512 px textures, leg clips merged; in-game Credits |
+| Final boss ([Gunslinger Crab Mech v1.2](https://sketchfab.com/3d-models/5147619f337a45b0974f349eac27b34a) by **vaportrash**) | CC-BY 4.0 | Legs split at the hips, decimated, textures resized (`public/assets/enemies/crab-boss.glb`, `tools/asset-pipeline/boss_sf.py`); in-game Credits |
+| Boss drones ([Light Assault Mech](https://sketchfab.com/3d-models/d1ca5065b5184646bc7028597d0ce049) by **Lagst**) | CC-BY 4.0 | Armature applied, decimated (`public/assets/enemies/dragonfly-drone.glb`, `drone_sf.py`); in-game Credits |
 | Samurai naginata ([Naginata](https://opengameart.org/content/naginata) by Bioxx) | CC0 | Held forward from the wrist (`samurai.glb`) |
 
-Everything else (the other robots, containers, crane, sounds, UI) is generated procedurally by this repository's code. The raw source downloads are not committed; each build script lists the exact source files.
+Everything else (the scorpion, the Bomber Duck, containers, crane, sounds, UI) is generated procedurally by this repository's code. The raw source downloads are not committed; each build script lists the exact source files.
 
 **Acknowledgements.** The reference models in [`docs/reference-models/`](docs/reference-models) inspired the robot
 designs; they are visual references only. This project was developed with substantial help from AI coding agents
