@@ -50,6 +50,7 @@ describe('parseEnemyParam', () => {
   it('defaults to army, supports lists and none', () => {
     expect(parseEnemyParam(null)).toEqual(['army']);
     expect(parseEnemyParam('spot, duck')).toEqual(['spot', 'duck']);
+    expect(parseEnemyParam('biped,army')).toEqual(['biped', 'army']);
     expect(parseEnemyParam('none')).toEqual([]);
     expect(parseEnemyParam('bogus')).toEqual([]);
   });
@@ -73,13 +74,14 @@ describe('authored harbor population', () => {
     expect(count('army')).toBe(ENEMY_COUNTS.army);
     expect(count('spot')).toBe(ENEMY_COUNTS.spot);
     expect(count('duck')).toBe(ENEMY_COUNTS.duck);
+    expect(count('biped')).toBe(ENEMY_COUNTS.biped);
     expect(count('samurai')).toBe(ENEMY_COUNTS.samurai);
     expect(authored).toHaveLength(ENEMY_COUNTS.total);
   });
 
   it('honours ENEMY_DISTRIBUTION per zone', () => {
     for (const zone of ['A', 'B', 'C', 'D'] as const) {
-      for (const type of ['army', 'spot', 'duck', 'samurai'] as const) {
+      for (const type of ['army', 'spot', 'duck', 'biped', 'samurai'] as const) {
         const n = authored.filter((p) => p.type === type && zoneAt(p.at[0], p.at[1]) === zone).length;
         expect(n, `${type} in ${zone}`).toBe(ENEMY_DISTRIBUTION[zone][type]);
       }
@@ -156,7 +158,7 @@ describe('getPopulation on the harbor', () => {
     expect(warn).not.toHaveBeenCalled();
     warn.mockRestore();
     const n = (t: string) => pop.filter((p) => p.type === t).length;
-    expect([n('army'), n('spot'), n('duck')]).toEqual([ENEMY_COUNTS.army, ENEMY_COUNTS.spot, ENEMY_COUNTS.duck]);
+    expect([n('army'), n('spot'), n('duck'), n('biped')]).toEqual([ENEMY_COUNTS.army, ENEMY_COUNTS.spot, ENEMY_COUNTS.duck, ENEMY_COUNTS.biped]);
     for (const p of pop) expect(nav.isWalkable(p.position.x, p.position.z)).toBe(true);
   });
 

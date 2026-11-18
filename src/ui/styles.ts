@@ -85,10 +85,6 @@ export const UI_CSS = `
 .nh-boss .nh-bar{height:1.3vh;transform:skewX(-18deg);background:rgba(10,9,14,.65);box-shadow:0 0 0 1px rgba(255,255,255,.16)}
 .nh-boss .nh-fill{background:linear-gradient(90deg,#b3160c,#ff5a3a);box-shadow:0 0 1.4vh rgba(255,61,46,.6)}
 .nh-boss .nh-fill.locked{background:repeating-linear-gradient(-45deg,#3a3a40 0 .8vh,#2a2a30 .8vh 1.6vh);box-shadow:none}
-.nh-wp{display:flex;gap:1.2vh;justify-content:center;margin:.7em 0 .5em}
-.nh-wp div{width:9vh;height:.9vh;background:rgba(10,9,14,.65);box-shadow:0 0 0 1px rgba(255,120,100,.5);overflow:hidden;transform:skewX(-18deg)}
-.nh-wp div i{display:block;height:100%;background:#ffb066;transform-origin:left}
-.nh-wp div.dead{opacity:.3}
 .nh-core{font-size:.7em;letter-spacing:.3em;margin-top:.6em;opacity:.85}
 .nh-screen{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.2vh;background:radial-gradient(ellipse at center,rgba(14,12,18,.72),rgba(4,4,8,.93));pointer-events:auto;animation:nh-in .35s ease-out both}
 @keyframes nh-in{from{opacity:0}to{opacity:1}}

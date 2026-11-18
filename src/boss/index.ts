@@ -3,44 +3,50 @@ import { BOSS } from '@/config/tunables';
 import { BOSS_ARENA } from '@/config/level';
 import type { GameContext } from '@/core/GameContext';
 import type { GameModule } from '@/core/GameModule';
-import type { BossAttackId, DamageResult } from '@/core/types';
-import { BossBody, BODY_R, BODY_Y, EYE_LOCAL } from './BossBody';
+import type { DamageResult } from '@/core/types';
+import { BossBody, BODY_Y } from './BossBody';
 import type { BodyAnim } from './BossBody';
-import {
-  AttackScheduler,
-  angleDelta,
-  clampToArena,
-  inSlamDanger,
-  inSplash,
-  missileTargets,
-  predictTarget,
-  rangeIntent,
-} from './BossAttacks';
-import type { AttackStep, BossAttackKind, XZ } from './BossAttacks';
+import { angleDelta, clampToArena, rangeIntent } from './BossAttacks';
+import type { XZ } from './BossAttacks';
 import { BossColliders } from './BossColliders';
-import type { ZoneHandlers } from './BossColliders';
+import { BossEffects } from './BossEffects';
 import { canSkip, cinematicFrame, newCinematicFrame } from './cinematic';
 import { CinematicFx } from './CinematicFx';
+import { CrabBody } from './CrabBody';
+import type { BossVisual } from './CrabBody';
+import { fallbackBones, loadBossAssets } from './crabAssets';
+import type { BossAssets, LegBone } from './crabAssets';
+import { Drones } from './Drones';
 import { pickLandingSpot } from './landing';
 import type { LandingObstacle } from './landing';
-import { QueryGroups } from '@/physics/groups';
 import { BossModel, DEFAULT_BOSS_MODEL_CONFIG } from './BossModel';
-import { resetArmorTextures } from './BossTextures';
 import type { BossModelEvent, HitOutcome } from './BossModel';
-import { BossProjectiles } from './BossProjectiles';
-import type { ExplodeKind } from './BossProjectiles';
-import { BOSS_LOCAL } from './tunables';
-
-const ATTACK_IDS: readonly BossAttackKind[] = ['heavy-cannon', 'ground-slam', 'missile-barrage'];
+import { resetArmorTextures } from './BossTextures';
+import {
+  SKILL_ATTACK,
+  SKILLS,
+  SkillScheduler,
+  SweepTracker,
+  TickTimer,
+  beamAngles,
+  beamHitsPlayer,
+  bombDamage,
+  bombPattern,
+  droneReleaseCount,
+  laserBase,
+  spinRate,
+  sweepContact,
+} from './skills';
+import type { SkillId } from './skills';
+import { BOSS_LOCAL, CRAB } from './tunables';
+import { QueryGroups } from '@/physics/groups';
 
 // module-level scratch, no per-frame allocation
 const evPos = new Vector3();
 /** Copy of the player position for `game:checkpoint` (event payloads must not carry live vectors). */
 const checkpointPos = new Vector3();
-const muzzle = new Vector3();
-const aim = new Vector3();
-const missileFrom = new Vector3();
-const missileTo = new Vector3();
+const bayPos = new Vector3();
+const mortarPos = new Vector3();
 const impulse = new Vector3();
 const blastDir = new Vector3();
 const playerCentre = new Vector3();
@@ -56,30 +62,58 @@ const CAM_ROLL = new Quaternion();
 const ROLL_AXIS = new Vector3(0, 0, 1);
 const probe = { x: 0, y: 0, z: 0 };
 const DOWN = { x: 0, y: -1, z: 0 };
+const beamRay = { x: 0, y: 0, z: 0 };
+const beamOrigin = { x: 0, y: 0, z: 0 };
+const bossXZ: XZ = { x: 0, z: 0 };
+const playerXZ: XZ = { x: 0, z: 0 };
+const touching = [false, false];
+
+interface SkillRun {
+  skill: SkillId | null;
+  phase: 'telegraph' | 'active';
+  t: number;
+  /** Length of the current phase (s). */
+  duration: number;
+  // laser
+  laserStart: number;
+  laserDir: 1 | -1;
+  clipTimer: number;
+  // bombs
+  bombsLeft: number;
+}
 
 /**
- * TITAN-04 boss fight (GDD 9). Rules live in BossModel / BossAttacks (pure, unit tested); this
- * module glues them to the scene, physics, pools and the event bus.
+ * Final boss: the Gunslinger Crab Mech (spec 27-crab-boss). Rules live in BossModel / skills (pure, unit
+ * tested); this module glues them to the scene, physics, pools and the event bus.
  */
 export function createBossModule(): GameModule {
   let ctx: GameContext | null = null;
   const offs: Array<() => void> = [];
   const model = new BossModel({ ...DEFAULT_BOSS_MODEL_CONFIG, awakeningDuration: BOSS_LOCAL.cinematic.duration });
-  const destroyed: boolean[] = [false, false, false, false];
 
+  /** Cinematic scale (harbor 0.5, sandbox 0.4); `k` is the same as a size factor relative to the harbor. */
   let scale = 1;
+  let k = 1;
   let origin: XZ = { x: BOSS_ARENA.center.x, z: BOSS_ARENA.center.z };
   let arenaRadius: number = BOSS_ARENA.radius;
-  let scheduler = new AttackScheduler(1);
+  const scheduler = new SkillScheduler();
+  const sweep = new SweepTracker();
+  const ticks = new TickTimer();
+  const angles: number[] = [];
+  const lengths: number[] = [0, 0, 0, 0];
 
   let fx: CinematicFx | null = null;
   const cin = { active: false, t: 0, impacted: false, ended: false, frame: newCinematicFrame() };
   const landing = { x: 0, z: 0, clear: true };
   const hiddenCamChildren: Array<{ o: { visible: boolean }; was: boolean }> = [];
 
-  let body: BossBody | null = null;
+  let body: BossVisual | null = null;
+  let usingCrab = false;
   let colliders: BossColliders | null = null;
-  let projectiles: BossProjectiles | null = null;
+  let effects: BossEffects | null = null;
+  let drones: Drones | null = null;
+  let assets: BossAssets | null = null;
+  let assetWait = 0;
 
   let spawned = false;
   let spawnRequested = false;
@@ -88,35 +122,30 @@ export function createBossModule(): GameModule {
   let collapseElapsed = 0;
   let nextBurst = 0;
   let defeatedEmitted = false;
+  let aiPaused = false;
 
   const pos = { x: 0, y: 0, z: 0 };
   let yaw = 0;
   let walk = 0;
-  const anim: BodyAnim = { walk: 0, travelled: 0, dirX: 0, dirZ: -1, slamRaise: 0, cannonCharge: 0, collapse: 0 };
-
-  // attack in progress
-  let pendingAttack: BossAttackKind | null = null;
-  let telegraphTime = 0;
-  let telegraphDuration = 0;
-  const pendingTarget = new Vector3();
-  const pendingMissiles: XZ[] = [];
-  let pendingMissileCount = 0;
-  const missileScratch: XZ[] = [];
+  let strafeDir: 1 | -1 = 1;
+  let strafeTimer = 0;
+  const anim: BodyAnim = { walk: 0, travelled: 0, dirX: 0, dirZ: -1, slamRaise: 0, cannonCharge: 0, collapse: 0, spin: 0, windup: 0, charge: 0 };
+  const run: SkillRun = { skill: null, phase: 'telegraph', t: 0, duration: 0, laserStart: 0, laserDir: 1, clipTimer: 0, bombsLeft: 0 };
 
   // ---- helpers -------------------------------------------------------------------------
 
-  /** Body-space point to world space (scaled, yawed). */
-  function worldPoint(local: Vector3, out: Vector3): Vector3 {
-    const lx = local.x * scale;
-    const ly = local.y * scale;
-    const lz = local.z * scale;
+  /** Body-space point (crab metres) to world space (sized, yawed). */
+  function worldPoint(lx: number, ly: number, lz: number, out: Vector3): Vector3 {
+    const x = lx * k;
+    const y = ly * k;
+    const z = lz * k;
     const c = Math.cos(yaw);
     const s = Math.sin(yaw);
-    return out.set(pos.x + lx * c + lz * s, pos.y + ly, pos.z - lx * s + lz * c);
+    return out.set(pos.x + x * c + z * s, pos.y + y, pos.z - x * s + z * c);
   }
 
   function bossCentre(out: Vector3): Vector3 {
-    return out.set(pos.x, pos.y + BODY_Y * scale, pos.z);
+    return out.set(pos.x, pos.y + (usingCrab ? CRAB.hull.y * k : BODY_Y * scale), pos.z);
   }
 
   function vfx(kind: 'explosion' | 'big-explosion' | 'dust' | 'telegraph-ring' | 'smoke', at: Vector3, size?: number): void {
@@ -132,46 +161,20 @@ export function createBossModule(): GameModule {
           c.events.emit('boss:phaseChanged', { phase: e.phase });
           if (e.phase === 'destroyed') beginCollapse();
           break;
-        case 'weakPointDamaged':
-          body?.setWeakPoint(e.index, e.hp, e.maxHp);
-          c.events.emit('boss:weakPointDamaged', { index: e.index, hp: e.hp, maxHp: e.maxHp });
-          break;
-        case 'weakPointDestroyed': {
-          destroyed[e.index] = true;
-          body?.setWeakPoint(e.index, 0, BOSS.weakPointHp);
-          colliders?.removeWeakPoint(e.index);
-          if (body) tmpLocal.copy(body.kneeRoot[e.index] ?? tmpLocal);
-          worldPoint(tmpLocal, evPos);
-          c.events.emit('boss:weakPointDestroyed', { index: e.index, remaining: e.remaining, position: evPos });
-          vfx('explosion', evPos, 2 * scale);
-          break;
-        }
-        case 'coreExposed':
-          colliders?.addCore();
-          body?.setCoreExposed(true);
-          c.events.emit('boss:coreExposed', {});
-          break;
-        case 'coreDamaged':
+        case 'damaged':
           c.events.emit('boss:coreDamaged', { hp: e.hp, maxHp: e.maxHp });
           break;
         case 'defeated':
-          // announced when the collapse has played (see fixedUpdate)
+          // announced when the collapse has played (see collapseStep)
           break;
       }
     }
   }
 
-  function outcome(out: HitOutcome, zone: DamageResult['zone']): DamageResult {
+  function outcome(out: HitOutcome): DamageResult {
     handleEvents(out.events);
-    return { dealt: out.dealt, zone, killed: out.killed, absorbed: out.absorbed };
+    return { dealt: out.dealt, zone: 'body', killed: out.killed, absorbed: out.absorbed };
   }
-
-  const handlers: ZoneHandlers = {
-    armor: (info) => outcome(model.hitArmor(info.amount), 'armor'),
-    weakPoint: (i, info) => outcome(model.hitWeakPoint(i, info.amount), 'weakpoint'),
-    core: (info) => outcome(model.hitCore(info.amount), 'core'),
-    alive: () => model.phase !== 'destroyed',
-  };
 
   // ---- lifecycle -----------------------------------------------------------------------
 
@@ -192,9 +195,9 @@ export function createBossModule(): GameModule {
       blocked: (x, z, r) => {
         for (let i = 0; i < 9; i++) {
           const a = (i / 8) * Math.PI * 2;
-          const k = i === 0 ? 0 : r * 0.85;
-          probe.x = x + Math.cos(a) * k;
-          probe.z = z + Math.sin(a) * k;
+          const kk = i === 0 ? 0 : r * 0.85;
+          probe.x = x + Math.cos(a) * kk;
+          probe.z = z + Math.sin(a) * kk;
           probe.y = L.probeHeight;
           const hit = c.physics.raycast(probe, DOWN, L.probeHeight + 2, { groups: QueryGroups.worldOnly });
           if (hit && hit.point.y > L.probeMaxGround) return true;
@@ -212,10 +215,22 @@ export function createBossModule(): GameModule {
     if (!c || spawned) return;
     spawned = true;
     const res = c.resources.scope('boss');
-    body = new BossBody(res, scale);
+    const crab = assets?.crab ?? null;
+    usingCrab = crab !== null;
+    body = crab ? new CrabBody(res, crab, k) : new BossBody(res, scale);
     c.scene.add(body.root);
-    colliders = new BossColliders(c.physics, scale, handlers, body.kneeRoot, body.restBones);
-    projectiles = new BossProjectiles(res, c.scene, c.physics, scale);
+    const bones: Map<string, LegBone> = crab ? crab.bones : fallbackBones();
+    colliders = new BossColliders(c.physics, k, { hit: (info) => outcome(model.hit(info.amount)), alive: () => model.phase !== 'destroyed' }, bones.values(), crab ? crab.arms.values() : []);
+    effects = new BossEffects(res, c.scene, c.physics, k);
+    drones = new Drones(res, c.scene, c.physics, assets?.drone ?? null, k, {
+      onKilled: (p) => {
+        vfx('explosion', p, 1.6);
+        vfx('smoke', p, 1.4);
+      },
+      onFire: (from, to) => {
+        effects?.fireBolt(from, to);
+      },
+    });
     fx = new CinematicFx(res, c.scene, c.uiRoot, scale);
 
     chooseLanding(c);
@@ -224,14 +239,9 @@ export function createBossModule(): GameModule {
     pos.y = BOSS_LOCAL.cinematic.skyHeight * scale;
     yaw = Math.atan2(-(c.player.position.x - pos.x), -(c.player.position.z - pos.z));
 
-    if (c.flags.params.get('bossphase') === 'core') {
-      model.destroyAllWeakPointsSilently();
-      for (let i = 0; i < BOSS.weakPointCount; i++) {
-        destroyed[i] = true;
-        body.setWeakPoint(i, 0, BOSS.weakPointHp);
-        colliders.removeWeakPoint(i);
-      }
-    }
+    // `?bossphase=low` (or the old `core`): the fight starts with a fifth of the HP left
+    const phaseParam = c.flags.params.get('bossphase');
+    if (phaseParam === 'low' || phaseParam === 'core') model.setHpFraction(0.2);
     applyPose();
 
     c.events.emit('game:checkpoint', { id: 'boss-start', position: checkpointPos.copy(c.player.position), yaw: c.player.yaw });
@@ -283,7 +293,7 @@ export function createBossModule(): GameModule {
       vfx('dust', evPos, 14 * s);
     }
     bossCentre(evPos);
-    c.events.emit('boss:spawned', { name: BOSS.name, coreHp: BOSS.coreHp, weakPoints: BOSS.weakPointCount, position: evPos });
+    c.events.emit('boss:spawned', { name: BOSS.name, coreHp: BOSS.hp, weakPoints: 0, position: evPos });
   }
 
   /** Jump to the release stage (E after the skip delay, or the test hook). */
@@ -325,8 +335,8 @@ export function createBossModule(): GameModule {
     }
     const dist = Math.min(cfg.cameraDistance * s, Math.max(d, 30 * s));
     const push = f.stage === 'title' || f.stage === 'release' ? 0.12 * Math.min(1, (f.t - cfg.impactAt) / 2) : 0;
-    const k = dist * (1 - push);
-    camPos.set(landing.x + dx * k, cfg.cameraHeight * s, landing.z + dz * k);
+    const kk = dist * (1 - push);
+    camPos.set(landing.x + dx * kk, cfg.cameraHeight * s, landing.z + dz * kk);
     camTarget.set(pos.x, pos.y + BODY_Y * s, pos.z);
     if (f.impacted) camTarget.y = Math.min(camTarget.y, BODY_Y * 1.15 * s);
     c.player.getEyePosition(tmpLocal);
@@ -347,14 +357,23 @@ export function createBossModule(): GameModule {
     c.camera.quaternion.multiply(CAM_ROLL);
   }
 
+  function resetSkill(): void {
+    run.skill = null;
+    anim.spin = 0;
+    anim.windup = 0;
+    anim.charge = 0;
+    effects?.setBeams('off', 0, 0, 0, null, null, 0);
+    sweep.reset();
+    ticks.reset();
+  }
+
   function beginCollapse(): void {
     collapseElapsed = 0;
     nextBurst = 0;
     scheduler.reset();
-    projectiles?.releaseAll();
-    pendingAttack = null;
-    anim.slamRaise = 0;
-    anim.cannonCharge = 0;
+    resetSkill();
+    effects?.releaseAll();
+    drones?.killAll(true);
   }
 
   function applyPose(): void {
@@ -363,124 +382,261 @@ export function createBossModule(): GameModule {
 
   function onRespawn(): void {
     scheduler.reset();
-    projectiles?.releaseAll();
-    pendingAttack = null;
-    anim.slamRaise = 0;
-    anim.cannonCharge = 0;
+    resetSkill();
+    effects?.releaseAll();
+    drones?.killAll(false);
   }
 
-  // ---- attacks -------------------------------------------------------------------------
+  // ---- skills --------------------------------------------------------------------------
 
-  function startTelegraph(step: AttackStep): void {
+  function dronesAlive(): number {
+    return drones?.alive ?? 0;
+  }
+
+  function startSkill(skill: SkillId): void {
     const c = ctx;
-    if (!c || !projectiles) return;
-    const player = c.player;
-    pendingAttack = step.attack;
-    telegraphTime = 0;
-    telegraphDuration = step.duration;
-    const kind: BossAttackId = step.attack;
-
-    if (step.attack === 'heavy-cannon') {
-      const t = predictTarget(player.position, player.velocity, step.duration);
-      pendingTarget.set(t.x, player.position.y, t.z);
-      muzzleWorld(muzzle);
-      const travel = muzzle.distanceTo(pendingTarget) / BOSS.heavyCannon.projectileSpeed;
-      projectiles.addMarker(pendingTarget.x, pendingTarget.y, pendingTarget.z, step.radius, step.duration + travel + 0.2, false);
-      c.events.emit('boss:attackTelegraph', { attack: kind, position: pendingTarget, radius: step.radius, duration: step.duration });
-    } else if (step.attack === 'ground-slam') {
-      projectiles.addMarker(pos.x, pos.y, pos.z, step.radius, step.duration, true);
-      evPos.set(pos.x, pos.y, pos.z);
-      c.events.emit('boss:attackTelegraph', { attack: kind, position: evPos, radius: step.radius, duration: step.duration });
-      vfx('telegraph-ring', evPos, step.radius);
-    } else {
-      const spread = BOSS_LOCAL.missile.spread * scale;
-      pendingTarget.set(player.position.x, player.position.y, player.position.z);
-      pendingMissileCount = step.count;
-      const list = missileTargets(step.count, pendingTarget, spread, Math.random, missileScratch);
-      pendingMissiles.length = 0;
-      for (const p of list) {
-        pendingMissiles.push({ x: p.x, z: p.z });
-        projectiles.addMarker(p.x, 0, p.z, step.radius, step.duration + BOSS_LOCAL.missile.flightTime + 0.1, false);
+    if (!c || !effects) return;
+    run.skill = skill;
+    run.phase = 'telegraph';
+    run.t = 0;
+    const C = CRAB;
+    const attack = SKILL_ATTACK[skill];
+    let radius = 1;
+    switch (skill) {
+      case 'bombs':
+        run.duration = C.bombs.telegraph;
+        radius = C.bombs.radius * k;
+        evPos.set(c.player.position.x, c.player.position.y, c.player.position.z);
+        break;
+      case 'drones':
+        run.duration = C.drones.telegraph;
+        radius = 2.5 * k;
+        evPos.copy(worldPoint(bayLocal().x, bayLocal().y, bayLocal().z, bayPos));
+        vfx('telegraph-ring', evPos, 3 * k);
+        break;
+      case 'spin':
+        run.duration = C.spin.windup;
+        radius = C.spin.reach * k;
+        evPos.set(pos.x, pos.y, pos.z);
+        effects.addMarker(pos.x, pos.y, pos.z, radius, C.spin.windup + C.spin.duration, false, true);
+        vfx('telegraph-ring', evPos, radius * 0.6);
+        break;
+      case 'laser': {
+        run.duration = C.laser.telegraph;
+        radius = C.laser.length * k;
+        evPos.set(pos.x, pos.y, pos.z);
+        // one beam starts on the player (a fair telegraph), the sweep turns a random way
+        run.laserStart = Math.atan2(-(c.player.position.x - pos.x), -(c.player.position.z - pos.z));
+        run.laserDir = Math.random() < 0.5 ? 1 : -1;
+        run.clipTimer = 0;
+        break;
       }
-      c.events.emit('boss:attackTelegraph', { attack: kind, position: pendingTarget, radius: spread, duration: step.duration });
+    }
+    c.events.emit('boss:attackTelegraph', { attack, position: evPos, radius, duration: run.duration });
+  }
+
+  function bayLocal(): { x: number; y: number; z: number } {
+    const b = assets?.crab?.bay;
+    return b ? b : CRAB.bay;
+  }
+
+  function mortarLocal(): { x: number; y: number; z: number } {
+    const m = assets?.crab?.mortar;
+    return m ? m : CRAB.mortar;
+  }
+
+  function beginActive(): void {
+    const c = ctx;
+    if (!c || !effects || !run.skill) return;
+    run.phase = 'active';
+    run.t = 0;
+    const C = CRAB;
+    const attack = SKILL_ATTACK[run.skill];
+    switch (run.skill) {
+      case 'bombs': {
+        const m = mortarLocal();
+        worldPoint(m.x, m.y, m.z, mortarPos);
+        bossXZ.x = pos.x;
+        bossXZ.z = pos.z;
+        playerXZ.x = c.player.position.x;
+        playerXZ.z = c.player.position.z;
+        const pattern = bombPattern(bossXZ, playerXZ, k, Math.random);
+        let last = 0;
+        run.bombsLeft = 0;
+        for (const b of pattern) {
+          if (effects.scheduleBomb(mortarPos, b.x, b.z, b.delay)) run.bombsLeft++;
+          last = Math.max(last, b.delay);
+        }
+        run.duration = last + C.bombs.markerTime + 0.4;
+        evPos.set(playerXZ.x, c.player.position.y, playerXZ.z);
+        c.events.emit('boss:attack', { attack, position: evPos, radius: C.bombs.radius * k });
+        break;
+      }
+      case 'drones': {
+        const b = bayLocal();
+        worldPoint(b.x, b.y, b.z, bayPos);
+        const n = droneReleaseCount(dronesAlive(), Math.random());
+        drones?.release(n, bayPos, c.player.position);
+        run.duration = 0.7;
+        c.events.emit('boss:attack', { attack, position: bayPos, radius: 2.5 * k });
+        break;
+      }
+      case 'spin':
+        run.duration = C.spin.duration;
+        sweep.reset();
+        evPos.set(pos.x, pos.y, pos.z);
+        vfx('dust', evPos, C.spin.reach * k * 0.8);
+        c.events.emit('boss:attack', { attack, position: evPos, radius: C.spin.reach * k });
+        break;
+      case 'laser':
+        run.duration = C.laser.duration;
+        ticks.reset();
+        evPos.set(pos.x, pos.y, pos.z);
+        c.events.emit('boss:attack', { attack, position: evPos, radius: C.laser.length * k });
+        break;
     }
   }
 
-  /** The cannon fires from the eye. */
-  function muzzleWorld(out: Vector3): Vector3 {
-    return worldPoint(EYE_LOCAL, out);
+  function endSkill(): void {
+    scheduler.finish(Math.random);
+    resetSkill();
   }
 
-  function impact(step: AttackStep): void {
-    const c = ctx;
-    if (!c || !projectiles) return;
-    const player = c.player;
-    anim.slamRaise = 0;
-    anim.cannonCharge = 0;
-    pendingAttack = null;
-    const kind: BossAttackId = step.attack;
-
-    if (step.attack === 'heavy-cannon') {
-      c.events.emit('boss:attack', { attack: kind, position: pendingTarget, radius: step.radius });
-      muzzleWorld(muzzle);
-      aim.copy(pendingTarget);
-      projectiles.fireShot(muzzle, aim, BOSS.heavyCannon.projectileSpeed);
-    } else if (step.attack === 'ground-slam') {
-      evPos.set(pos.x, pos.y, pos.z);
-      c.events.emit('boss:attack', { attack: kind, position: evPos, radius: step.radius });
-      vfx('dust', evPos, step.radius);
-      if (inSlamDanger(player.position, pos, step.radius, BOSS_LOCAL.groundSlam.safeHeight)) {
-        blastDir.set(player.position.x - pos.x, 0, player.position.z - pos.z);
-        if (blastDir.lengthSq() < 1e-6) blastDir.set(0, 0, 1);
-        blastDir.normalize();
-        player.applyDamage({ amount: BOSS.groundSlam.damage, zone: 'body', source: 'boss', direction: blastDir });
-        impulse.copy(blastDir).multiplyScalar(BOSS_LOCAL.groundSlam.knockback);
-        impulse.y = BOSS_LOCAL.groundSlam.knockbackUp;
-        player.addImpulse(impulse);
-      }
-    } else {
-      c.events.emit('boss:attack', { attack: kind, position: pendingTarget, radius: BOSS_LOCAL.missile.spread * scale });
-      for (let i = 0; i < pendingMissileCount; i++) {
-        const t = pendingMissiles[i];
-        if (!t) continue;
-        const a = (i / pendingMissileCount) * Math.PI * 2 + yaw;
-        missileFrom.set(
-          pos.x + Math.cos(a) * BODY_R * 0.5 * scale,
-          pos.y + BOSS_LOCAL.missile.spawnHeight * scale,
-          pos.z + Math.sin(a) * BODY_R * 0.5 * scale,
-        );
-        missileTo.set(t.x, 0, t.z);
-        projectiles.fireMissile(missileFrom, missileTo, BOSS_LOCAL.missile.flightTime);
-      }
+  /** Clip each beam against the static world (containers stop it). */
+  function clipBeams(base: number, c: GameContext): void {
+    const L = CRAB.laser;
+    beamAngles(base, L.beams, angles);
+    beamOrigin.x = pos.x;
+    beamOrigin.y = L.height * k;
+    beamOrigin.z = pos.z;
+    for (let i = 0; i < L.beams; i++) {
+      const a = angles[i] ?? 0;
+      beamRay.x = -Math.sin(a);
+      beamRay.y = 0;
+      beamRay.z = -Math.cos(a);
+      const max = L.length * k;
+      const hit = c.physics.raycast(beamOrigin, beamRay, max, { groups: QueryGroups.worldOnly });
+      lengths[i] = hit ? hit.distance : max;
     }
   }
 
-  function onExplode(point: Vector3, kind: ExplodeKind): void {
+  function skillStep(dt: number, c: GameContext): void {
+    if (!run.skill || !effects) return;
+    run.t += dt;
+    const C = CRAB;
+    if (run.phase === 'telegraph') {
+      const f = Math.min(1, run.t / Math.max(0.001, run.duration));
+      anim.charge = f;
+      if (run.skill === 'spin') anim.windup = f;
+      if (run.skill === 'laser') {
+        clipBeams(run.laserStart, c);
+        effects.setBeams('warn', pos.x, C.laser.height * k, pos.z, angles, lengths, C.laser.startRadius * k);
+      }
+      if (run.t >= run.duration) {
+        if (run.skill === 'laser') effects.setBeams('off', 0, 0, 0, null, null, 0);
+        beginActive();
+      }
+      return;
+    }
+    // active
+    switch (run.skill) {
+      case 'bombs':
+        anim.charge = 0.4;
+        break;
+      case 'drones':
+        anim.charge = 0.6 * (1 - run.t / run.duration);
+        break;
+      case 'spin': {
+        anim.windup = 0;
+        anim.charge = 0.5;
+        const rate = spinRate(run.t);
+        yaw += rate * dt;
+        anim.spin = rate;
+        const reach = C.spin.reach;
+        bossXZ.x = pos.x;
+        bossXZ.z = pos.z;
+        for (let i = 0; i < C.spin.armAngles.length; i++) {
+          touching[i] = rate > 0.5 && sweepContact(yaw + (C.spin.armAngles[i] ?? 0), bossXZ, c.player.position, k);
+        }
+        if (sweep.step(touching)) {
+          blastDir.set(c.player.position.x - pos.x, 0, c.player.position.z - pos.z);
+          if (blastDir.lengthSq() < 1e-6) blastDir.set(0, 0, 1);
+          blastDir.normalize();
+          c.player.applyDamage({ amount: C.spin.damage, zone: 'body', source: 'boss', direction: blastDir });
+          impulse.copy(blastDir).multiplyScalar(C.spin.knockback);
+          impulse.y = C.spin.knockbackUp;
+          c.player.addImpulse(impulse);
+        }
+        void reach;
+        break;
+      }
+      case 'laser': {
+        anim.charge = 0.8;
+        const base = laserBase(run.laserStart, run.laserDir, run.t);
+        run.clipTimer -= dt;
+        if (run.clipTimer <= 0) {
+          run.clipTimer = 1 / C.laser.clipHz;
+          clipBeams(base, c);
+        } else {
+          beamAngles(base, C.laser.beams, angles);
+        }
+        effects.setBeams('fire', pos.x, C.laser.height * k, pos.z, angles, lengths, C.laser.startRadius * k);
+        bossXZ.x = pos.x;
+        bossXZ.z = pos.z;
+        let hit = false;
+        for (let i = 0; i < C.laser.beams; i++) {
+          if (beamHitsPlayer(bossXZ, angles[i] ?? 0, lengths[i] ?? 0, c.player.position, C.laser.startRadius * k)) hit = true;
+        }
+        const n = ticks.step(dt, hit);
+        if (n > 0) {
+          blastDir.set(c.player.position.x - pos.x, 0, c.player.position.z - pos.z);
+          if (blastDir.lengthSq() < 1e-6) blastDir.set(0, 0, 1);
+          blastDir.normalize();
+          c.player.applyDamage({ amount: C.laser.tickDamage * n, zone: 'body', source: 'boss', direction: blastDir });
+        }
+        break;
+      }
+    }
+    if (run.t >= run.duration) endSkill();
+  }
+
+  function onBomb(point: Vector3): void {
     const c = ctx;
     if (!c) return;
-    const cannon = kind === 'cannon';
-    const radius = cannon ? BOSS.heavyCannon.splashRadius : BOSS.missileBarrage.splashRadius;
-    const damage = cannon ? BOSS.heavyCannon.damage : BOSS.missileBarrage.damage;
-    vfx('explosion', point, radius / 3);
-    playerCentre.set(c.player.position.x, c.player.position.y + BOSS_LOCAL.playerCentreHeight, c.player.position.z);
-    if (inSplash(point, playerCentre, radius)) {
+    const radius = CRAB.bombs.radius * k;
+    vfx('explosion', point, radius / 2.2);
+    playerCentre.set(c.player.position.x, c.player.position.y + CRAB.playerCentreHeight, c.player.position.z);
+    const d = playerCentre.distanceTo(point);
+    const dmg = bombDamage(d, radius);
+    if (dmg > 0) {
       blastDir.copy(playerCentre).sub(point);
       if (blastDir.lengthSq() < 1e-6) blastDir.set(0, 1, 0);
       blastDir.normalize();
-      c.player.applyDamage({ amount: damage, zone: 'body', source: 'boss', point, direction: blastDir });
+      c.player.applyDamage({ amount: dmg, zone: 'body', source: 'boss', point, direction: blastDir });
     }
   }
 
-  function schedulerInput(): { phase: typeof model.phase; destroyed: boolean[]; playerDistance: number } {
+  function onBolt(point: Vector3): boolean {
     const c = ctx;
-    const d = c ? Math.hypot(c.player.position.x - pos.x, c.player.position.z - pos.z) : 0;
-    return { phase: model.phase, destroyed, playerDistance: d };
+    if (!c) return false;
+    playerCentre.set(c.player.position.x, c.player.position.y + CRAB.playerCentreHeight, c.player.position.z);
+    if (playerCentre.distanceTo(point) > CRAB.drones.bolt.radius * k + 0.5) return false;
+    blastDir.copy(playerCentre).sub(point).normalize();
+    c.player.applyDamage({ amount: CRAB.drones.bolt.damage, zone: 'body', source: 'boss', point, direction: blastDir });
+    return true;
   }
 
-  function route(step: AttackStep | null): void {
-    if (!step) return;
-    if (step.kind === 'telegraph') startTelegraph(step);
-    else impact(step);
+  function skillInput(): { distance: number; aliveDrones: number; k: number } {
+    const c = ctx;
+    const d = c ? Math.hypot(c.player.position.x - pos.x, c.player.position.z - pos.z) : 0;
+    return { distance: d, aliveDrones: dronesAlive(), k };
+  }
+
+  function forceSkill(id: string): boolean {
+    const skill = SKILLS.find((s) => s === id || SKILL_ATTACK[s] === id);
+    if (!skill || model.phase !== 'fight' || !scheduler.force(skill)) return false;
+    startSkill(skill);
+    return true;
   }
 
   // ---- module --------------------------------------------------------------------------
@@ -492,7 +648,7 @@ export function createBossModule(): GameModule {
       ctx = context;
       const sandbox = context.flags.sandbox;
       scale = sandbox ? BOSS_LOCAL.sandbox.scale : BOSS_LOCAL.harborScale;
-      scheduler = new AttackScheduler(scale);
+      k = scale / BOSS_LOCAL.harborScale;
       if (sandbox) {
         origin = { x: BOSS_LOCAL.sandbox.position.x, z: BOSS_LOCAL.sandbox.position.z };
         arenaRadius = BOSS_LOCAL.sandbox.arenaRadius;
@@ -503,35 +659,60 @@ export function createBossModule(): GameModule {
       offs.push(context.events.on('game:respawn', onRespawn));
       if (context.flags.params.has('boss') || context.flags.params.has('bossphase')) bootDelay = BOSS_LOCAL.bootSpawnDelay;
 
+      // the GLBs load while the player plays; the spawn waits for them (at most `loadWaitSeconds`)
+      if (typeof document !== 'undefined' && !context.flags.params.has('procedural-boss')) {
+        void loadBossAssets().then((a) => {
+          assets = a;
+        });
+      } else {
+        assets = { crab: null, drone: null };
+      }
+
       context.testHooks.boss = {
         getState: () => ({
           phase: model.phase,
-          weakPoints: [...model.weakPoints],
-          coreHp: model.coreHp,
+          hp: model.hp,
+          maxHp: model.maxHp,
           scale,
           position: { x: pos.x, y: pos.y, z: pos.z },
           spawned,
-          liveShots: projectiles?.liveShots ?? 0,
-          liveMissiles: projectiles?.liveMissiles ?? 0,
-          droppedShots: projectiles?.droppedShots ?? 0,
+          skill: run.skill,
+          skillPhase: run.skill ? run.phase : null,
+          skillTime: run.t,
+          drones: drones?.alive ?? 0,
+          dronePositions: drones?.positions() ?? [],
+          liveBombs: effects?.liveBombs ?? 0,
+          liveBolts: effects?.liveBolts ?? 0,
+          liveMarkers: effects?.liveMarkers ?? 0,
+          beamsActive: effects?.beamsActive ?? false,
           meshCount: countMeshes(),
           fxDrawCalls: fx?.drawCalls ?? 0,
-          kneeWorld: body ? body.kneeRoot.map((k) => ({ ...worldPoint(k, new Vector3()) })) : [],
+          colliders: colliders?.colliderCount ?? 0,
+          crabModel: usingCrab,
+          droneModel: assets?.drone != null,
           yaw,
-          height: body?.measuredHeight ?? 0,
           landing: { x: landing.x, z: landing.z, clear: landing.clear },
+          cooldowns: { ...scheduler.cooldowns },
           cinematic: { active: cin.active, ended: cin.ended, t: cin.t, stage: cin.frame.stage, impacted: cin.impacted, duration: BOSS_LOCAL.cinematic.duration },
         }),
         skipCinematic: (): boolean => skipCinematic(true),
-        damageWeakPoint: (i: number, amount: number): DamageResult => outcome(model.hitWeakPoint(i, amount), 'weakpoint'),
-        damageCore: (amount: number): DamageResult => outcome(model.hitCore(amount), 'core'),
-        forceAttack: (id: string): boolean => {
-          const kind = ATTACK_IDS.find((k) => k === id);
-          if (!kind) return false;
-          const step = scheduler.force(kind, schedulerInput());
-          route(step);
-          return step !== null;
+        damage: (amount: number): DamageResult => outcome(model.hit(amount)),
+        setHp: (hp: number): void => {
+          model.setHpFraction(hp / model.maxHp);
+          ctx?.events.emit('boss:coreDamaged', { hp: model.hp, maxHp: model.maxHp });
         },
+        pauseAi: (paused: boolean): void => {
+          aiPaused = paused;
+        },
+        /** `bombs` | `drones` | `spin` | `laser` (or the event ids `carpet-bombs`, ...). */
+        force: (id: string): boolean => forceSkill(id),
+        forceAttack: (id: string): boolean => forceSkill(id),
+        teleportBoss: (x: number, z: number): void => {
+          pos.x = x;
+          pos.z = z;
+          applyPose();
+        },
+        killDrones: (): void => drones?.killAll(true),
       };
     },
 
@@ -543,7 +724,14 @@ export function createBossModule(): GameModule {
           bootDelay -= dt;
           if (bootDelay < 0) spawnRequested = true;
         }
-        if (spawnRequested) spawn();
+        if (spawnRequested) {
+          // wait for the GLBs, but not for ever (then the procedural body is used)
+          assetWait += dt;
+          if (assets || assetWait >= CRAB.loadWaitSeconds) {
+            if (!assets) assets = { crab: null, drone: null };
+            spawn();
+          }
+        }
         if (!spawned) return;
       }
       elapsed += dt;
@@ -551,7 +739,7 @@ export function createBossModule(): GameModule {
 
       if (phase === 'destroyed') {
         collapseStep(dt);
-        projectiles?.fixedStep(dt, onExplode);
+        effects?.fixedStep(dt, onBomb, onBolt);
         return;
       }
 
@@ -561,22 +749,21 @@ export function createBossModule(): GameModule {
         handleEvents(model.update(dt));
       }
 
-      if (model.phase !== 'awakening' && !cin.active) {
+      if (model.phase === 'fight' && !cin.active) {
         pos.y = 0;
+        if (!aiPaused) {
+          if (run.skill) skillStep(dt, c);
+          else {
+            const pick = scheduler.update(dt, skillInput(), Math.random);
+            if (pick) startSkill(pick);
+          }
+        }
         walkStep(dt, c);
-        route(scheduler.update(dt, schedulerInput()));
+        drones?.fixedStep(dt, c.player.position, CRAB.playerCentreHeight);
       }
 
-      if (pendingAttack) {
-        telegraphTime += dt;
-        const k = Math.min(1, telegraphTime / Math.max(0.001, telegraphDuration));
-        if (pendingAttack === 'ground-slam') anim.slamRaise = k;
-        else if (pendingAttack === 'heavy-cannon') anim.cannonCharge = k;
-      }
-
-      projectiles?.fixedStep(dt, onExplode);
+      effects?.fixedStep(dt, onBomb, onBolt);
       applyPose();
-      if (body) colliders?.syncWeakPoints(body.kneeRoot);
     },
 
     update(dt) {
@@ -587,7 +774,8 @@ export function createBossModule(): GameModule {
       body.root.rotation.y = yaw;
       body.update(c.clock.simTime, dt, anim);
       anim.travelled = 0;
-      projectiles?.update();
+      effects?.update();
+      drones?.update(c.clock.simTime);
       if (cin.active) {
         if (c.input.wasPressed('interact')) skipCinematic(false);
         cinematicCamera(c);
@@ -612,7 +800,8 @@ export function createBossModule(): GameModule {
       body = null;
       fx = null;
       colliders = null;
-      projectiles = null;
+      effects = null;
+      drones = null;
       ctx = null;
     },
   };
@@ -623,21 +812,37 @@ export function createBossModule(): GameModule {
     const dx = c.player.position.x - pos.x;
     const dz = c.player.position.z - pos.z;
     const dist = Math.hypot(dx, dz);
-    // turn slowly towards the player
-    const target = Math.atan2(-dx, -dz);
-    const maxTurn = BOSS_LOCAL.turnRate * dt;
-    const delta = angleDelta(yaw, target);
-    yaw += Math.max(-maxTurn, Math.min(maxTurn, delta));
+    const busy = run.skill !== null;
+    const spinning = run.skill === 'spin' && run.phase === 'active';
+    // turn slowly towards the player (not while spinning; the laser keeps its heading)
+    if (!spinning && run.skill !== 'laser') {
+      const target = Math.atan2(-dx, -dz);
+      const maxTurn = BOSS_LOCAL.turnRate * dt;
+      const delta = angleDelta(yaw, target);
+      yaw += Math.max(-maxTurn, Math.min(maxTurn, delta));
+    }
 
     let moved = 0;
     let mx = 0;
     let mz = 0;
-    const intent = rangeIntent(dist, BOSS_LOCAL.rangeMin * scale, BOSS_LOCAL.rangeMax * scale);
-    if (intent !== 0 && dist > 1e-3 && !pendingAttack) {
-      const step = BOSS.speed * scale * dt * intent;
-      const nx = pos.x + (dx / dist) * step;
-      const nz = pos.z + (dz / dist) * step;
-      const clamped = clampToArena({ x: nx, z: nz }, origin, arenaRadius, BOSS_LOCAL.arenaMargin * scale);
+    if (!busy && dist > 1e-3) {
+      const intent = rangeIntent(dist, BOSS_LOCAL.rangeMin * scale, BOSS_LOCAL.rangeMax * scale);
+      let vx = 0;
+      let vz = 0;
+      if (intent !== 0) {
+        vx = (dx / dist) * intent * CRAB.walkSpeed * k;
+        vz = (dz / dist) * intent * CRAB.walkSpeed * k;
+      } else {
+        // inside the band: strafe around the player
+        strafeTimer -= dt;
+        if (strafeTimer <= 0) {
+          strafeDir = strafeDir === 1 ? -1 : 1;
+          strafeTimer = CRAB.strafeFlip[0] + Math.random() * (CRAB.strafeFlip[1] - CRAB.strafeFlip[0]);
+        }
+        vx = (-dz / dist) * strafeDir * CRAB.strafeSpeed * k;
+        vz = (dx / dist) * strafeDir * CRAB.strafeSpeed * k;
+      }
+      const clamped = clampToArena({ x: pos.x + vx * dt, z: pos.z + vz * dt }, origin, arenaRadius, BOSS_LOCAL.arenaMargin * scale);
       mx = clamped.x - pos.x;
       mz = clamped.z - pos.z;
       pos.x = clamped.x;
@@ -646,7 +851,7 @@ export function createBossModule(): GameModule {
     }
     walk += ((moved > 0 ? 1 : 0) - walk) * Math.min(1, dt * 4);
     anim.walk = walk;
-    anim.travelled += moved / scale;
+    anim.travelled += moved / k;
     if (moved > 0) {
       const cs = Math.cos(yaw);
       const sn = Math.sin(yaw);
@@ -662,19 +867,22 @@ export function createBossModule(): GameModule {
     const p = Math.min(1, collapseElapsed / BOSS_LOCAL.collapseDuration);
     anim.collapse = p;
     anim.walk = 0;
-    pos.y = -p * BOSS_LOCAL.collapseSink * scale;
+    anim.spin = 0;
+    anim.charge = 0;
+    anim.windup = 0;
+    pos.y = -p * (usingCrab ? CRAB.sink * k : BOSS_LOCAL.collapseSink * scale);
     applyPose();
     if (collapseElapsed >= nextBurst) {
       nextBurst += 0.5;
       bossCentre(evPos);
-      evPos.x += (Math.sin(collapseElapsed * 7) * BODY_R * scale) / 2;
-      evPos.z += (Math.cos(collapseElapsed * 5) * BODY_R * scale) / 2;
-      vfx('explosion', evPos, 2.5 * scale);
+      evPos.x += Math.sin(collapseElapsed * 7) * 2.5 * k;
+      evPos.z += Math.cos(collapseElapsed * 5) * 2.5 * k;
+      vfx('explosion', evPos, 5 * k);
     }
     if (p >= 1) {
       defeatedEmitted = true;
       bossCentre(evPos);
-      vfx('big-explosion', evPos, scale);
+      vfx('big-explosion', evPos, 2 * k);
       c.events.emit('boss:defeated', { position: evPos });
     }
   }

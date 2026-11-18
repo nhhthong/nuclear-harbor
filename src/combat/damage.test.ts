@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BOSS, ECONOMY, ENEMY_COUNTS, ARMY_ROBOT, WEAPON } from '@/config/tunables';
 import { DUCK } from '@/enemies/duck/tunables';
+import { BIPED } from '@/enemies/biped/tunables';
 import { SPOT } from '@/enemies/spot/tunables';
 import { resolveDamage, shotsToKill } from './damage';
 import { SAMURAI } from '@/enemies/samurai/tunables';
@@ -27,15 +28,16 @@ describe('resolveDamage', () => {
 });
 
 describe('ammo budget (GDD 5.4)', () => {
-  it('needs about 345 hits (whole roster and the boss) and the supply covers the assumed accuracy', () => {
+  it('needs about 348 hits (whole roster and the crab boss) and the supply covers the assumed accuracy', () => {
     const hits =
       ENEMY_COUNTS.army * shotsToKill(ARMY_ROBOT.hp) +
       ENEMY_COUNTS.spot * shotsToKill(SPOT.hp) +
       ENEMY_COUNTS.duck * shotsToKill(DUCK.hp) +
+      ENEMY_COUNTS.biped * shotsToKill(BIPED.hp) +
       ENEMY_COUNTS.samurai * shotsToKill(SAMURAI.hp) +
-      BOSS.weakPointCount * shotsToKill(BOSS.weakPointHp) +
-      shotsToKill(BOSS.coreHp);
-    expect(hits).toBe(345);
+      shotsToKill(BOSS.hp);
+    // 348 = roster 116 + crab boss 232 (5800 HP, no weak points)
+    expect(hits).toBe(348);
     const supply =
       WEAPON.magazineSize +
       WEAPON.reserveAmmo +

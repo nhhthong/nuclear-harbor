@@ -45,12 +45,13 @@ describe('level contract', () => {
   });
 
   it('distributes exactly the configured robots', () => {
-    const sum = (k: 'army' | 'spot' | 'duck' | 'samurai') => Object.values(ENEMY_DISTRIBUTION).reduce((n, z) => n + z[k], 0);
+    const sum = (k: 'army' | 'spot' | 'duck' | 'biped' | 'samurai') => Object.values(ENEMY_DISTRIBUTION).reduce((n, z) => n + z[k], 0);
     expect(sum('army')).toBe(ENEMY_COUNTS.army);
     expect(sum('spot')).toBe(ENEMY_COUNTS.spot);
     expect(sum('duck')).toBe(ENEMY_COUNTS.duck);
+    expect(sum('biped')).toBe(ENEMY_COUNTS.biped);
     expect(sum('samurai')).toBe(ENEMY_COUNTS.samurai);
-    expect(ENEMY_COUNTS.army + ENEMY_COUNTS.spot + ENEMY_COUNTS.duck + ENEMY_COUNTS.samurai).toBe(ENEMY_COUNTS.total);
+    expect(ENEMY_COUNTS.army + ENEMY_COUNTS.spot + ENEMY_COUNTS.duck + ENEMY_COUNTS.biped + ENEMY_COUNTS.samurai).toBe(ENEMY_COUNTS.total);
   });
 
   it('keeps the crane and the boss arena on the quay, apart from each other and from the spawn', () => {

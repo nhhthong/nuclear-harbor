@@ -250,6 +250,11 @@ export function createHud(ctx: GameContext, parent: HTMLElement): Hud {
         rg.fillStyle = '#ff4a3a';
         continue;
       }
+      if (e.type === 'biped') {
+        // infantry that leaps at the player: a small square
+        rg.fillRect(x - 2.7, y - 2.7, 5.4, 5.4);
+        continue;
+      }
       rg.beginPath();
       rg.arc(x, y, e.type === 'army' ? 3.6 : 2.6, 0, Math.PI * 2);
       rg.fill();
@@ -303,33 +308,15 @@ export function createHud(ctx: GameContext, parent: HTMLElement): Hud {
   // ---- boss ----
   const boss = el(root, 'div', 'nh-boss nh-hidden');
   const bossName = new Cell(el(boss, 'div', 'nh-small'), '');
-  const wpRow = el(boss, 'div', 'nh-wp');
-  let wpBoxes: HTMLElement[] = [];
-  let wpFills: HTMLElement[] = [];
-  let wpHp: number[] = [];
+  // one HP bar (the crab has no weak points)
   const coreBar = el(boss, 'div', 'nh-bar');
-  const coreFill = el(coreBar, 'div', 'nh-fill locked');
+  const coreFill = el(coreBar, 'div', 'nh-fill');
   const bossCore = new Cell(el(boss, 'div', 'nh-core'), '');
-  let coreMax: number = ctx.tunables.BOSS.coreHp;
-  const bossWp = new Cell(el(boss, 'span', 'nh-hidden'), '');
 
-  const buildBoss = (name: string, count: number, coreHp: number): void => {
-    for (const b of wpBoxes) b.remove();
-    wpBoxes = [];
-    wpFills = [];
-    wpHp = [];
-    for (let i = 0; i < count; i++) {
-      const box = el(wpRow, 'div');
-      wpFills.push(el(box, 'i'));
-      wpBoxes.push(box);
-      wpHp.push(ctx.tunables.BOSS.weakPointHp);
-    }
-    coreMax = coreHp;
-    coreFill.classList.add('locked');
+  const buildBoss = (name: string, hp: number): void => {
     coreFill.style.transform = 'scaleX(1)';
     bossName.set(name);
-    bossCore.set('CORE LOCKED');
-    bossWp.set(wpHp.join(','));
+    bossCore.set(`HP ${hp} / ${hp}`);
     boss.classList.remove('nh-hidden');
   };
 
@@ -493,7 +480,7 @@ export function createHud(ctx: GameContext, parent: HTMLElement): Hud {
   on('combat:hit', (e) => {
     if (e.targetKind === 'player') return;
     const zone: HitZone = e.absorbed ? 'armor' : e.zone;
-    flash(e.killed && !e.absorbed ? 'kill' : zone === 'core' ? 'weakpoint' : zone);
+    flash(e.killed && !e.absorbed ? 'kill' : zone);
   });
   on('player:jumped', ({ airJumpsLeft }) => {
     jumpPip.classList.toggle('ready', airJumpsLeft > 0);
@@ -542,7 +529,7 @@ export function createHud(ctx: GameContext, parent: HTMLElement): Hud {
     showToast(`Tower ${pipIndex(e.towerId) + 1} activated (${e.activatedCount}/${e.total})`);
     lastCompass = '';
   });
-  on('objectives:allActivated', () => showToast('All towers online - the TITAN approaches', 4));
+  on('objectives:allActivated', () => showToast('All towers online - the boss approaches', 4));
   on('countdown:tick', (e) => {
     countCell.set(formatCountdown(e.remaining));
     countNode.classList.toggle('critical', e.critical);
@@ -563,35 +550,13 @@ export function createHud(ctx: GameContext, parent: HTMLElement): Hud {
   on('ui:toast', (e) => showToast(e.text, e.seconds));
 
   on('boss:spawned', (e) => {
-    buildBoss(e.name, e.weakPoints, e.coreHp);
+    buildBoss(e.name, e.coreHp);
     bossAt = { x: e.position.x, z: e.position.z };
   });
-  on('boss:weakPointDamaged', (e) => {
-    const f = wpFills[e.index];
-    if (!f) return;
-    wpHp[e.index] = e.hp;
-    f.style.transform = `scaleX(${hpRatio(e.hp, e.maxHp).toFixed(3)})`;
-    bossWp.set(wpHp.join(','));
-  });
-  on('boss:weakPointDestroyed', (e) => {
-    const f = wpFills[e.index];
-    if (!f) return;
-    wpHp[e.index] = 0;
-    f.style.transform = 'scaleX(0)';
-    wpBoxes[e.index]?.classList.add('dead');
-    bossWp.set(wpHp.join(','));
-    showToast(`Weak point destroyed (${e.remaining} left)`, 2);
-  });
-  on('boss:coreExposed', () => {
-    coreFill.classList.remove('locked');
-    bossCore.set(`CORE ${coreMax} / ${coreMax}`);
-    showToast('Core exposed - shoot it!', 3);
-  });
+  // every hit on the boss's single HP pool (event name kept from the TITAN-04 contract)
   on('boss:coreDamaged', (e) => {
-    coreFill.classList.remove('locked');
-    coreMax = e.maxHp;
     coreFill.style.transform = `scaleX(${hpRatio(e.hp, e.maxHp).toFixed(3)})`;
-    bossCore.set(`CORE ${Math.ceil(e.hp)} / ${e.maxHp}`);
+    bossCore.set(`HP ${Math.ceil(e.hp)} / ${e.maxHp}`);
   });
   on('boss:defeated', () => {
     bossCore.set('DEFEATED');
@@ -616,7 +581,6 @@ export function createHud(ctx: GameContext, parent: HTMLElement): Hud {
       jump: jumpCell.value,
       bossName: boss.classList.contains('nh-hidden') ? '' : bossName.value,
       bossCore: boss.classList.contains('nh-hidden') ? '' : bossCore.value,
-      bossWeakPoints: boss.classList.contains('nh-hidden') ? '' : bossWp.value,
     }),
     dispose() {
       for (const off of offs) off();

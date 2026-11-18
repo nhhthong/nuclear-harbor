@@ -147,21 +147,23 @@ export const ECONOMY = {
 export const ENEMY_COUNTS = {
   /** Whole roster over all areas. Robots are streamed by area, see `ENEMY_LOCAL.area` (live cap). */
   army: 5,
-  spot: 8,
-  duck: 5,
+  spot: 6,
+  duck: 4,
+  biped: 4,
   /** Elites: twice the HP and damage of a regular robot, one per area. */
   samurai: 3,
-  total: 21,
+  total: 22,
 } as const;
 
 /**
- * GDD 6.1 role (14 of them), now the T-20 Vanguard army mech: slow patrol, disciplined combat movement,
- * telegraphed rocket salvos. HP, speeds and ranges are proposals (ROBOT-REFRESH T-20).
+ * GDD 6.1 role (14 of them), now the Medium Mech Striker (spec 26): slow patrol, disciplined combat movement,
+ * 3-round bursts and, now and then, a telegraphed rocket with splash damage. HP, speeds and ranges are
+ * proposals; the weapon numbers live in `src/enemies/army/tunables.ts` (`STRIKER`).
  */
 export const ARMY_ROBOT = {
   hp: 150,
   /** Rocket centre damage (splash falls off linearly to 0 at `splashRadius`). */
-  damage: 12,
+  damage: 14,
   /** Patrol walk speed (m/s). */
   speed: 1.5,
   /** Combat speeds (m/s). */
@@ -172,19 +174,13 @@ export const ARMY_ROBOT = {
   accel: 1.8,
   decel: 2.6,
   turnRate: 1.1,
-  detectionRange: 30,
+  detectionRange: 36,
   /** Preferred firing band to the player (m) and the distance below which the mech backs off. */
-  bandMin: 18,
-  bandMax: 25,
+  bandMin: 14,
+  bandMax: 30,
   retreatDistance: 8,
-  rocketSpeed: 25,
-  splashRadius: 3,
-  /** Salvo size range, delay between rockets, telegraph before the first one, cooldown after the last (s). */
-  salvoMin: 2,
-  salvoMax: 3,
-  shotInterval: 0.5,
-  telegraphTime: 1.0,
-  cooldown: 3,
+  rocketSpeed: 24,
+  splashRadius: 4,
   loseTargetTime: 4,
 } as const;
 
@@ -221,24 +217,23 @@ export const OBJECTIVES = {
   countdownCriticalSeconds: 120,
 } as const;
 
-/** GDD 9 */
+/**
+ * Final boss: the Gunslinger Crab Mech (spec 27-crab-boss; GDD 9 described TITAN-04 with weak points,
+ * see docs/DEVIATIONS.md). One tanky HP pool, no weak points, no core stage. The skill numbers live in
+ * `src/boss/tunables.ts`.
+ */
 export const BOSS = {
-  name: 'TITAN-04',
-  coreHp: 4000,
-  weakPointCount: 4,
-  weakPointHp: 500,
+  name: 'GUNSLINGER CRAB MECH',
+  /** Single HP pool: 232 hits at 25 damage (ammo budget, `src/combat/damage.test.ts`). */
+  hp: 5800,
+  /** Walk speed of the full-size boss (m/s, scaled by the boss scale). */
   speed: 2.5,
-  /** GDD 9.2: armour is immune ("cannot finish the boss"). */
+  /** Legacy: the crab has no armour zone (every hit does full damage); kept for the armour unit test. */
   armorDamageMultiplier: 0,
-  /** proposed (REVIEW #2): perch heights around the arena. */
-  perchHeights: [8, 14, 20],
-  /** proposed */
+  /** Awakening (landing cinematic) length, seconds. */
   awakeningDuration: 4,
-  attackInterval: 5,
-  heavyCannon: { damage: 30, telegraph: 1.2, projectileSpeed: 40, splashRadius: 4, cooldown: 6 },
-  groundSlam: { damage: 35, telegraph: 1.5, radius: 14, cooldown: 9 },
-  missileBarrage: { damage: 18, telegraph: 2.0, count: 6, splashRadius: 4.5, cooldown: 12 },
-  maxProjectiles: 16,
+  /** Pause between two skills (s). */
+  attackInterval: 2.2,
 } as const;
 
 /** GDD 13.9 / 10 / 13.6 */

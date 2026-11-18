@@ -6,7 +6,7 @@ import type { Vector3 } from 'three';
  * internals.
  */
 
-export type EnemyType = 'army' | 'spot' | 'duck' | 'samurai';
+export type EnemyType = 'army' | 'spot' | 'duck' | 'biped' | 'samurai';
 export type DamageSource = 'player' | 'enemy' | 'boss' | 'environment';
 export type DamageableKind = 'player' | 'enemy' | 'boss' | 'prop';
 
@@ -111,6 +111,18 @@ export interface ColliderMeta {
 export type GameStateId = 'loading' | 'menu' | 'playing' | 'paused' | 'gameOver' | 'victory';
 export type GameOverReason = 'player-died' | 'countdown-expired';
 export type PickupKind = 'ammo' | 'medkit';
-export type BossPhase = 'dormant' | 'awakening' | 'weakpoint-hunt' | 'core-exposed' | 'destroyed';
-export type BossAttackId = 'heavy-cannon' | 'ground-slam' | 'missile-barrage' | 'shockwave' | 'target-lock' | 'emp-pulse';
+/** Boss fight phases (spec 27): the crab has one HP pool, so there is a single `fight` phase. */
+export type BossPhase = 'dormant' | 'awakening' | 'fight' | 'destroyed';
+export type BossAttackId =
+  | 'heavy-cannon'
+  | 'ground-slam'
+  | 'missile-barrage'
+  | 'shockwave'
+  | 'target-lock'
+  | 'emp-pulse'
+  /** Gunslinger Crab Mech skills (spec 27). */
+  | 'carpet-bombs'
+  | 'drone-release'
+  | 'body-spin'
+  | 'quad-laser';
 export type VfxKind = 'spark' | 'armor-spark' | 'explosion' | 'big-explosion' | 'smoke' | 'dust' | 'pickup' | 'telegraph-ring';

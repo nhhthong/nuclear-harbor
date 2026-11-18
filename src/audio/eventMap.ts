@@ -28,13 +28,17 @@ const BOSS_ATTACK_ORDER: readonly BossAttackId[] = [
   'shockwave',
   'target-lock',
   'emp-pulse',
+  'carpet-bombs',
+  'drone-release',
+  'body-spin',
+  'quad-laser',
 ];
 
 function attackVariant(attack: BossAttackId): number {
   return Math.max(0, BOSS_ATTACK_ORDER.indexOf(attack));
 }
 
-const ENEMY_VARIANT = { army: 0, spot: 1, duck: 2, samurai: 0 } as const;
+const ENEMY_VARIANT = { army: 0, spot: 1, duck: 2, biped: 1, samurai: 0 } as const;
 
 /** Event -> sound routing. Stateful sounds (tower hum, beacon, ambience) live in the module. */
 export const EVENT_ROUTES = {
@@ -94,6 +98,13 @@ export const EVENT_ROUTES = {
         return { id: 'bossMissile', position: e.position, variant };
       case 'emp-pulse':
         return { id: 'bossEmp', position: e.position, variant };
+      case 'carpet-bombs':
+        return { id: 'bossMissile', position: e.position, variant };
+      case 'drone-release':
+      case 'quad-laser':
+        return { id: 'bossEmp', position: e.position, variant };
+      case 'body-spin':
+        return { id: 'bossSlam', position: e.position, intensity: 1.2, variant };
       case 'target-lock':
         return null; // the telegraph already carries the lock beeps
     }

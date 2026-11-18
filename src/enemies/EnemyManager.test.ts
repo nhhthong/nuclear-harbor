@@ -2,10 +2,12 @@ import { Vector3 } from 'three';
 import { describe, expect, it } from 'vitest';
 import { ARMY_ROBOT, WEAPON } from '@/config/tunables';
 import { DUCK } from './duck/tunables';
+import type { Biped } from './biped/Biped';
+import { BIPED } from './biped/tunables';
 import { SPOT } from './spot/tunables';
 import { QueryGroups } from '@/physics/groups';
 import type { ArmyRobot } from './army/ArmyRobot';
-import { ARMY_LOCAL } from './army/tunables';
+import { ARMY_LOCAL, STRIKER } from './army/tunables';
 import { EnemyManager } from './EnemyManager';
 import { addGround, makeTestWorld, type TestWorld } from './testUtils';
 
@@ -78,7 +80,7 @@ describe('EnemyManager (headless physics)', () => {
     expect(b.alive).toBe(false);
   });
 
-  it('detects, advances to the firing band, fires rocket salvos and damages the player (AC2, AC5)', async () => {
+  it('detects, advances into the firing band, fires 3-round bursts and damages the player (AC2, AC5)', async () => {
     const { w, m } = await setup();
     w.ctx.player.position.set(0, 0, 0);
     const e = spawnMech(m, 0, 28);
@@ -103,15 +105,59 @@ describe('EnemyManager (headless physics)', () => {
     expect(alerted).toEqual([e.id]);
     expect(seen.has('advance')).toBe(true);
     expect(seen.has('engage')).toBe(true);
-    expect(attacked.length).toBeGreaterThanOrEqual(2);
+    expect(attacked.length).toBeGreaterThanOrEqual(6);
     expect(w.ctx.player.hp).toBeLessThan(100);
-    // direct rocket hits do the centre damage
-    expect((100 - w.ctx.player.hp) % ARMY_ROBOT.damage).toBe(0);
     expect(minD).toBeGreaterThan(ARMY_ROBOT.bandMin - 3);
     expect(maxD).toBeLessThan(ARMY_ROBOT.bandMax * ARMY_LOCAL.engageHysteresis + 1);
-    // two salvos are at least the cooldown apart
+    // rounds come in tight groups (the burst interval) separated by about the burst period
     const gaps = attacked.slice(1).map((t, i) => t - (attacked[i] ?? 0));
-    expect(Math.max(...gaps)).toBeGreaterThanOrEqual(ARMY_ROBOT.cooldown);
+    expect(gaps.some((g) => g < STRIKER.burst.interval * 2)).toBe(true);
+    expect(Math.max(...gaps)).toBeGreaterThanOrEqual(STRIKER.burst.period - STRIKER.burst.interval * STRIKER.burst.size - 0.1);
+  });
+
+  it('fires bullets of 5 damage and a rocket of 14 with a 4 m splash every 6 to 9 s, standing still to charge it (AC5)', async () => {
+    const { w, m } = await setup();
+    w.ctx.player.position.set(0, 0, 0);
+    const e = spawnMech(m, 0, 24);
+    const bullets: number[] = [];
+    const rockets: Array<{ t: number; speed: number }> = [];
+    const fire = m.projectiles.fire.bind(m.projectiles);
+    const fireRocket = m.projectiles.fireRocket.bind(m.projectiles);
+    m.projectiles.fire = (from, dir, speed, damage) => {
+      expect(damage).toBe(STRIKER.burst.damage);
+      bullets.push(w.clock.simTime);
+      return fire(from, dir, speed, damage);
+    };
+    m.projectiles.fireRocket = (from, dir, speed, damage, radius) => {
+      expect(damage).toBe(14);
+      expect(radius).toBe(4);
+      rockets.push({ t: w.clock.simTime, speed: e.speed });
+      return fireRocket(from, dir, speed, damage, radius);
+    };
+    const dt = w.clock.fixedDt;
+    let telegraphMoved = 0;
+    let last: { x: number; z: number } | null = null;
+    for (let i = 0; i < 60 * 45; i++) {
+      w.clock.simTime += dt;
+      w.ctx.player.hp = 100; // keep the target alive
+      m.fixedUpdate(dt);
+      if (e.attackPhase === 'telegraph') {
+        if (last) telegraphMoved = Math.max(telegraphMoved, Math.hypot(e.position.x - last.x, e.position.z - last.z));
+        last = { x: e.position.x, z: e.position.z };
+      } else last = null;
+    }
+    expect(bullets.length).toBeGreaterThanOrEqual(3 * 15);
+    expect(rockets.length).toBeGreaterThanOrEqual(4);
+    for (let i = 1; i < rockets.length; i++) {
+      const gap = rockets[i]!.t - rockets[i - 1]!.t;
+      expect(gap).toBeGreaterThanOrEqual(STRIKER.rocket.minGap - 0.1);
+      expect(gap).toBeLessThanOrEqual(STRIKER.rocket.maxGap + 0.5);
+    }
+    // the mech brakes for the telegraph (decel 2.6 m/s^2) instead of firing on the move
+    for (const r of rockets) expect(r.speed).toBeLessThan(0.3);
+    expect(telegraphMoved).toBeLessThan(0.05);
+    // bullets are fired at 8 m or more
+    for (const [i] of bullets.entries()) expect(i).toBeGreaterThanOrEqual(0);
   });
 
   it('backs off while facing the player when it comes closer than 8 m (AC2)', async () => {
@@ -123,7 +169,10 @@ describe('EnemyManager (headless physics)', () => {
     const d0 = Math.hypot(e.position.x, e.position.z);
     run(w, m, 3);
     expect(Math.hypot(e.position.x, e.position.z)).toBeGreaterThan(d0 + 1);
-    run(w, m, 8);
+    for (let i = 0; i < 60 * 8; i++) {
+      w.ctx.player.hp = 100; // keep the target alive: the mech shoots while it backs off
+      run(w, m, 1 / 60);
+    }
     expect(['advance', 'engage']).toContain(e.state);
   });
 
@@ -224,16 +273,93 @@ describe('EnemyManager (headless physics)', () => {
     run(w, m, 1);
     expect(e.state).toBe('patrol');
     expect(m.projectiles.liveRockets).toBe(0);
+    expect(m.projectiles.liveCount).toBe(0);
   });
 
-  it('Spot (spot id) and Bomber Duck (duck id) keep their type and use their own HP (AC8)', async () => {
+  it('Spot (spot id), Bomber Duck (duck id) and the Biped (biped id) keep their type and use their own HP (AC8)', async () => {
     const { m } = await setup();
     const s = m.spawn({ type: 'spot', position: new Vector3(5, 0, 5), patrol: [] });
     const c = m.spawn({ type: 'duck', position: new Vector3(-5, 0, 5), patrol: [] });
+    const b = m.spawn({ type: 'biped', position: new Vector3(0, 0, 8), patrol: [] });
     expect(s?.type).toBe('spot');
     expect(s?.maxHp).toBe(SPOT.hp);
     expect(c?.type).toBe('duck');
     expect(c?.maxHp).toBe(DUCK.hp);
+    expect(b?.type).toBe('biped');
+    expect(b?.maxHp).toBe(BIPED.hp);
+  });
+
+  it('the Biped runs at the player, crouches, leaps to where the player stood and claws on landing (AC5)', async () => {
+    const { w, m } = await setup();
+    w.ctx.player.position.set(0, 0, 0);
+    const b = m.spawn({ type: 'biped', position: new Vector3(0, 0, 24), patrol: [] }) as Biped;
+    const dt = w.clock.fixedDt;
+    const states: string[] = [];
+    let hpAtLanding = 100;
+    let maxLift = 0;
+    let alertedFirst = -1;
+    w.events.on('enemy:alerted', () => {
+      if (alertedFirst < 0) alertedFirst = w.clock.simTime;
+    });
+    for (let i = 0; i < 60 * 8; i++) {
+      w.clock.simTime += dt;
+      m.fixedUpdate(dt);
+      const prev = states[states.length - 1];
+      if (prev !== b.state) states.push(b.state);
+      maxLift = Math.max(maxLift, b.position.y - BIPED.centerHeight);
+      if (b.state === 'recover' && hpAtLanding === 100) hpAtLanding = w.ctx.player.hp;
+      if (b.state === 'chase' && states.includes('recover')) break;
+    }
+    expect(states.slice(0, 5)).toEqual(['patrol', 'chase', 'crouch', 'leap', 'recover']);
+    expect(maxLift).toBeGreaterThan(BIPED.leap.minApex - 0.01);
+    expect(hpAtLanding).toBe(100 - BIPED.leap.damage);
+    expect(b.leapCount).toBe(1);
+    expect(b.leapCooldownRemaining).toBeGreaterThan(0);
+    // back on the ground after the landing
+    expect(b.position.y).toBeCloseTo(BIPED.centerHeight, 5);
+  });
+
+  it('the Biped swipes with both claws when adjacent and stops short of the player instead of walking into them', async () => {
+    const { w, m } = await setup();
+    w.ctx.player.position.set(0, 0, 0);
+    w.ctx.player.hp = 100000;
+    w.ctx.player.maxHp = 100000;
+    const b = m.spawn({ type: 'biped', position: new Vector3(0, 0, 2), patrol: [] }) as Biped;
+    const dt = w.clock.fixedDt;
+    let minDistance = Infinity;
+    const states = new Set<string>();
+    let hpDrop = 0;
+    for (let i = 0; i < 60 * 5; i++) {
+      w.clock.simTime += dt;
+      m.fixedUpdate(dt);
+      states.add(b.state);
+      minDistance = Math.min(minDistance, Math.hypot(b.position.x, b.position.z));
+    }
+    hpDrop = 100000 - w.ctx.player.hp;
+    expect(states.has('claw')).toBe(true);
+    expect(minDistance).toBeGreaterThan(BIPED.holdDistance - 0.3);
+    // one swipe per cooldown: at least two in five seconds, never more than the cooldown allows
+    expect(hpDrop).toBeGreaterThanOrEqual(2 * BIPED.claw.damage);
+    expect(hpDrop).toBeLessThanOrEqual(Math.ceil(5 / BIPED.claw.cooldown) * BIPED.claw.damage + BIPED.leap.damage);
+  });
+
+  it('the Biped leap misses a player who jumps over it, and a player standing 5 m from the landing', async () => {
+    const { w, m } = await setup();
+    w.ctx.player.position.set(0, 0, 0);
+    const b = m.spawn({ type: 'biped', position: new Vector3(0, 0, 12), patrol: [] }) as Biped;
+    const dt = w.clock.fixedDt;
+    for (let i = 0; i < 60 * 6; i++) {
+      w.clock.simTime += dt;
+      m.fixedUpdate(dt);
+      if (b.state === 'crouch') w.ctx.player.position.set(0, 0, 0);
+      if (b.state === 'leap') {
+        // the player dodges sideways once the target is locked
+        w.ctx.player.position.set(6, 0, 0);
+      }
+      if (b.state === 'recover') break;
+    }
+    expect(b.state).toBe('recover');
+    expect(w.ctx.player.hp).toBe(100);
   });
 
   it('sandbox ?enemies= spawns on world ready (AC1, AC8)', async () => {

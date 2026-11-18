@@ -2,7 +2,9 @@ import { Bone, Group, LOD, Mesh, MeshStandardMaterial, Skeleton, SkinnedMesh, Ve
 import { legAt, strideLength, type LegPose } from '../gait';
 import type { DamageInfo, DamageResult } from '@/core/types';
 import { BaseEnemy, type EnemyDeps, type EnemySpawn } from '../BaseEnemy';
+import { authoredModel, instantiate, type AuthoredInstance } from '../authored';
 import { createVertexColorMaterial } from '../duck/modelKit';
+import { GlowCue } from '../glowCue';
 import { forgetTarget, markAware, type Perception } from '../perception';
 import type { SharedAssets } from '../SharedAssets';
 import { buildSpotModel, type SpotModel } from './model';
@@ -50,13 +52,17 @@ export class Spot extends BaseEnemy {
 
   private readonly model = new Group();
   private readonly bones: Bone[] = [];
-  private readonly legLength: number;
+  private legLength = 1;
   private readonly legPose: LegPose = { hip: 0, knee: 0 };
   private walkAmount = 0;
-  private readonly lamps: Mesh;
-  private readonly lampOn: MeshStandardMaterial;
-  private readonly lampOff: MeshStandardMaterial;
+  private readonly lamps: Mesh | null = null;
+  private readonly lampOn: MeshStandardMaterial | null = null;
+  private readonly lampOff: MeshStandardMaterial | null = null;
   private lampLit = false;
+  // authored look (null: procedural fallback)
+  private readonly inst: AuthoredInstance | null;
+  private readonly glow: GlowCue | null = null;
+  private lastClip = '';
 
   constructor(deps: EnemyDeps, spawn: EnemySpawn) {
     super(
@@ -76,15 +82,41 @@ export class Spot extends BaseEnemy {
     this.lastZ = this.position.z;
     this.lastX2 = this.position.x;
     this.lastZ2 = this.position.z;
+    const skin = authoredModel('spot');
+    this.inst = skin ? instantiate(skin) : null;
+    if (this.inst) {
+      this.inst.root.updateMatrixWorld(true);
+      const k = SPOT.skin;
+      this.glow = new GlowCue(this.inst.root, [{ bone: 'SPOT_BODY_51', point: new Vector3(0, 0.95, -0.95), radius: k.glowRadius }], k.glowColor);
+      this.inst.player.play('walk', { randomPhase: true, fade: 0, timeScale: 0 });
+      this.model.position.y = -SPOT.centerHeight + k.footLift;
+      this.model.add(this.inst.root);
+      this.root.add(this.model);
+    } else {
+      this.buildProcedural(deps);
+    }
+
+    const { ColliderDesc } = deps.ctx.physics.rapier;
+    this.addHitVolume(
+      ColliderDesc.cuboid(SPOT.bodyHalf.x, SPOT.bodyHalf.y, SPOT.bodyHalf.z).setTranslation(0, SPOT.bodyCenterY, 0),
+      'body',
+    );
+    this.addHitVolume(
+      ColliderDesc.cuboid(SPOT.noseHalf.x, SPOT.noseHalf.y, SPOT.noseHalf.z).setTranslation(0, SPOT.noseUp, -SPOT.noseForward),
+      'critical',
+    );
+  }
+
+  private buildProcedural(deps: EnemyDeps): void {
     const { shared } = deps;
     const m = modelFor(shared);
     const mat = shared.get('spot:mat', () => createVertexColorMaterial(0.36, 0.62, { key: 'spot', wear: 0.45, bottomY: -0.6, height: 1.4 }));
     const geo = (key: string, g: BufferGeometry): BufferGeometry => shared.get(`spot:${key}`, () => g);
-    this.lampOff = shared.get(
+    const lampOff = shared.get(
       'spot:lamp-off',
       () => new MeshStandardMaterial({ color: 0x0a141a, emissive: 0x38c8e8, emissiveIntensity: 1.6 }),
     );
-    this.lampOn = shared.get(
+    const lampOn = shared.get(
       'spot:lamp-on',
       () => new MeshStandardMaterial({ color: 0x300000, emissive: 0xff2a1a, emissiveIntensity: 5 }),
     );
@@ -104,24 +136,19 @@ export class Spot extends BaseEnemy {
     rig.bind(new Skeleton(this.bones));
     rig.castShadow = true;
     rig.frustumCulled = false;
-    this.lamps = new Mesh(geo('lamps', m.lamps), this.lampOff);
-    near.add(rig, this.lamps);
+    const lamps = new Mesh(geo('lamps', m.lamps), lampOff);
+    near.add(rig, lamps);
     const far = new Mesh(geo('far', m.far), mat);
     const lod = new LOD();
     lod.addLevel(near, 0);
     lod.addLevel(far, SPOT.lodFar);
     this.model.add(lod);
     this.root.add(this.model);
+    Object.assign(this, { lamps, lampOn, lampOff });
+  }
 
-    const { ColliderDesc } = deps.ctx.physics.rapier;
-    this.addHitVolume(
-      ColliderDesc.cuboid(SPOT.bodyHalf.x, SPOT.bodyHalf.y, SPOT.bodyHalf.z).setTranslation(0, SPOT.bodyCenterY, 0),
-      'body',
-    );
-    this.addHitVolume(
-      ColliderDesc.cuboid(SPOT.noseHalf.x, SPOT.noseHalf.y, SPOT.noseHalf.z).setTranslation(0, SPOT.noseUp, -SPOT.noseForward),
-      'critical',
-    );
+  get authoredLook(): boolean {
+    return this.inst !== null;
   }
 
   get brainState(): SpotState {
@@ -354,6 +381,17 @@ export class Spot extends BaseEnemy {
     markAware(this.deps.ctx, this.perception);
   }
 
+  protected override onDestroyed(): void {
+    this.glow?.dispose();
+    this.inst?.dispose();
+  }
+
+  override dispose(): void {
+    this.glow?.dispose();
+    this.inst?.dispose();
+    super.dispose();
+  }
+
   // ---- animation ----------------------------------------------------------------------------
 
   override animate(dt: number, _time: number): void {
@@ -368,6 +406,10 @@ export class Spot extends BaseEnemy {
     const travelled = Math.hypot(this.position.x - this.lastX2, this.position.z - this.lastZ2);
     this.lastX2 = this.position.x;
     this.lastZ2 = this.position.z;
+    if (this.inst) {
+      this.animateAuthored(this.inst, dt, state);
+      return;
+    }
     let lift = 0;
     let drop = 0;
     let pitch = 0;
@@ -415,10 +457,42 @@ export class Spot extends BaseEnemy {
     this.root.position.y = this.position.y;
   }
 
+  /** Walk clip scaled by the ground speed; frozen in the crouch and the leap, whose pose comes from the body motion. */
+  private animateAuthored(inst: AuthoredInstance, dt: number, state: SpotState): void {
+    const k = SPOT.skin;
+    const crouching = state === 'telegraph';
+    const leaping = state === 'lunge';
+    const moving = !crouching && !leaping && this.speedEstimate > 0.3;
+    const scale = moving ? Math.max(k.minScale, Math.min(k.maxScale, this.speedEstimate / k.walkSpeed)) : 0;
+    if (this.lastClip !== 'walk') {
+      this.lastClip = 'walk';
+      inst.player.play('walk', { timeScale: scale, randomPhase: true, fade: 0 });
+    } else {
+      inst.player.setTimeScale(scale);
+    }
+    inst.player.update(dt);
+    let lift = 0;
+    let drop = 0;
+    let pitch = 0;
+    if (leaping) {
+      const w = Math.min(1, this.travelled / SPOT.lungeMaxDistance);
+      lift = 4 * SPOT.lungeArcHeight * w * (1 - w);
+      pitch = 0.12 - 0.24 * w;
+    } else if (crouching) {
+      const c = Math.min(1, this.fsm.timeInState / SPOT.telegraphTime);
+      drop = SPOT.crouchDrop * 4 * c;
+      pitch = 0.06 * c;
+    }
+    this.model.position.y = -SPOT.centerHeight + k.footLift + lift - drop;
+    this.model.rotation.x = pitch;
+    this.root.position.y = this.position.y;
+    this.glow?.set(crouching ? Math.min(1, this.fsm.timeInState / SPOT.telegraphTime) : leaping ? 1 : 0);
+  }
+
   private setLamps(lit: boolean): void {
     if (lit === this.lampLit) return;
     this.lampLit = lit;
-    this.lamps.material = lit ? this.lampOn : this.lampOff;
+    if (this.lamps && this.lampOn && this.lampOff) this.lamps.material = lit ? this.lampOn : this.lampOff;
   }
 
   /** Leg `index` (FR, FL, RR, RL): hip and knee angles about X, positive swings forward. */

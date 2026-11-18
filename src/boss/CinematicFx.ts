@@ -112,7 +112,7 @@ export class CinematicFx {
     this.title.style.cssText =
       'position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;opacity:0;color:#f4f4f6;font-family:Impact,Haettenschweiler,"Arial Narrow Bold",sans-serif;letter-spacing:0.35em;text-shadow:0 0 24px #e02020,0 0 3px #000';
     this.title.innerHTML =
-      '<div style="font-size:clamp(12px,1.8vw,20px);letter-spacing:0.6em;color:#ff9d40;margin-bottom:0.6em">FINAL BOSS</div><div style="font-size:clamp(34px,7vw,92px)">TITAN-04</div>';
+      '<div style="font-size:clamp(12px,1.8vw,20px);letter-spacing:0.6em;color:#ff9d40;margin-bottom:0.6em">FINAL BOSS</div><div style="font-size:clamp(24px,4.6vw,64px)">GUNSLINGER CRAB MECH</div>';
     root.appendChild(this.title);
     this.hint = document.createElement('div');
     this.hint.style.cssText = 'position:absolute;right:3vw;bottom:1.5vh;color:#ddd;font:600 13px/1 system-ui,sans-serif;letter-spacing:0.12em;opacity:0';
