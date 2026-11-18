@@ -699,6 +699,7 @@ export function createBossModule(): GameModule {
         damage: (amount: number): DamageResult => outcome(model.hit(amount)),
         setHp: (hp: number): void => {
           model.setHpFraction(hp / model.maxHp);
+          ctx?.events.emit('boss:coreDamaged', { hp: model.hp, maxHp: model.maxHp });
         },
         pauseAi: (paused: boolean): void => {
           aiPaused = paused;

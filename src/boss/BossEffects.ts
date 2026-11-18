@@ -103,7 +103,7 @@ export class BossEffects {
     this.boltMesh = this.make(new SphereGeometry(0.35, 10, 8), additive(new Color(1.2, 3.0, 1.6), 0.95), CRAB.drones.bolt.capacity);
     const beams = CRAB.laser.beams;
     // HDR colours (> 1) so the bloom pass picks the core up
-    this.beamCore = this.make(new BoxGeometry(1, 1, 1), additive(new Color(5, 1.1, 0.7), 1), beams);
+    this.beamCore = this.make(new BoxGeometry(1, 1, 1), additive(new Color(2.8, 0.55, 0.35), 1), beams);
     this.beamGlow = this.make(new BoxGeometry(1, 1, 1), additive(new Color(1.6, 0.25, 0.15), 0.4), beams);
     this.beamWarn = this.make(new BoxGeometry(1, 1, 1), additive(new Color(1.4, 0.2, 0.15), 0.55), beams);
     for (const m of [this.markerMesh, this.bombMesh, this.boltMesh, this.beamCore, this.beamGlow, this.beamWarn]) {

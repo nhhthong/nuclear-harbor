@@ -89,7 +89,7 @@ export class CrabBody implements BossVisual {
       arm.node.rotation.y = arm.side * (a.charge ?? 0) * 0.08;
     }
     const pulse = 0.75 + 0.25 * Math.sin(time * 14);
-    const glow = Math.min(1.4, ((a.charge ?? 0) * 1.1 + wind * 0.9 + Math.abs(spin) * 0.1) * pulse);
+    const glow = Math.min(0.8, ((a.charge ?? 0) * 0.6 + wind * 0.5 + Math.abs(spin) * 0.04) * pulse);
     for (const m of this.glow) m.emissiveIntensity = glow;
   }
 }

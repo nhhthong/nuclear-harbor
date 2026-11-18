@@ -23,6 +23,16 @@ export const CREDITS: readonly CreditEntry[] = [
   },
   { name: 'Bioxx', role: 'Naginata', note: 'CC0, opengameart.org/content/naginata' },
   {
+    name: 'vaportrash',
+    role: 'Final boss ("Gunslinger Crab Mech v1.2")',
+    note: 'CC-BY 4.0, sketchfab.com/3d-models/5147619f337a45b0974f349eac27b34a (legs split at the hips, decimated, textures resized)',
+  },
+  {
+    name: 'Lagst',
+    role: 'Boss drones ("Light Assault Mech", a dragonfly flyer)',
+    note: 'CC-BY 4.0, sketchfab.com/3d-models/d1ca5065b5184646bc7028597d0ce049 (armature applied, decimated, textures resized)',
+  },
+  {
     name: 'Chenzoss',
     role: 'Semi-truck with trailer (Yellow semi-truck with trailer)',
     note: 'CC-BY 4.0, sketchfab.com/3d-models/ee0a8763bd8941f1bc546b43332d4001 (decimated, textures resized)',
