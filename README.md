@@ -102,6 +102,21 @@ simulation, procedural audio and procedurally built models. There is no backend 
 
 <table>
   <tr>
+    <td width="50%"><img src="docs/media/biped.jpg" alt="Biped robot raising its claws on the gate apron"><br><sub><b>Biped robot</b>, the new infantry: it crouches, leaps at where you stood and claws on landing</sub></td>
+    <td width="50%"><img src="docs/media/striker.jpg" alt="Medium Mech Striker advancing between container stacks"><br><sub><b>Medium Mech Striker</b>: 3-round bursts and, now and then, an AOE rocket</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/media/spot-dog.jpg" alt="Walking Robotic Dog beside a barrier wall"><br><sub><b>Spot dog</b> (Walking Robotic Dog model): weak, fast, lunges</sub></td>
+    <td width="50%"><img src="docs/media/biped-patrol.jpg" alt="Biped robot patrolling in front of the container stacks"><br><sub>Biped on patrol, before it spots you</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/media/crab.jpg" alt="Gunslinger Crab Mech final boss on the quay"><br><sub><b>Gunslinger Crab Mech</b>, the final boss: 5800 HP, no weak points</sub></td>
+    <td width="50%"><img src="docs/media/crab-close.jpg" alt="Gunslinger Crab Mech seen from the side with its heavy cannon arm"><br><sub>Up close: armoured legs and a cannon arm; it spins 360 degrees when you are near</sub></td>
+  </tr>
+  <tr>
+    <td colspan="2"><img src="docs/media/crab-drones.jpg" alt="The crab releasing dragonfly drones"><br><sub>Skill 2: it releases dragonfly drones that circle and shoot (the other skills are carpet bombs, the 360 degree spin and a slow four-way laser)</sub></td>
+  </tr>
+  <tr>
     <td width="50%"><img src="docs/media/scorpion.jpg" alt="STINGER-7, the mecha scorpion semi-boss, between container stacks"><br><sub>STINGER-7, the relay guardian, in the container lanes</sub></td>
     <td width="50%"><img src="docs/media/scorpion-venom.jpg" alt="Green venom pool left by the scorpion's venom shot, with its tail beams"><br><sub>Venom shot: the pool keeps hurting for five seconds</sub></td>
   </tr>
@@ -111,7 +126,7 @@ simulation, procedural audio and procedurally built models. There is no backend 
   </tr>
 </table>
 
-<sub>All images were captured from the production build with software rendering (no GPU), quality preset "medium"; the overhead and zone shots use a free camera, the others show the real first-person view.</sub>
+<sub>All images were captured from the production build with software rendering (no GPU), quality preset "medium" (the robot and crab shots: "low"); the overhead and zone shots use a free camera, the others show the real first-person view.</sub>
 
 ## Features
 
