@@ -35,7 +35,11 @@ export function bossAttackRecipes(attack: BossAttackId): readonly RecipeId[] {
     case 'shockwave':
       return ['dust', 'telegraph-ring'];
     case 'emp-pulse':
+    case 'quad-laser':
+    case 'drone-release':
       return ['armor-spark', 'telegraph-ring'];
+    case 'body-spin':
+      return ['dust', 'telegraph-ring'];
     case 'target-lock':
       return ['spark'];
     default:

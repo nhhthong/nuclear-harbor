@@ -103,11 +103,14 @@ export interface GameEvents {
   'pickup:collected': { id: string; kind: PickupKind; amount: number; position: Vector3 };
 
   // ---- boss (T-15) ---------------------------------------------------------------------
+  /** `coreHp` is the size of the single HP pool, `weakPoints` is 0 (the crab has none; fields kept for the contract). */
   'boss:spawned': { name: string; coreHp: number; weakPoints: number; position: Vector3 };
   'boss:phaseChanged': { phase: BossPhase };
+  /** Legacy (never emitted by the crab). */
   'boss:weakPointDamaged': { index: number; hp: number; maxHp: number };
   'boss:weakPointDestroyed': { index: number; remaining: number; position: Vector3 };
   'boss:coreExposed': Record<string, never>;
+  /** Fired for every hit on the boss's single HP pool (name kept from the TITAN-04 contract). */
   'boss:coreDamaged': { hp: number; maxHp: number };
   'boss:attackTelegraph': { attack: BossAttackId; position: Vector3; radius: number; duration: number };
   'boss:attack': { attack: BossAttackId; position: Vector3; radius: number };
