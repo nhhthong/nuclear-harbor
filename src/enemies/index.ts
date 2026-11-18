@@ -2,15 +2,17 @@ import { Vector3 } from 'three';
 import type { GameContext } from '@/core/GameContext';
 import type { GameModule } from '@/core/GameModule';
 import type { EnemyType } from '@/core/types';
+import { authoredModel, disposeAuthored, loadAllAuthored } from './authored';
 import { EnemyManager } from './EnemyManager';
 import { loadSamuraiSkin, samuraiSkin, setSamuraiSkin } from './samurai/skin';
 
-/** Longest the population start waits for the samurai GLB. */
+/** Longest the population start waits for the authored GLBs (samurai, biped, striker, spot). */
 const SKIN_WAIT_MS = 5000;
 
 /**
  * Robot framework: manager, AI scheduler, navigation, robot types (GDD 6, 13.7).
- * Robot types live in army/ (Vanguard mech), spot/ (Spot dog) and duck/ (Bomber Duck).
+ * Robot types live in army/ (Medium Mech Striker), spot/ (Spot dog), duck/ (Bomber Duck), biped/ (Biped robot)
+ * and samurai/ (cyber samurai).
  */
 export function createEnemiesModule(): GameModule {
   let manager: EnemyManager | null = null;
@@ -25,10 +27,16 @@ export function createEnemiesModule(): GameModule {
       const res = ctx.resources.scope('enemies');
       const m = new EnemyManager(ctx, res);
       manager = m;
-      // authored samurai look: a samurai built before the GLB has loaded would keep the procedural model for
-      // good, so the population starts only once the skin has loaded or failed (5 s at most)
-      const skinReady: Promise<unknown> =
-        typeof document !== 'undefined' && !ctx.flags.params.has('procedural-samurai') ? loadSamuraiSkin() : Promise.resolve(null);
+      // authored looks: a robot built before its GLB has loaded would keep the procedural model for good, so
+      // the population starts only once every model (samurai skin, biped, striker, spot) has loaded or failed
+      // (5 s at most); a failed load falls back to the procedural model of that type
+      const browser = typeof document !== 'undefined';
+      const skinReady: Promise<unknown> = browser
+        ? Promise.all([
+            ctx.flags.params.has('procedural-samurai') ? Promise.resolve(null) : loadSamuraiSkin(),
+            ctx.flags.params.has('procedural') ? Promise.resolve([]) : loadAllAuthored(),
+          ])
+        : Promise.resolve(null);
       const startWhenReady = (): void => {
         const timeout = new Promise<void>((resolve) => {
           const id = setTimeout(resolve, SKIN_WAIT_MS);
@@ -46,12 +54,13 @@ export function createEnemiesModule(): GameModule {
 
       ctx.testHooks.enemies = {
         list: () => m.snapshot(),
-        spawn: (type: EnemyType, position: { x: number; y?: number; z: number }) => {
-          const e = m.spawn({ type, position: new Vector3(position.x, 0, position.z), patrol: [] });
+        spawn: (type: EnemyType, position: { x: number; y?: number; z: number }, patrol: Array<{ x: number; z: number }> = []) => {
+          const e = m.spawn({ type, position: new Vector3(position.x, 0, position.z), patrol: patrol.map((p) => new Vector3(p.x, 0, p.z)) });
           return e ? e.id : null;
         },
         killAll: () => m.killAll(),
         samuraiSkin: () => samuraiSkin() !== null,
+        authored: () => ({ biped: authoredModel('biped') !== null, striker: authoredModel('striker') !== null, spot: authoredModel('spot') !== null }),
         rosterRemaining: () => m.rosterRemaining,
         projectiles: () => ({ live: m.projectiles.liveCount, cap: m.projectiles.capacity }),
       };
@@ -71,6 +80,7 @@ export function createEnemiesModule(): GameModule {
       manager?.dispose();
       manager = null;
       setSamuraiSkin(null);
+      disposeAuthored();
       if (ctxRef) {
         delete ctxRef.testHooks.enemies;
         ctxRef.resources.scope('enemies').dispose();

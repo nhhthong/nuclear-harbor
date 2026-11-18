@@ -250,6 +250,11 @@ export function createHud(ctx: GameContext, parent: HTMLElement): Hud {
         rg.fillStyle = '#ff4a3a';
         continue;
       }
+      if (e.type === 'biped') {
+        // infantry that leaps at the player: a small square
+        rg.fillRect(x - 2.7, y - 2.7, 5.4, 5.4);
+        continue;
+      }
       rg.beginPath();
       rg.arc(x, y, e.type === 'army' ? 3.6 : 2.6, 0, Math.PI * 2);
       rg.fill();

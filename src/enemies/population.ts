@@ -7,7 +7,7 @@ import { navFor } from './nav/bakeNav';
 import type { NavGrid, PathPoint } from './nav/NavGrid';
 import { ENEMY_LOCAL } from './tunables';
 
-const TYPES: readonly EnemyType[] = ['army', 'spot', 'duck', 'samurai'];
+const TYPES: readonly EnemyType[] = ['army', 'spot', 'duck', 'biped', 'samurai'];
 
 /** Parses `?enemies=army,spot|none`; the default is a single army robot. */
 export function parseEnemyParam(value: string | null): EnemyType[] {
@@ -132,6 +132,7 @@ const spot = (patrol: XZ[]): Authored => ({ type: 'spot', at: patrol[0] ?? [0, 0
 
 const samurai = (patrol: XZ[]): Authored => ({ type: 'samurai', at: patrol[0] ?? [0, 0], patrol });
 const duck = (patrol: XZ[]): Authored => ({ type: 'duck', at: patrol[0] ?? [0, 0], patrol });
+const biped = (patrol: XZ[]): Authored => ({ type: 'biped', at: patrol[0] ?? [0, 0], patrol });
 
 /**
  * Army loops (tower, lane crossings), spot beats, samurai beats and the Ducks outside the yard; the
@@ -139,30 +140,31 @@ const duck = (patrol: XZ[]): Authored => ({ type: 'duck', at: patrol[0] ?? [0, 0
  * gate apron stays empty.
  */
 const ARMY_SPOT_POSTS: readonly Authored[] = [
-  // A Container Yard (3 army, 4 spot, 1 duck, 2 samurai); near the start only the far ends of the
-  // south aisle are used
+  // A Container Yard (3 army, 3 spot, 2 duck (the yard aisles, below), 2 biped, 2 samurai); near the start only
+  // the far ends of the south aisle are used
   army(cross(-11, -15.5), [-11, -15.5]),
   army(cross(9, -15.5), [9, -15.5]),
   army(line([-33, 2.5], [-21, 2.5])),
   spot(line([21, 2.5], [33, 2.5])),
   spot(line([-33, -15.5], [-21, -15.5])),
   spot(line([19, -15.5], [32, -15.5])),
-  spot(line([-11, -26], [-11, -21])),
-  duck(line([9, -24], [9, -6])),
+  biped(line([-11, -26], [-11, -21])),
+  biped(line([9, -24], [9, -6])),
   samurai(line([9, -26], [9, -20])),
   samurai(line([-11, -7], [-11, -3])),
-  // B Relay Court (1 army, 2 spot, 1 duck): the tower guard
+  // B Relay Court (1 army, 1 spot, 1 duck): the tower guard
   army(ring(0, -34, 4.5)),
   spot(line([15, -31], [26, -31])),
-  spot(line([-16, -38.5], [-6, -38.5])),
   duck(line([18, -38], [30, -38])),
-  // D Quay (1 army, 2 spot, 1 duck, 1 samurai): beats on the ring just outside the boss arena, which
+  // D Quay (1 army, 2 spot, 1 duck, 2 biped, 1 samurai): beats on the ring just outside the boss arena, which
   // stays free of containers, plus one along the south strip
   army(line([BOSS_ARENA.center.x - 18.5, BOSS_ARENA.center.z + 6], [BOSS_ARENA.center.x - 18.5, BOSS_ARENA.center.z - 6])),
   spot(line([16, -44], [32, -44])),
   spot(line([BOSS_ARENA.center.x + 18.5, BOSS_ARENA.center.z + 6], [BOSS_ARENA.center.x + 18.5, BOSS_ARENA.center.z - 6])),
   duck(line([BOSS_ARENA.center.x - 5, BOSS_ARENA.center.z + 19], [BOSS_ARENA.center.x + 5, BOSS_ARENA.center.z + 19])),
   samurai(line([BOSS_ARENA.center.x - 6, BOSS_ARENA.center.z - 18.5], [BOSS_ARENA.center.x + 6, BOSS_ARENA.center.z - 18.5])),
+  biped(line([-25.5, -84.5], [-19, -84.5])),
+  biped(line([18, -65], [30, -65])),
 ];
 
 function laneAlong(lane: LaneData, d: number): XZ {

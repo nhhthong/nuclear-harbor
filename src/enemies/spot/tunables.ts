@@ -46,4 +46,22 @@ export const SPOT = {
   arriveRadius: 0.8,
   /** Defend-phase arrival tolerance (m). */
   commandArriveRadius: 3,
+  /**
+   * Authored look (spec 26): "Walking Robotic Dog" (Sketchfab, CC-BY 4.0, reececreoplan), built by
+   * tools/asset-pipeline/enemies_sf.py. Behaviour, stats and hit volumes are unchanged.
+   */
+  skin: {
+    url: 'assets/enemies/spot.glb',
+    /** Ground speed (m/s) at which the `walk` clip (6.3 s per cycle) at time scale 1 keeps the feet planted (measured on the clip). */
+    walkSpeed: 2.1,
+    /** Time scale limits of the walk clip. */
+    minScale: 0.3,
+    maxScale: 4,
+    /** Lift (m) so the feet rest on the ground. */
+    footLift: 0.02,
+    /** Glow colours of the telegraph (lamps in the procedural model): the head glows red while it crouches. */
+    glowColor: 0xff2a1a,
+    glowRadius: 0.2,
+    glowBone: 'Joint_1_00_26',
+  },
 } as const;
