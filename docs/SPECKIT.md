@@ -5,7 +5,7 @@
 ## When to use it
 - **New feature or gameplay system:** use the flow below.
 - **Small fix, tuning, refactor, docs, cleanup:** no Spec Kit; a normal commit or PR with a clear description is enough.
-- **History:** `specs/T-01..T-22` belong to the first version of the game and are historical (`specs/README.md`). Later reworks (sunset quay, scorpion, samurai, area streaming, HUD/radar, gaits, shelters) were done without Spec Kit and are described in `docs/DEVIATIONS.md` and `docs/PLAN.md` "Current state".
+- **History:** `specs/T-01..T-22` belong to the first version of the game and are historical (`specs/README.md`). Specs 24 to 27 (ADS, world dressing, enemy models and Biped, crab boss) follow the flow and are current. Earlier reworks (sunset quay, scorpion, samurai, area streaming, HUD/radar, gaits, shelters) were done without Spec Kit and are described in `docs/DEVIATIONS.md` and `docs/PLAN.md` "Current state".
 
 ## Flow (one folder per feature: `specs/<id>-<name>/`)
 Set the feature directory explicitly before running any `.specify/scripts/bash/*` script (the shell environment does not persist between calls):
