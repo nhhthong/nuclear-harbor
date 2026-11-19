@@ -29,7 +29,7 @@ Fight through the yard, bring down STINGER-7, the mecha scorpion that guards the
 
 You are the only survivor of a container quay whose defence robots have been hijacked. The nuclear control system counts down from **08:00**. Fight through the container yard to the relay tower, where the mecha scorpion **STINGER-7** rises, hold **E** to activate the tower, then bring down the **Gunslinger Crab Mech**, a 10 m armoured boss with one huge health bar and four skills.
 
-**Three.js + TypeScript + Vite + Rapier**: fixed 60 Hz simulation, procedural audio, no backend, no network at runtime. One small level (72 x 122 m) with modelled containers, wet ground with a planar reflection, a pale sun with one shadow map, an overcast sky, bloom and a cold film grade. Robots, vehicles and clutter are free CC0 or CC-BY models ([credits](#credits-and-licenses)). It is a **prototype**: nobody has play-tested a full run yet, so balance and real-GPU frame rate are unverified.
+**Three.js + TypeScript + Vite + Rapier**: fixed 60 Hz simulation, procedural audio, no backend, no network at runtime. One small level (72 x 122 m) with modelled containers, wet ground with a planar reflection, a pale sun with one shadow map, an overcast sky, bloom and a cold film grade. Robots, vehicles and clutter are free CC0 or CC-BY models ([credits](CREDITS.md)). It is a **prototype**: nobody has play-tested a full run yet, so balance and real-GPU frame rate are unverified.
 
 ## Screenshots
 
@@ -121,33 +121,4 @@ Run `npm run typecheck && npm test && npm run build`, keep gameplay numbers in t
 
 ## Credits and licenses
 
-**Project code** is released under the [MIT License](LICENSE).
-
-| Component | License | Notes |
-|---|---|---|
-| [Three.js](https://threejs.org/) | MIT | Rendering |
-| [Rapier](https://rapier.rs/) (`@dimforge/rapier3d-compat`) | Apache-2.0 | Physics |
-| [Vite](https://vite.dev/), [Vitest](https://vitest.dev/) | MIT | Build and unit tests |
-| [TypeScript](https://www.typescriptlang.org/) | Apache-2.0 | Language |
-| G36C view model (`assets-src/weapons/g36c/`, `public/assets/weapons/g36c/`) | **Not covered by the MIT license** | Model by **funnky**, used with the author's permission as stated by the project owner. No licence text ships with the file, so confirm the terms before redistributing or selling the game. |
-
-| Parked cars: sedan ([Kiri '10](https://sketchfab.com/3d-models/7fd6e15785fa4aa9bfd6e31eb7c97ba6)), hatchback ([Milano '95](https://sketchfab.com/3d-models/122a22d210234596ad23623588d0d166)), SUV ([Urban '10](https://sketchfab.com/3d-models/2866efdfa943484391ef8313768e074d)), van ([Shvan '92](https://sketchfab.com/3d-models/09d718c9cf72401b8534d265a06a803f)), pickup ([Conquer '89 Pickup](https://sketchfab.com/3d-models/6c48c94be8974dc7a5932f697c0ba68f)), box truck ([LCT 3000 '07](https://sketchfab.com/3d-models/3be03b6a43aa41898c9ca806b8787052)), all by **Daniel Zhabotinsky** | CC-BY 4.0 | Decimated, 512 px textures, painted per instance (`public/assets/props/vehicles.glb`, built by `tools/asset-pipeline/vehicles_sf.py`); credited in the in-game Credits screen |
-| Semi-truck ([Yellow semi-truck with trailer](https://sketchfab.com/3d-models/ee0a8763bd8941f1bc546b43332d4001) by **Chenzoss**) | CC-BY 4.0 | Decimated, 512 px textures; in-game Credits |
-| Forklift ([Forklift Truck](https://sketchfab.com/3d-models/060f3f8bc7de4e6ca2f348d414702e9d) by **louis-muir**) | CC-BY 4.0 | 512 px textures; in-game Credits |
-| Mobile crane truck ([Ural KS3574 / interior](https://sketchfab.com/3d-models/317c5dbcad974d9f99efd079060d4344) by **Basic Hsu** (Hsu.Pei.Ge)) | CC-BY 4.0 | Interior dropped, decimated, 1024 px textures; in-game Credits |
-| Cabinets, barrier, barrels, tyre, generator, work light ([Poly Haven](https://polyhaven.com): `utility_box_01/02`, `concrete_road_barrier_02`, `Barrel_01`, `barrel_03`, `old_tyre`, `portable_generator`, `flood_lights`) | CC0 | 512 px textures, decimated (`public/assets/props/industrial.glb`, `industrial.py`) |
-| Water tower, dumpster, AC unit, cable drum, switchgear, street box, gas cylinder, water barrel, light tower, cement mixer, pallet, portable toilet, roadblock, trash bin ([3DModelsCC0](https://3dmodelscc0.itch.io) packs: City Environment 1 and 2, Industrial 1 and 2) | CC0 | 512 px textures, decimated (`public/assets/props/terminal.glb`, `terminal.py`) |
-| Cyber samurai body ([Cyberpunk Samurai Robot](https://sketchfab.com/3d-models/cyberpunk-samurai-robot-6b7c89af7c5b4a17a94f890e0ec3eedf) by byhoangtran) | **CC-BY 4.0** | Split at the hips and knees, katana removed; credited in the in-game Credits screen (`public/assets/enemies/samurai.glb`, `tools/asset-pipeline/samurai.py`) |
-| Biped robot ([Biped robot](https://sketchfab.com/3d-models/801d2a245e4a4405a0c2152b35b5e486) by **skudgee (Willy Decarpentrie)**) | CC-BY 4.0 | Display base removed, decimated, run, crouch, leap and claw clips authored (`public/assets/enemies/`, `tools/asset-pipeline/enemies_sf.py`); in-game Credits |
-| Medium Mech Striker ([Medium Mech Striker](https://sketchfab.com/3d-models/27ba717c173a40b7841d2f2c6a89d823) by **MSGDI**) | CC-BY 4.0 | Decimated, 512 px textures, idle, walk and run clips; in-game Credits |
-| Spot dog ([Walking Robotic Dog](https://sketchfab.com/3d-models/cb8157f40d39456d9f37865b4e6e7477) by **reececreoplan (CreoPlan Ltd)**) | CC-BY 4.0 | Decimated, 512 px textures, leg clips merged; in-game Credits |
-| Final boss ([Gunslinger Crab Mech v1.2](https://sketchfab.com/3d-models/5147619f337a45b0974f349eac27b34a) by **vaportrash**) | CC-BY 4.0 | Legs split at the hips, decimated, textures resized (`public/assets/enemies/crab-boss.glb`, `tools/asset-pipeline/boss_sf.py`); in-game Credits |
-| Semi-boss STINGER-7 ([Scorpion Robot](https://sketchfab.com/3d-models/e44be9a622af4e85b4b10cf59b25de1a) by **Mirandanimator**) | CC-BY 4.0 | Split into body, four legs and a four-segment tail, decimated to 15.6k triangles, recoloured (dark gunmetal, green emissive accents) (`public/assets/enemies/scorpion.glb`, `scorpion_sf.py`); in-game Credits |
-| Boss drones ([Light Assault Mech](https://sketchfab.com/3d-models/d1ca5065b5184646bc7028597d0ce049) by **Lagst**) | CC-BY 4.0 | Armature applied, decimated (`public/assets/enemies/dragonfly-drone.glb`, `drone_sf.py`); in-game Credits |
-| Samurai naginata ([Naginata](https://opengameart.org/content/naginata) by Bioxx) | CC0 | Held forward from the wrist (`samurai.glb`) |
-
-Everything else (the Bomber Duck, the procedural fallback scorpion, containers, crane, sounds, UI) is generated procedurally by this repository's code. The raw source downloads are not committed; each build script lists the exact source files.
-
-**Acknowledgements.** The reference models in [`docs/reference-models/`](docs/reference-models) inspired the robot
-designs; they are visual references only. This project was developed with substantial help from AI coding agents
-([Claude Code](https://claude.com/claude-code)) under human direction and review.
+Project code: [MIT License](LICENSE). Third-party models are CC0 or CC-BY 4.0 (Sketchfab, Poly Haven, 3DModelsCC0, OpenGameArt); the G36C view model is **not** covered by the MIT license. Full tables, authors, changes and build scripts: **[CREDITS.md](CREDITS.md)** (also in the in-game Credits screen and [`docs/ASSETS.md`](docs/ASSETS.md)).

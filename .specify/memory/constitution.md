@@ -91,7 +91,7 @@ ownership, which stopped matching how features are built.)
   the same origin, with a procedural fallback where one exists (new models should have one).
   Audio files remain forbidden without maintainer approval.
 - Every third-party asset MUST be recorded in `docs/ASSETS.md` (source, author, licence, script)
-  and credited in `src/ui/credits.ts` and the README credits table. Assets of unverified licence
+  and credited in `src/ui/credits.ts` and `CREDITS.md`. Assets of unverified licence
   MUST NOT be committed; raw downloads and archives stay out of git (`tools/asset-pipeline/input/`).
 - New runtime dependencies beyond `three` and `@dimforge/rapier3d-compat` require maintainer
   approval.
@@ -155,7 +155,7 @@ Rationale: a small, working vertical slice that is fun beats a broad, half-finis
 - Runtime guidance for developers lives in `docs/PLAN.md` ("Current state"), `docs/DEVIATIONS.md`
   and `docs/SPECKIT.md`.
 
-**Version**: 2.0.0 | **Ratified**: 2026-11-12 | **Last Amended**: 2026-11-19
+**Version**: 2.0.1 | **Ratified**: 2026-11-12 | **Last Amended**: 2026-11-19
 
 Amendment 2.0.0 (2026-11-19, MAJOR: principles V and VI redefined, IV and VII corrected): audited
 against the repo after specs 24 to 28. Per-ticket file ownership became declared blast radius (V);
@@ -163,3 +163,5 @@ authored CC0/CC-BY GLBs are allowed with credits and fallbacks (VI); the smoke r
 dropped from the definition of done to match CI (IV); weak-point and cut-list text removed (VII).
 Principle II got a justified-exception clause (spec 27 precedent). Principles I and III were checked
 against the code (no cross-module imports, no `any`, pools, `ResourceTracker`, tunables) and are unchanged.
+
+Amendment 2.0.1 (2026-11-19, PATCH): the credits table moved from README.md to CREDITS.md; Principle VI now names that file.
