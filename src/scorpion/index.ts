@@ -11,9 +11,12 @@ import { ScorpionDrops } from './drops';
 import type { ScorpionSkill } from './events';
 import './events';
 import { pickGuardTowers, seedFromParams } from './guards';
+import { disposeScene, loadScorpionModel, type AuthoredScorpion } from './scorpionAssets';
 import { SCORPION } from './tunables';
 
 const MODULE_ID = 'scorpion';
+/** The spawn waits at most this long for the GLB (it normally appears minutes into a run), then the procedural model is used. */
+const LOAD_WAIT_MS = 5000;
 
 interface TowerRef {
   id: number;
@@ -190,8 +193,33 @@ export function createScorpionModule(): GameModule {
       const res = c.resources.scope(MODULE_ID);
       enabled = !c.flags.sandbox || c.flags.params.has('scorpion');
       seed = seedFromParams(c.flags.params, Date.now());
-      assets = createScorpionAssets();
-      res.onDispose(() => assets?.dispose());
+      // the authored GLB loads while the player plays; no scorpion spawns before a look is ready (5 s at most)
+      const install = (authored: AuthoredScorpion | null): void => {
+        if (!ctx || assets) {
+          if (authored) disposeScene(authored.scene);
+          return;
+        }
+        assets = createScorpionAssets(authored);
+        res.onDispose(() => {
+          assets?.dispose();
+          if (authored) disposeScene(authored.scene);
+        });
+      };
+      if (typeof document !== 'undefined' && !c.flags.params.has('procedural-scorpion')) {
+        let timer: ReturnType<typeof setTimeout> | null = setTimeout(() => {
+          timer = null;
+          install(null);
+        }, LOAD_WAIT_MS);
+        void loadScorpionModel().then((a) => {
+          if (timer !== null) clearTimeout(timer);
+          install(a);
+        });
+        res.onDispose(() => {
+          if (timer !== null) clearTimeout(timer);
+        });
+      } else {
+        install(null);
+      }
       decals = createDecals();
       const dg = decals;
       res.onDispose(() => dg.dispose());
@@ -240,13 +268,15 @@ export function createScorpionModule(): GameModule {
         drops: () => drops?.list() ?? [],
         shake: () => shakeAmp * (shakeLeft / shakeTotal),
         spawnCount: () => serialSpawns,
+        /** 'authored' or 'procedural' once the look is ready, 'loading' before. */
+        model: () => assets?.kind ?? 'loading',
       };
     },
 
     fixedUpdate(dt) {
       if (!ctx || !enabled) return;
       const p = ctx.player;
-      if (p.alive && guardIds.length > 0) {
+      if (p.alive && assets && guardIds.length > 0) {
         for (const t of towers) {
           if (spawned.has(t.id) || !guardIds.includes(t.id)) continue;
           if (Math.hypot(p.position.x - t.position.x, p.position.z - t.position.z) <= SCORPION.triggerRadius) {

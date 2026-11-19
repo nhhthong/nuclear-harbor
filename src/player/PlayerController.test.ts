@@ -210,7 +210,7 @@ describe('PlayerController', () => {
     expect(r.player.position.z).toBeCloseTo(30, 1);
   });
 
-  it('Space jumps about 3.9 m and a second press in the air reaches a container top', async () => {
+  it('Space jumps about 1 m and a second press at the apex reaches about 1.8 m', async () => {
     const press = (r: Rig): void => {
       r.input.handleCode('Space', true);
       r.controller.update(DT, 1);
@@ -227,21 +227,21 @@ describe('PlayerController', () => {
       r.tick(1);
       apex = Math.max(apex, r.player.position.y);
     }
-    expect(apex).toBeGreaterThan(3.6);
-    expect(apex).toBeLessThan(4.2);
+    expect(apex).toBeGreaterThan(0.85);
+    expect(apex).toBeLessThan(1.05);
     expect(r.player.grounded).toBe(true);
 
     // double jump: second press near the apex
     press(r);
-    r.tick(43);
+    r.tick(15);
     press(r);
     let apex2 = 0;
     for (let i = 0; i < 150; i++) {
       r.tick(1);
       apex2 = Math.max(apex2, r.player.position.y);
     }
-    expect(apex2).toBeGreaterThan(6.4);
-    expect(apex2).toBeLessThan(7.5);
+    expect(apex2).toBeGreaterThan(1.6);
+    expect(apex2).toBeLessThan(2.0);
     // a third press in the air does nothing; landing restores the air jump
     expect(jumps).toEqual([false, false, true]);
     r.tick(80);

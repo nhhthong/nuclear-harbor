@@ -43,6 +43,11 @@ export const CREDITS: readonly CreditEntry[] = [
     note: 'CC-BY 4.0, sketchfab.com/3d-models/5147619f337a45b0974f349eac27b34a (legs split at the hips, decimated, textures resized)',
   },
   {
+    name: 'Mirandanimator',
+    role: 'Semi-boss STINGER-7 ("Scorpion Robot")',
+    note: 'CC-BY 4.0, sketchfab.com/3d-models/e44be9a622af4e85b4b10cf59b25de1a (split into body, four legs and a tail chain, decimated, recoloured gunmetal with green glow parts)',
+  },
+  {
     name: 'Lagst',
     role: 'Boss drones ("Light Assault Mech", a dragonfly flyer)',
     note: 'CC-BY 4.0, sketchfab.com/3d-models/d1ca5065b5184646bc7028597d0ce049 (armature applied, decimated, textures resized)',

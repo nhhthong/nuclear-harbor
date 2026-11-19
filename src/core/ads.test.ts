@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ADS, CAMERA, PLAYER } from '@/config/tunables';
+import { BIPED } from '@/enemies/biped/tunables';
+import { CRAB } from '@/boss/tunables';
 import { aimFovDeg, aimScale, aimSensitivityScale, stepAim } from './ads';
 
 describe('ads helpers', () => {
@@ -33,14 +35,22 @@ describe('ads helpers', () => {
 });
 
 describe('player gravity', () => {
-  it('keeps the intended jump heights', () => {
+  it('keeps the natural jump heights (apex = v^2 / 2g)', () => {
     const g = -PLAYER.gravity;
-    expect((PLAYER.jumpSpeed ** 2) / (2 * g)).toBeGreaterThan(3.8);
-    expect((PLAYER.jumpSpeed ** 2) / (2 * g)).toBeLessThan(4.0);
-    expect((PLAYER.airJumpSpeed ** 2) / (2 * g)).toBeGreaterThan(3.2);
-    expect((PLAYER.airJumpSpeed ** 2) / (2 * g)).toBeLessThan(3.4);
-    // two-high stack (5.2 m) reachable with a chained air jump, three-high (7.8 m) not
-    expect((PLAYER.jumpSpeed ** 2 + PLAYER.airJumpSpeed ** 2) / (2 * g)).toBeGreaterThan(5.2);
-    expect((PLAYER.jumpSpeed ** 2 + PLAYER.airJumpSpeed ** 2) / (2 * g)).toBeLessThan(7.8);
+    const single = PLAYER.jumpSpeed ** 2 / (2 * g);
+    const air = PLAYER.airJumpSpeed ** 2 / (2 * g);
+    expect(single).toBeGreaterThanOrEqual(0.9);
+    expect(single).toBeLessThanOrEqual(1.0);
+    // chained at the apex of the ground jump
+    expect(single + air).toBeGreaterThanOrEqual(1.6);
+    expect(single + air).toBeLessThanOrEqual(1.85);
+  });
+
+  it('keeps the enemy dodge thresholds reachable with the double jump', () => {
+    const g = -PLAYER.gravity;
+    const reach = (PLAYER.jumpSpeed ** 2 + PLAYER.airJumpSpeed ** 2) / (2 * g);
+    for (const t of [BIPED.leap.clearance, BIPED.claw.clearance, CRAB.spin.safeHeight, CRAB.laser.top]) {
+      expect(t).toBeLessThan(reach - 0.2);
+    }
   });
 });

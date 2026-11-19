@@ -1,7 +1,6 @@
 import { BOSS_ARENA, fromLegacyZ, type ZoneId } from '@/config/level';
-import { ECONOMY, WORLD } from '@/config/tunables';
+import { ECONOMY } from '@/config/tunables';
 import type { PickupKind } from '@/core/types';
-import { generateContainerLayout } from '@/world/containerLayout';
 import { PICKUP } from './tunables';
 
 type PlacementZone = ZoneId | 'boss';
@@ -34,39 +33,20 @@ const m = (zone: ZoneId, x: number, z: number, elevated = false, castFromY?: num
   castFromY,
 });
 
-const LAYOUT = generateContainerLayout();
-
-/** Centre of the one-high container stack in the yard nearest to (x, z): a double jump reaches its top. */
-function stackTopNear(x: number, z: number): [number, number] {
-  let best: [number, number] | null = null;
-  let bestD = Infinity;
-  for (const t of LAYOUT.stackTops) {
-    // one-high, set square on the grid (loose boxes at an angle are left out)
-    if (t.zone !== 'A' || Math.abs(t.y - WORLD.container.height) > 0.01 || Math.abs(Math.sin(2 * t.yaw)) > 1e-6) continue;
-    const d = Math.hypot(t.x - x, t.z - z);
-    if (d < bestD) {
-      bestD = d;
-      best = [t.x, t.z];
-    }
-  }
-  if (!best) throw new Error('pickups: the yard has no one-high stack');
-  return best;
-}
 
 /**
- * Zone placement for the quay: 7 crates and 2 medkits. Two of them sit on one-high container
- * stacks (2.6 m) and need the double jump. `placements.test.ts` checks every position against the
+ * Zone placement for the quay: 7 crates and 2 medkits. All of them are on the ground since the jump was lowered (the double jump no longer reaches 2.6 m container tops). `placements.test.ts` checks every position against the
  * generated container layout and the props.
  */
 export const ZONE_PLACEMENTS: readonly PickupCandidate[] = [
   // C Gate Apron
   c('C', -24, fromLegacyZ(27)),
   c('C', 26, fromLegacyZ(23)),
-  // A Container Yard: lane and aisle crossings (always free), plus two supplies on one-high stacks
+  // A Container Yard: lane and aisle crossings and open ground (all supplies are on the ground)
   c('A', -11, 9),
   c('A', 9, -8),
-  c('A', ...stackTopNear(-21, -8), true), // one-high stack, west blocks
-  m('A', ...stackTopNear(0, -24), true), // one-high stack facing the relay court
+  c('A', -16, -11), // west blocks, on the ground (was on a one-high stack; the lower jump no longer reaches container tops)
+  m('A', -0.5, -27.5), // aisle facing the relay court, on the ground (was on a one-high stack)
   // B Relay Court
   c('B', -4, fromLegacyZ(-16.5)),
   // D Quay, east of the boss arena

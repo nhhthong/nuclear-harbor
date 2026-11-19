@@ -20,7 +20,7 @@ Inputs: [`docs/GDD.md`](GDD.md) (design spec), [`docs/REVIEW.md`](REVIEW.md) (ac
 
 ## Current state (authoritative, matches the code)
 
-**Game:** one 72 x 122 m quay under a cold overcast (no rain), a pale sun is the only real light. Objective: activate 1 tower (guarded by the mecha scorpion STINGER-7), survive the nuclear countdown, defeat the half-size final boss. No grapple.
+**Game:** one 72 x 122 m quay under a cold overcast (no rain), a pale sun is the only real light. Objective: activate 1 tower (guarded by the mecha scorpion STINGER-7), survive the nuclear countdown, defeat the final boss, the Gunslinger Crab Mech (`src/boss`, one 5800 HP pool, no weak points). No grapple.
 
 **Modules** (registration order in `src/modules.ts`): sandbox, world, structures, player, weapon, enemies, boss, scorpion, objectives, pickups, shelters, vfx, audio, ui, flow, debug. `GameContext` still has `grappleAnchors` (legacy, unused).
 
@@ -28,10 +28,10 @@ Inputs: [`docs/GDD.md`](GDD.md) (design spec), [`docs/REVIEW.md`](REVIEW.md) (ac
 zones by z: A [-28, 16], B [-40, -28], C [16, 34], D [-88, -40]. Spawn (0, 0, 29), tower (0, -34), boss arena center (-10, -66) r 17, crane (25, -75), ship (-34, -2, -148).
 Container yard: seeded generator `src/world/containerLayout.ts`. Five safe containers heal the player (`src/world/shelters.ts`, `src/shelters`).
 
-**Enemies:** 21 robots = army 5, spot 8, duck 5 (regular, 18) + 3 cyber samurai elites (`src/enemies/samurai`). Distribution per zone (`ENEMY_DISTRIBUTION`), samurai included: A {3,4,3,2}, B {1,2,1,0}, C none, D {1,2,1,1} (army, spot, duck, samurai). The spawn area is empty. Robots are streamed by area (`src/enemies/areaSpawner.ts`, 10 alive at most). All robots walk with stepping legs paced by distance (`src/enemies/gait.ts`).
+**Enemies:** roster of 22 = army (Medium Mech Striker) 5, spot 6, biped 4, duck 4 + 3 cyber samurai elites (`src/enemies/samurai`); authored GLBs with procedural fallbacks (`src/enemies/authored.ts`). Per-zone distribution: see `ENEMY_DISTRIBUTION` in `src/config/tunables.ts` and `docs/DEVIATIONS.md` (last sections), not this text. The spawn area is empty. Robots are streamed by area (`src/enemies/areaSpawner.ts`, 10 alive at most). All robots walk with stepping legs paced by distance (`src/enemies/gait.ts`).
 Scorpion (`src/scorpion`): charge, venom, tail slam, hex shield blocks 80% of frontal damage. Samurai: leap cleave, spinning polearm deflect, two lightning dashes.
 
-**Economy:** crates 7 + 4, medkits 2 + 1, enemy ammo drop 10% (see `ECONOMY`). Ammo budget: 345 hits needed, 540 rounds supplied, assumed accuracy 65%.
+**Economy:** crates 7 + 4, medkits 2 + 1, enemy ammo drop 10% (see `ECONOMY`). Ammo budget (test): 348 hits needed (roster 116 + boss 232), 540 rounds supplied, assumed accuracy 65%.
 
 **Dressing:** `structures/layout.ts` holds `VEHICLES` and `DRESSING` (pure data + colliders + tests); `vehicles.ts` and `dressing.ts` draw them as instanced GLB meshes (`public/assets/props/{vehicles,industrial,terminal}.glb`, built by `tools/asset-pipeline/{props,industrial,terminal}.py`). Mood: cold overcast (`WORLD_LOCAL.sky/sun/hemi`, `PERFORMANCE.grade`).
 
@@ -250,6 +250,8 @@ budget (404 hits needed, 870 rounds supplied) so balance edits that break the bu
 Headless Chromium uses software WebGL: FPS numbers from smoke/e2e are not performance data.
 
 ## 7. Definition of Done (every ticket)
+
+> Original text, partly stale (smoke/e2e, `specs/T-XX`, ticket-owned files, no binary assets). The current definition of done is in `docs/SPECKIT.md` ("Continuing the work").
 
 1. Spec Kit flow followed as in [`docs/SPECKIT.md`](SPECKIT.md); `specs/T-XX-name/` contains
    `spec.md`, `plan.md`, `tasks.md` with all tasks ticked, and is committed with the code.
