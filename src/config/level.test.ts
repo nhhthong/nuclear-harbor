@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { BOSS_ARENA, CRANE_SITES, ENEMY_DISTRIBUTION, SPAWN_SAFE_RADIUS, fromLegacyZ, KEEP_CLEAR, LAND, PLAYER_SPAWN, TOWERS, ZONES, isOnLand, zoneAt } from './level';
+import { BOSS_ARENA, CRANE_SITES, ENEMY_DISTRIBUTION, SPAWN_SAFE_RADIUS, fromLegacyZ, KEEP_CLEAR, LAND, PLAYER_SPAWN, TOWERS, ZONES, isInClosedBlock, isInPlayArea, isOnLand, zoneAt } from './level';
+import { SPAWN_L, WAREHOUSE } from './warehouse';
 import { ENEMY_COUNTS, OBJECTIVES, WORLD } from './tunables';
 
 describe('level contract', () => {
@@ -8,9 +9,9 @@ describe('level contract', () => {
     expect(LAND.maxZ - LAND.minZ).toBeLessThanOrEqual(130);
   });
 
-  it('every zone is about 1.4 times as deep as in the first version', () => {
+  it('zone depths of the L (spec 29): yard and warehouse 36, court 16, apron 22, quay 48', () => {
     const depth = (id: 'A' | 'B' | 'C' | 'D') => ZONES[id].maxZ - ZONES[id].minZ;
-    expect([depth('A'), depth('B'), depth('C'), depth('D')]).toEqual([44, 12, 18, 48]);
+    expect([depth('A'), depth('B'), depth('C'), depth('D')]).toEqual([36, 16, 22, 48]);
   });
 
   it('maps legacy z onto the stretched zones and keeps the zone borders', () => {
@@ -22,13 +23,25 @@ describe('level contract', () => {
     expect(fromLegacyZ(-86.5)).toBe(-86.5);
   });
 
-  it('has four zones that tile the land without gaps', () => {
+  it('has four zones that tile the L-shaped play area; the closed loading dock has no zone', () => {
     expect(Object.keys(ZONES)).toHaveLength(4);
-    for (let x = LAND.minX + 1; x < LAND.maxX; x += 5) {
-      for (let z = LAND.minZ + 1; z < LAND.maxZ; z += 5) {
-        expect(zoneAt(x, z), `(${x}, ${z})`).not.toBeNull();
+    for (let x = LAND.minX + 1; x < LAND.maxX; x += 2.5) {
+      for (let z = LAND.minZ + 1; z < LAND.maxZ; z += 2.5) {
+        if (isInPlayArea(x, z)) expect(zoneAt(x, z), `(${x}, ${z})`).not.toBeNull();
+        else {
+          expect(zoneAt(x, z), `(${x}, ${z})`).toBeNull();
+          expect(isOnLand(x, z)).toBe(false);
+          expect(isInClosedBlock(x, z)).toBe(true);
+        }
       }
     }
+    // the closed block is the south-east corner beside and behind the warehouse
+    expect(isInClosedBlock(20, 25)).toBe(true);
+    expect(isInClosedBlock(35, 0)).toBe(true);
+    expect(isInClosedBlock(-15, 25)).toBe(false);
+    expect(isInClosedBlock(20, -30)).toBe(false);
+    expect(zoneAt(20, 0)).toBe('A'); // the warehouse floor counts as zone A
+    expect(isInPlayArea(WAREHOUSE.footprint.minX - 1, -4)).toBe(true); // apron in front of the roller door
   });
 
   it('has one relay tower between the yard and the quay', () => {
@@ -39,6 +52,7 @@ describe('level contract', () => {
 
   it('keeps the player spawn in the empty gate apron, far from every robot area', () => {
     expect(zoneAt(PLAYER_SPAWN.position.x, PLAYER_SPAWN.position.z)).toBe('C');
+    expect(PLAYER_SPAWN.position).toEqual(SPAWN_L);
     expect(Object.values(ENEMY_DISTRIBUTION.C).every((n) => n === 0)).toBe(true);
     expect(SPAWN_SAFE_RADIUS).toBeGreaterThanOrEqual(30);
     expect(ENEMY_DISTRIBUTION.B.samurai).toBe(0);

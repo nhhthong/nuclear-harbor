@@ -66,18 +66,15 @@ export interface LaneData {
  * partial boots). A unit test compares it with the real generator so drift is caught.
  */
 export const FALLBACK_LANES: readonly LaneData[] = [
-  { id: 'yard-ns-0', axis: 'z', start: { x: -11, z: -27 }, end: { x: -11, z: 15 }, width: 6.6, length: 42 },
-  { id: 'yard-ns-1', axis: 'z', start: { x: 9, z: -27 }, end: { x: 9, z: 15 }, width: 6.6, length: 42 },
-  { id: 'yard-ew-0', axis: 'x', start: { x: -35, z: -15.5 }, end: { x: 35, z: -15.5 }, width: 6.6, length: 70 },
-  { id: 'yard-ew-1', axis: 'x', start: { x: -35, z: 2.5 }, end: { x: 35, z: 2.5 }, width: 6.6, length: 70 },
+  { id: 'yard-ns-0', axis: 'z', start: { x: -15, z: -20.56 }, end: { x: -15, z: 10.940000000000001 }, width: 6.6, length: 31.5 },
+  { id: 'yard-ns-1', axis: 'z', start: { x: 2, z: -20.56 }, end: { x: 2, z: 10.940000000000001 }, width: 6.6, length: 31.5 },
+  { id: 'yard-ew-0', axis: 'x', start: { x: -35, z: -4 }, end: { x: 7, z: -4 }, width: 6.6, length: 42 },
 ];
 
 /** Distance kept from lane ends when placing a Duck (m). */
 const LANE_INSET = 6;
 /** Ducks on the yard aisles (zone A). */
-const YARD_DUCKS = 2;
-/** Arm length of the plus-shaped patrol at lane intersections (m). */
-const ARM = 8;
+const YARD_DUCKS = 1;
 
 function isNum(v: unknown): v is number {
   return typeof v === 'number' && Number.isFinite(v);
@@ -121,12 +118,6 @@ const ring = (cx: number, cz: number, r: number): XZ[] => [
   [cx - r, cz],
   [cx, cz - r],
 ];
-const cross = (cx: number, cz: number): XZ[] => [
-  [cx, cz - ARM],
-  [cx + ARM, cz],
-  [cx, cz + ARM],
-  [cx - ARM, cz],
-];
 const army = (patrol: XZ[], at: XZ = patrol[0] ?? [0, 0]): Authored => ({ type: 'army', at, patrol });
 const spot = (patrol: XZ[]): Authored => ({ type: 'spot', at: patrol[0] ?? [0, 0], patrol });
 
@@ -140,29 +131,32 @@ const biped = (patrol: XZ[]): Authored => ({ type: 'biped', at: patrol[0] ?? [0,
  * gate apron stays empty.
  */
 const ARMY_SPOT_POSTS: readonly Authored[] = [
-  // A Container Yard (3 army, 3 spot, 2 duck (the yard aisles, below), 2 biped, 2 samurai); near the start only
-  // the far ends of the south aisle are used
-  army(cross(-11, -15.5), [-11, -15.5]),
-  army(cross(9, -15.5), [9, -15.5]),
-  army(line([-33, 2.5], [-21, 2.5])),
-  spot(line([21, 2.5], [33, 2.5])),
-  spot(line([-33, -15.5], [-21, -15.5])),
-  spot(line([19, -15.5], [32, -15.5])),
-  biped(line([-11, -26], [-11, -21])),
-  biped(line([9, -24], [9, -6])),
-  samurai(line([9, -26], [9, -20])),
-  samurai(line([-11, -7], [-11, -3])),
-  // B Relay Court (1 army, 1 spot, 1 duck): the tower guard
+  // A Container Yard, west leg, and the warehouse floor (2 army, 2 spot, 1 duck (the yard aisle, below), 2 biped,
+  // 1 samurai). Spec 29: the yard is smaller and closer to the spawn, so its posts sit in its north half
+  // (z < -3) and two robots guard the warehouse corridor (contract `WAREHOUSE.corridor`, kept free of props).
+  army(line([-15, -19], [-15, -8])),
+  army(line([10, -4], [15, -12])),
+  spot(line([-33, -4], [-21, -4])),
+  spot(line([0, -19], [0, -8])),
+  biped(line([4, -19], [4, -8])),
+  biped(line([14, -22], [14, -14])),
+  samurai(line([-8, -4], [-1, -4])),
+  // B Relay Court (2 army, 2 spot, 1 duck): the tower guard, the strip in front of the warehouse back door,
+  // the strip along the yard's container wall
   army(ring(0, -34, 4.5)),
+  army(line([18, -27.5], [30, -27.5])),
   spot(line([15, -31], [26, -31])),
+  spot(line([-14, -26.5], [-4, -26.5])),
   duck(line([18, -38], [30, -38])),
-  // D Quay (1 army, 2 spot, 1 duck, 2 biped, 1 samurai): beats on the ring just outside the boss arena, which
-  // stays free of containers, plus one along the south strip
+  // D Quay (1 army, 2 spot, 2 duck, 2 biped, 2 samurai): beats on the ring just outside the boss arena, which
+  // stays free of containers, plus the strips kept free of containers (WORLD_LOCAL.clusters.reserved)
   army(line([BOSS_ARENA.center.x - 18.5, BOSS_ARENA.center.z + 6], [BOSS_ARENA.center.x - 18.5, BOSS_ARENA.center.z - 6])),
   spot(line([16, -44], [32, -44])),
   spot(line([BOSS_ARENA.center.x + 18.5, BOSS_ARENA.center.z + 6], [BOSS_ARENA.center.x + 18.5, BOSS_ARENA.center.z - 6])),
   duck(line([BOSS_ARENA.center.x - 5, BOSS_ARENA.center.z + 19], [BOSS_ARENA.center.x + 5, BOSS_ARENA.center.z + 19])),
+  duck(line([28, -50.5], [33.5, -50.5])),
   samurai(line([BOSS_ARENA.center.x - 6, BOSS_ARENA.center.z - 18.5], [BOSS_ARENA.center.x + 6, BOSS_ARENA.center.z - 18.5])),
+  samurai(line([4, -45], [10, -45])),
   biped(line([-25.5, -84.5], [-19, -84.5])),
   biped(line([18, -65], [30, -65])),
 ];

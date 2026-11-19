@@ -39,14 +39,16 @@ const m = (zone: ZoneId, x: number, z: number, elevated = false, castFromY?: num
  * generated container layout and the props.
  */
 export const ZONE_PLACEMENTS: readonly PickupCandidate[] = [
-  // C Gate Apron
+  // C Gate Apron (spec 29: the west leg of the L; the east crate moved out of the closed loading dock)
   c('C', -24, fromLegacyZ(27)),
-  c('C', 26, fromLegacyZ(23)),
-  // A Container Yard: lane and aisle crossings and open ground (all supplies are on the ground)
-  c('A', -11, 9),
-  c('A', 9, -8),
-  c('A', -16, -11), // west blocks, on the ground (was on a one-high stack; the lower jump no longer reaches container tops)
-  m('A', -0.5, -27.5), // aisle facing the relay court, on the ground (was on a one-high stack)
+  c('C', -0.5, 21.2),
+  // A Container Yard (west leg): lanes and the aisle to the warehouse door (all supplies are on the ground)
+  c('A', -15, 9),
+  c('A', 3.5, -12),
+  c('A', -16, -11),
+  // A Warehouse: on the mezzanine deck (ray cast from below the roof); the floor spot under it is
+  // WAREHOUSE.supplySpot, reserved for the drone stream's extra crate
+  m('A', 21, -20.5, false, 5.5),
   // B Relay Court
   c('B', -4, fromLegacyZ(-16.5)),
   // D Quay, east of the boss arena

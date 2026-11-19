@@ -126,7 +126,7 @@ const LEGACY_PROPS: readonly Prop[] = [
   { kind: 'pallet', x: 5.2, z: 28.9, yaw: 1.4, variant: 0.4 },
   // south-west dump
   ...row('pallet', -31.5, 30.5, 1.5, 0, 3, 0.05, 0.3),
-  ...row('drum', -26.4, 31.8, 0.7, 0.05, 4, 0, 0.55),
+  ...row('drum', -27.0, 31.8, 0.7, 0.05, 4, 0, 0.55),
   { kind: 'drum', x: -26.0, z: 31.1, yaw: 0, variant: 0.2 },
   { kind: 'barrier', x: -30.5, z: 26.0, yaw: Math.PI / 2, variant: 0.4 },
   // relay court: cover on both flanks of the tower
@@ -206,10 +206,10 @@ export const VEHICLES: readonly Vehicle[] = [
   { kind: 'hatchback', x: -28, z: 19.3, yaw: 0, tint: RED },
   { kind: 'suv', x: -25, z: 19.3, yaw: 0, tint: NAVY },
   // gate apron: east car park, against the dock wall (spec 29)
-  { kind: 'van', x: 3.6, z: 16.6, yaw: 0, tint: WHITE },
-  { kind: 'pickup', x: 0.6, z: 16.6, yaw: 0, tint: OLIVE },
+  { kind: 'van', x: 3.6, z: 17.0, yaw: 0, tint: WHITE },
+  { kind: 'pickup', x: 0.6, z: 17.0, yaw: 0, tint: OLIVE },
   // truck with trailer queuing at the gate
-  { kind: 'semi', x: -2, z: 25, yaw: Q, tint: WHITE },
+  { kind: 'semi', x: -3, z: 25, yaw: Q, tint: WHITE },
   // forklift at the south-west pallet dump, forks towards the pallets
   { kind: 'forklift', x: -21.8, z: 31.6, yaw: -Q, tint: WHITE },
   // relay court, west edge
@@ -307,16 +307,16 @@ export const DRESSING: readonly Dressing[] = [
   ...barrierRow(-26.2, 28.6, 4),
   ...barrierRow(-9.0, 28.6, 4),
   // tyre dump by the west wall
-  { kind: 'tyre', x: -30.4, z: 27.6, yaw: 0, stack: 4 },
-  { kind: 'tyre', x: -29.6, z: 28.3, yaw: 0, stack: 2 },
-  { kind: 'tyre', x: -30.6, z: 28.6, yaw: 0, stack: 1, jitter: 0.4 },
+  { kind: 'tyre', x: -33.4, z: 27.7, yaw: 0, stack: 4 },
+  { kind: 'tyre', x: -32.6, z: 28.2, yaw: 0, stack: 2 },
+  { kind: 'tyre', x: -33.6, z: 28.4, yaw: 0, stack: 1, jitter: 0.4 },
   // barrels by the west car park
   { kind: 'barrel_red', x: -22.8, z: 17.3, yaw: 0, jitter: 0.4 },
   { kind: 'barrel_red', x: -22.2, z: 17.8, yaw: 0, jitter: 1.1 },
   { kind: 'barrel_blue', x: -22.9, z: 18.0, yaw: 0, jitter: 2.0 },
   // east (spec 29: against the dock wall): barrels by the site office, generator and work light by the mast
-  { kind: 'barrel_blue', x: 5.3, z: 29.9, yaw: 0, jitter: 0.7 },
-  { kind: 'barrel_red', x: 4.6, z: 29.7, yaw: 0, jitter: 2.4 },
+  { kind: 'barrel_blue', x: 5.3, z: 29.0, yaw: 0, jitter: 0.7 },
+  { kind: 'barrel_red', x: 4.6, z: 29.1, yaw: 0, jitter: 2.4 },
   { kind: 'generator', x: 3.4, z: 21.0, yaw: Q, jitter: -0.2 },
   { kind: 'worklight', x: 5.2, z: 20.6, yaw: -Q, jitter: 0.35 },
   // water tower in the south-west corner (was behind the old site office, now in the closed loading dock)

@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { KEEP_CLEAR, ZONES } from '@/config/level';
+import { KEEP_CLEAR, LAND, YARD_RECT, ZONES, isInPlayArea, isInWarehouse } from '@/config/level';
+import { WAREHOUSE } from '@/config/warehouse';
 import { WORLD } from '@/config/tunables';
 import { generateContainerLayout, type ColliderBox, type Lane } from './containerLayout';
 import { WORLD_LOCAL } from './tunables';
 
 const layout = generateContainerLayout();
+const L = WORLD.container.length;
 
 function laneRect(l: Lane): { minX: number; maxX: number; minZ: number; maxZ: number } {
   return {
@@ -34,9 +36,39 @@ describe('generateContainerLayout', () => {
     expect(generateContainerLayout({ seed: 8 }).instances).not.toEqual(generateContainerLayout({ seed: 7 }).instances);
   });
 
-  it('places 60-140 containers in the yard', () => {
-    expect(layout.zoneCounts.A).toBeGreaterThanOrEqual(60);
-    expect(layout.zoneCounts.A).toBeLessThanOrEqual(140);
+  it('places 30-100 containers in the yard (the west leg of the L since spec 29)', () => {
+    expect(layout.zoneCounts.A).toBeGreaterThanOrEqual(30);
+    expect(layout.zoneCounts.A).toBeLessThanOrEqual(100);
+  });
+
+  it('fills only the west leg: nothing in the warehouse, the closed loading dock or outside the L', () => {
+    for (const c of layout.instances) {
+      expect(isInPlayArea(c.x, c.z), `${c.x},${c.z}`).toBe(true);
+      expect(isInWarehouse(c.x, c.z), `${c.x},${c.z}`).toBe(false);
+      if (c.zone === 'A') {
+        expect(c.x + L / 2).toBeLessThanOrEqual(YARD_RECT.maxX + 1e-6);
+        expect(c.z).toBeGreaterThan(YARD_RECT.minZ);
+      }
+    }
+    for (const b of layout.boxes) {
+      const h = aabbHalf(b);
+      const r = { minX: b.center.x - h.x, maxX: b.center.x + h.x, minZ: b.center.z - h.z, maxZ: b.center.z + h.z };
+      const f = WAREHOUSE.footprint;
+      expect(r.minX < f.maxX && r.maxX > f.minX + 1e-6 && r.minZ < f.maxZ && r.maxZ > f.minZ + 1e-6).toBe(false);
+    }
+  });
+
+  it('closes the yard to the north with a two-high container wall without any gap', () => {
+    const H = WORLD.container.height;
+    const z = YARD_RECT.minZ + WORLD.container.width / 2;
+    const solidAt = (x: number, y: number): boolean =>
+      layout.boxes.some((b) => !b.yaw && Math.abs(x - b.center.x) <= b.halfExtents.x && Math.abs(y - b.center.y) <= b.halfExtents.y && Math.abs(z - b.center.z) <= b.halfExtents.z);
+    for (let x = LAND.minX + 0.05; x <= YARD_RECT.maxX - 0.05; x += 0.25) {
+      for (const y of [0.3, 1.5, H + 0.5, 2 * H - 0.2, 2 * H + 2, 12]) expect(solidAt(x, y), `x ${x.toFixed(2)} y ${y}`).toBe(true);
+    }
+    const wall = layout.instances.filter((c) => Math.abs(c.z - z) < 1e-6);
+    expect(Math.max(...wall.map((c) => c.tier))).toBe(WORLD_LOCAL.yard.northWallTiers);
+    expect(WORLD_LOCAL.yard.northWallTiers * H).toBeGreaterThan(1.8 + 1);
   });
 
   it('keeps stacks within 1..maxContainerStack and flags exactly one top per stack', () => {
@@ -107,7 +139,7 @@ describe('generateContainerLayout', () => {
     for (const l of good) {
       const r = laneRect(l);
       expect(layout.boxes.some((b) => boxHitsRect(b, r)), l.id).toBe(false);
-      const z = ZONES.A;
+      const z = YARD_RECT;
       expect(r.minX).toBeGreaterThanOrEqual(z.minX);
       expect(r.maxX).toBeLessThanOrEqual(z.maxX);
       expect(r.minZ).toBeGreaterThanOrEqual(z.minZ);
