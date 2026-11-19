@@ -105,7 +105,8 @@ describe('warehouse shell layout', () => {
     }
     expect(tris).toBeGreaterThan(1000);
     expect(tris).toBeLessThan(120_000);
-    expect(g.lamps.length).toBeGreaterThan(8);
+    // only the small lamps under the mezzanine; the high-bay lamps are interior props (warehouse.glb)
+    expect(g.lamps.length).toBeGreaterThan(0);
     for (const geo of Object.values(g)) if (geo && typeof geo === 'object' && 'dispose' in geo) (geo as { dispose(): void }).dispose();
   });
 });

@@ -67,7 +67,27 @@ export const CREDITS: readonly CreditEntry[] = [
     role: 'Mobile crane truck (Ural KS3574 / interior)',
     note: 'CC-BY 4.0, sketchfab.com/3d-models/317c5dbcad974d9f99efd079060d4344 (interior dropped, decimated)',
   },
-  { name: 'Poly Haven', role: 'Cabinets, barrier, barrels, tyre, generator, work light', note: 'CC0, polyhaven.com' },
+  {
+    name: 'Monke (cosmiccobra)',
+    role: 'Warehouse pallet jack ("Low Poly Pallet Jack")',
+    note: 'CC-BY 4.0, sketchfab.com/3d-models/5b0b9b7b1e1640cf9804588a763cc9f1 (decimated, textures resized)',
+  },
+  {
+    name: 'DartleDyan',
+    role: 'Warehouse ibc tank ("IBC Tank")',
+    note: 'CC-BY 4.0, sketchfab.com/3d-models/55723c0e512242e989dbb996fbef095e (decimated, textures resized)',
+  },
+  {
+    name: 'YadroGames',
+    role: 'Warehouse wooden pallet ("Wooden Pallets")',
+    note: 'CC-BY 4.0, sketchfab.com/3d-models/dba5c00928cd400796d9f6fffdd724b3 (decimated, textures resized)',
+  },
+  {
+    name: 'Glowbox 3D',
+    role: 'Warehouse computer desk set ("Low Poly Computer Desk")',
+    note: 'CC-BY 4.0, sketchfab.com/3d-models/c67f61fa444044bcb88ec3e28f0ca7ac (decimated, textures resized)',
+  },
+  { name: 'Poly Haven', role: 'Cabinets, barrier, barrels, tyre, generator, work light; warehouse crates, boxes, tools, office furniture, lamps', note: 'CC0, polyhaven.com' },
   { name: '3DModelsCC0', role: 'Water tower, dumpster and other yard clutter', note: 'CC0, 3dmodelscc0.itch.io' },
   { name: 'Three.js', role: '3D rendering', note: 'MIT licence, threejs.org' },
   { name: 'Rapier', role: 'Physics engine (@dimforge/rapier3d-compat)', note: 'Apache-2.0, rapier.rs' },

@@ -55,7 +55,8 @@ export const WAREHOUSE_LOCAL = {
   bollardHeight: 1.1,
   /** Hanging high-bay lamps over the open floor (lens height) and the smaller ones under the mezzanine. */
   lampY: 7.4,
-  lampsX: [12.5, 21, 29.5] as readonly number[],
+  // the high-bay lamps over the floor come from the interior props (warehouse.glb, warehousePropsTunables)
+  lampsX: [] as readonly number[],
   lampsZ: [-12, -5, 2, 9] as readonly number[],
   underLampY: 3.05,
   underLampsX: [14, 20, 26, 31] as readonly number[],
