@@ -50,7 +50,7 @@ You are the only survivor of a container quay whose defence robots have been hij
   </tr>
   <tr>
     <td width="50%"><img src="docs/media/samurai.jpg" alt="Cyber samurai with a naginata"><br><sub><b>Cyber samurai</b> elite</sub></td>
-    <td width="50%"><img src="docs/media/scorpion.jpg" alt="STINGER-7 mecha scorpion between container stacks"><br><sub><b>STINGER-7</b> semi-boss</sub></td>
+    <td width="50%"><img src="docs/media/scorpion.jpg" alt="STINGER-7 mecha scorpion in gunmetal with green glowing sensors"><br><sub><b>STINGER-7</b> semi-boss: gunmetal armour, green glow</sub></td>
   </tr>
   <tr>
     <td width="50%"><img src="docs/media/crab.jpg" alt="Gunslinger Crab Mech final boss on the quay"><br><sub><b>Gunslinger Crab Mech</b>: 5800 HP, no weak points</sub></td>
