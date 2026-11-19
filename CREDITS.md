@@ -61,6 +61,7 @@ All vehicles are built into `public/assets/props/vehicles.glb` by `tools/asset-p
 
 | Asset | Source | License | Built into |
 |---|---|---|---|
+| Warehouse floor texture (`concrete_floor_worn_001`: colour, normal, AO/roughness/metal maps at 1k) | [Poly Haven](https://polyhaven.com/a/concrete_floor_worn_001) | CC0 | `public/assets/textures/warehouse-floor/` |
 | Cabinets, barrier, barrels, tyre, generator, work light (`utility_box_01/02`, `concrete_road_barrier_02`, `Barrel_01`, `barrel_03`, `old_tyre`, `portable_generator`, `flood_lights`) | [Poly Haven](https://polyhaven.com) | CC0 | `props/industrial.glb`, `industrial.py` |
 | Water tower, dumpster, AC unit, cable drum, switchgear, street box, gas cylinder, water barrel, light tower, cement mixer, pallet, portable toilet, roadblock, trash bin | [3DModelsCC0](https://3dmodelscc0.itch.io) packs: City Environment 1 and 2, Industrial 1 and 2 | CC0 | `props/terminal.glb`, `terminal.py` |
 | Naginata (held by the samurai) | [Naginata](https://opengameart.org/content/naginata) by Bioxx | CC0 | `enemies/samurai.glb` |

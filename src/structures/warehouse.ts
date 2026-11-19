@@ -1,5 +1,9 @@
 import {
   CanvasTexture,
+  RepeatWrapping,
+  SRGBColorSpace,
+  TextureLoader,
+  Vector2,
   DoubleSide,
   InstancedMesh,
   Mesh,
@@ -10,6 +14,7 @@ import {
   type Material,
 } from 'three';
 import { WAREHOUSE } from '@/config/warehouse';
+import { STRUCTURES } from './tunables';
 import { applyWeatheredPaint } from '@/world/containerModel';
 import { MeshBuilder } from '@/world/meshBuilder';
 import {
@@ -51,6 +56,8 @@ export interface WarehouseGeometry {
   liner: BufferGeometry;
   concrete: BufferGeometry;
   floor: BufferGeometry;
+  /** Saw-cut slab joints, a few millimetres above the floor. */
+  joints: BufferGeometry;
   steel: BufferGeometry;
   yellow: BufferGeometry;
   glass: BufferGeometry;
@@ -387,6 +394,65 @@ function bollards(yellow: MeshBuilder): void {
   for (const [x, z] of W.bollards) prism(yellow, [x, 0, z], [x, W.bollardHeight, z], W.bollardRadius, 8);
 }
 
+/**
+ * Interior floor: one quad 1.5 cm above the reflective asphalt (the sky reflection stays outside), with
+ * UVs in world metres / `tile` so the concrete maps repeat at a real scale, plus thin saw-cut joints.
+ */
+function floorSlab(floor: MeshBuilder, joints: MeshBuilder): void {
+  const { tile, jointSpacing: js, jointWidth: jw } = STRUCTURES.warehouseFloor;
+  const x0 = F.minX + T;
+  const x1 = F.maxX - T;
+  const z0 = F.minZ + T;
+  const z1 = F.maxZ - T;
+  const y = 0.03;
+  floor.quad([x0, y, z1], [x1, y, z1], [x1, y, z0], [x0, y, z0], [x0 / tile, -z1 / tile, x1 / tile, -z0 / tile]);
+  const yj = y + 0.002;
+  for (let x = F.minX + js; x < x1 - 0.5; x += js) joints.quad([x - jw / 2, yj, z1], [x + jw / 2, yj, z1], [x + jw / 2, yj, z0], [x - jw / 2, yj, z0]);
+  for (let z = F.minZ + js; z < z1 - 0.5; z += js) joints.quad([x0, yj, z + jw / 2], [x1, yj, z + jw / 2], [x1, yj, z - jw / 2], [x0, yj, z - jw / 2]);
+}
+
+/** Loads the CC0 concrete maps into `mat` when a DOM exists; the flat colour stays as the fallback. */
+function loadFloorMaps(mat: MeshStandardMaterial): void {
+  if (typeof document === 'undefined') return;
+  const cfg = STRUCTURES.warehouseFloor;
+  const loader = new TextureLoader();
+  // maps arrive after the resource tracker saw the material: free them with it
+  mat.addEventListener('dispose', () => {
+    for (const t of new Set([mat.map, mat.normalMap, mat.roughnessMap, mat.aoMap])) t?.dispose();
+  });
+  const prep = (url: string, srgb: boolean, apply: (t: ReturnType<TextureLoader['load']>) => void): void => {
+    loader.load(
+      url,
+      (t) => {
+        t.wrapS = RepeatWrapping;
+        t.wrapT = RepeatWrapping;
+        t.anisotropy = 8;
+        if (srgb) t.colorSpace = SRGBColorSpace;
+        apply(t);
+        mat.needsUpdate = true;
+      },
+      undefined,
+      () => {
+        /* keep the flat fallback colour */
+      },
+    );
+  };
+  prep(cfg.diffuseUrl, true, (t) => {
+    mat.map = t;
+    mat.color.setHex(0xe4e4de); // light grey sealed concrete: the shaded interior darkens it enough
+  });
+  prep(cfg.normalUrl, false, (t) => {
+    mat.normalMap = t;
+    mat.normalScale = new Vector2(cfg.normalScale, cfg.normalScale);
+  });
+  prep(cfg.armUrl, false, (t) => {
+    mat.roughnessMap = t;
+    mat.roughness = 1;
+    mat.aoMap = t;
+    mat.aoMapIntensity = 0.5;
+  });
+}
+
 /** Corridor edge lines on the floor (safety yellow), roller door to back door. */
 function floorLines(yellow: MeshBuilder): void {
   const y = 0.034;
@@ -467,13 +533,15 @@ export function buildWarehouseGeometry(): WarehouseGeometry {
   const lamps = lampPlacements(steel);
   // interior floor slab: just above the wet asphalt, which keeps its sky reflection outside only
   const floor = new MeshBuilder();
-  floor.box((F.minX + F.maxX) / 2, 0.015, (F.minZ + F.maxZ) / 2, (F.maxX - F.minX) / 2 - T, 0.015, (F.maxZ - F.minZ) / 2 - T, ['-y']);
+  const joints = new MeshBuilder();
+  floorSlab(floor, joints);
   const lamp = lampGeometry();
   return {
     cladding: cl.build(),
     liner: liner.build(),
     concrete: concrete.build(),
     floor: floor.build(),
+    joints: joints.build(),
     steel: steel.build(),
     yellow: yellow.build(),
     glass: glass.build(),
@@ -518,7 +586,9 @@ export function createWarehouseMeshes(geo: WarehouseGeometry = buildWarehouseGeo
   const concrete = new MeshStandardMaterial({ color: 0x77786f, roughness: 0.85, metalness: 0 });
   applyWeatheredPaint(concrete, { bottomY: 0, height: W.plinthHeight, wear: 0.25, key: 'warehouse-plinth' });
   // the floor sits 1.5 cm over the reflective asphalt: polygon offset keeps it on top at any distance
-  const floor = new MeshStandardMaterial({ color: 0x4d4e4b, roughness: 0.92, metalness: 0, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 });
+  const floor = new MeshStandardMaterial({ color: 0x5c5d59, roughness: 0.85, metalness: 0, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 });
+  loadFloorMaps(floor);
+  const jointMat = new MeshStandardMaterial({ color: 0x2e302e, roughness: 0.95, metalness: 0, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -6 });
   const steel = new MeshStandardMaterial({ color: 0x2c3236, roughness: 0.55, metalness: 0.7 });
   applyWeatheredPaint(steel, { bottomY: 0, height: RIDGE, wear: 0.35, key: 'warehouse-steel' });
   const yellow = new MeshStandardMaterial({ color: 0xd9a514, roughness: 0.5, metalness: 0.3 });
@@ -544,6 +614,7 @@ export function createWarehouseMeshes(geo: WarehouseGeometry = buildWarehouseGeo
   mesh(geo.liner, liner, 'liner');
   mesh(geo.concrete, concrete, 'plinth');
   mesh(geo.floor, floor, 'floor', false, true);
+  mesh(geo.joints, jointMat, 'floor-joints', false, true);
   mesh(geo.steel, steel, 'steel');
   mesh(geo.yellow, yellow, 'yellow');
   mesh(geo.glass, glass, 'glass', false, false);
@@ -567,5 +638,5 @@ export function createWarehouseMeshes(geo: WarehouseGeometry = buildWarehouseGeo
   };
   instanced(geo.lampShade, shadeMat, 'lamp-shades', true);
   instanced(geo.lampLens, lensMat, 'lamp-lenses', false);
-  return { meshes, materials: [cladding, liner, concrete, floor, steel, yellow, glass, skylight, signMat, shadeMat, lensMat] };
+  return { meshes, materials: [cladding, liner, concrete, floor, jointMat, steel, yellow, glass, skylight, signMat, shadeMat, lensMat] };
 }
