@@ -22,6 +22,7 @@ import { buildBarrier, buildBollard, buildCabin, buildCone, buildCrane, buildDru
 import { STRUCTURES } from './tunables';
 import { buildVehicleMeshes, loadVehicleGeometries } from './vehicles';
 import { buildDressingMeshes, loadDressingModels } from './dressing';
+import { mountWarehouseProps } from './warehousePropMeshes';
 
 const MODULE_ID = 'structures';
 
@@ -219,6 +220,14 @@ export function createStructuresModule(): GameModule {
         }
         ctx.renderer.markShadowsDirty();
       });
+
+      // ---- warehouse interior props (spec 29, stream C: racks, GLB props, their colliders) ----------
+      const warehouseProps = mountWarehouseProps(ctx, scope, () => res === scope);
+      ctx.testHooks.warehouseProps = { summary: warehouseProps.summary };
+      scope.onDispose(() => {
+        delete ctx.testHooks.warehouseProps;
+      });
+      // ---- end warehouse interior props ------------------------------------------------------------
 
       // ---- colliders ----------------------------------------------------------------------------
       for (const s of structureSolids()) {
