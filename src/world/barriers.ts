@@ -2,8 +2,8 @@ import { LAND } from '@/config/level';
 import { WORLD_LOCAL } from './tunables';
 
 /**
- * Pure list of the walls that close the level: a low concrete kerb all around the quay (the visible
- * chain-link fence stands on it) plus an invisible wall above it, so neither a double jump nor a
+ * Pure list of the walls that close the level: a low concrete kerb along the quay edge plus an invisible
+ * wall above it, and invisible walls on the land sides (behind the perimeter wall), so neither a double jump nor a
  * container stack leads out of the map or into the sea. `blocker` boxes are colliders only.
  */
 
@@ -36,9 +36,15 @@ export function buildBarriers(): BarrierBox[] {
     [minX, minX + t, minZ + t, maxZ - t], // west
     [maxX - t, maxX, minZ + t, maxZ - t], // east
   ];
-  for (const [x0, x1, z0, z1] of edges) {
-    out.push(box('parapet', x0, x1, 0, h, z0, z1));
-    out.push(box('blocker', x0, x1, h, top, z0, z1));
-  }
+  edges.forEach(([x0, x1, z0, z1], i) => {
+    // spec 29: the 7 m perimeter wall (perimeter.ts) replaces the visible kerb on the land sides; only the
+    // quay edge keeps its kerb, the other sides keep an invisible wall from the ground up
+    if (i === 0) {
+      out.push(box('parapet', x0, x1, 0, h, z0, z1));
+      out.push(box('blocker', x0, x1, h, top, z0, z1));
+    } else {
+      out.push(box('blocker', x0, x1, 0, top, z0, z1));
+    }
+  });
   return out;
 }

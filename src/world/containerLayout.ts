@@ -1,8 +1,11 @@
 import {
   KEEP_CLEAR,
+  LAND,
+  YARD_RECT,
   ZONES,
   type ZoneId,
 } from '@/config/level';
+import { PERIMETER_WALL } from '@/config/warehouse';
 import { WORLD } from '@/config/tunables';
 import { structureSolids } from '@/structures/layout';
 import { createRng } from './rng';
@@ -306,9 +309,46 @@ function fillDump(layout: ContainerLayout, rng: () => number, rect: Rect, blocke
   }
 }
 
-function generateYard(layout: ContainerLayout, rng: () => number, blocked: readonly Rect[]): void {
+/** Top of the invisible blocker over the yard's north wall (above anything a jump from a stack reaches). */
+const NORTH_WALL_BLOCKER_TOP = 15;
+
+/**
+ * North wall of the yard (spec 29): one row of containers along z = -24, two high, from the warehouse west
+ * wall to the perimeter wall, with one continuous collider (no gap anywhere, even between the boxes) and an
+ * invisible blocker above it. The only way from the yard to the relay court is through the warehouse.
+ */
+function generateNorthWall(layout: ContainerLayout, rng: () => number): Rect {
+  const tiers = WORLD_LOCAL.yard.northWallTiers;
+  const east = YARD_RECT.maxX;
+  const west = LAND.minX + PERIMETER_WALL.thickness;
+  const z = YARD_RECT.minZ + W / 2;
+  // whole cells only; the last few centimetres are covered by the continuous collider
+  const cells = Math.max(1, Math.round((east - west + WORLD_LOCAL.containerGap) / PITCH));
+  const heights = Array.from({ length: cells }, () => tiers);
+  // first cell flush with the warehouse wall, the row runs west; the last cell may tuck into the perimeter wall
+  const x0 = east - L / 2 - (cells - 1) * PITCH;
+  for (let c = 0; c < cells; c++) emitStack(layout, rng, 'A', x0 + c * PITCH, z, 0, heights[c] as number);
+  const minX = LAND.minX;
+  const cx = (minX + east) / 2;
+  const hx = (east - minX) / 2;
+  if (tiers > 1) {
+    layout.boxes.push({ center: { x: cx, y: ((tiers - 1) * H) / 2, z }, halfExtents: { x: hx, y: ((tiers - 1) * H) / 2, z: W / 2 }, grappleable: false, zone: 'A' });
+  }
+  layout.boxes.push({ center: { x: cx, y: (tiers - 0.5) * H, z }, halfExtents: { x: hx, y: H / 2, z: W / 2 }, grappleable: true, zone: 'A' });
+  const top = tiers * H;
+  layout.boxes.push({
+    center: { x: cx, y: (top + NORTH_WALL_BLOCKER_TOP) / 2, z },
+    halfExtents: { x: hx, y: (NORTH_WALL_BLOCKER_TOP - top) / 2, z: W / 2 },
+    grappleable: false,
+    zone: 'A',
+  });
+  return { minX, maxX: east, minZ: YARD_RECT.minZ, maxZ: YARD_RECT.minZ + W };
+}
+
+function generateYard(layout: ContainerLayout, rng: () => number, blocked: readonly Rect[], northWall: Rect): void {
   const y = WORLD_LOCAL.yard;
-  const zone = ZONES.A;
+  // the west leg of the L, south of the north wall
+  const zone: Rect = { minX: YARD_RECT.minX, maxX: YARD_RECT.maxX, minZ: northWall.maxZ, maxZ: YARD_RECT.maxZ };
   const xs = [...y.nsLanesX].sort((a, b) => a - b);
   const zs = [...y.ewAislesZ].sort((a, b) => a - b);
   // block edges: zone borders (minus margins) and lane / aisle edges
@@ -329,7 +369,12 @@ function generateYard(layout: ContainerLayout, rng: () => number, blocked: reado
 
   // every block gets its own style; the dealer makes sure each style appears
   const blocks: Rect[] = [];
-  for (const [minZ, maxZ] of rowEdges) for (const [minX, maxX] of colEdges) blocks.push({ minX, maxX, minZ, maxZ });
+  for (const [minZ, maxZ] of rowEdges) {
+    for (const [minX, maxX] of colEdges) {
+      // strips narrower than a container (along the warehouse wall) stay open ground
+      if (maxX - minX >= W && maxZ - minZ >= W) blocks.push({ minX, maxX, minZ, maxZ });
+    }
+  }
   const styles: BlockStyle[] = blocks.map((_, i) => (['rows', 'columns', 'dump'] as const)[i % 3] as BlockStyle);
   for (let i = styles.length - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1));
@@ -417,7 +462,8 @@ export function generateContainerLayout(params: Partial<LayoutParams> = {}): Con
     zoneCounts: { A: 0, B: 0, D: 0 },
   };
   const blocked = obstacleRects();
-  generateYard(layout, rng, blocked);
+  const northWall = generateNorthWall(layout, rng);
+  generateYard(layout, rng, blocked, northWall);
   const taken: Rect[] = [];
   const clusterBlocked = [...blocked, ...WORLD_LOCAL.clusters.reserved];
   generateClusters(layout, rng, 'B', taken, clusterBlocked);

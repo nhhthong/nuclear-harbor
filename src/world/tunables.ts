@@ -5,14 +5,15 @@ export const WORLD_LOCAL = {
   /** Gap between neighbouring containers in a run (m). */
   containerGap: 0.1,
   /**
-   * Container yard (zone A). The lanes are fixed (patrol posts and Duck runs rely on them) and set off
-   * centre on purpose; every block between them is filled in its own style (long rows, short columns,
-   * or a loose dump), with uneven stack heights, holes and a few boxes set down at an angle.
+   * Container yard (west leg of the L, `YARD_RECT`). The lanes are fixed (patrol posts and Duck runs rely on
+   * them): a N-S lane up from the gate apron (x = -15), one along the warehouse (x = 2) and the E-W aisle that
+   * ends at the warehouse roller door (z = -4). Every block between them is filled in its own style (long
+   * rows, short columns, or a loose dump), with uneven stack heights, holes and a few boxes set at an angle.
    */
   yard: {
     /** Centre lines of the N-S lanes and the E-W aisles (m). */
-    nsLanesX: [-11, 9] as readonly number[],
-    ewAislesZ: [-15.5, 2.5] as readonly number[],
+    nsLanesX: [-15, 2] as readonly number[],
+    ewAislesZ: [-4] as readonly number[],
     aisleWidth: 6.6,
     laneWidth: 6.6,
     /** Free strip kept along the fence and the zone borders (m). */
@@ -20,6 +21,8 @@ export const WORLD_LOCAL = {
     /** Gap between rows inside a block, and the wider straddle-carrier gap every few rows (m). */
     rowGap: 0.3,
     straddleGap: 0.8,
+    /** North wall of the yard (spec 29): containers this many high along z = -24, no gap. */
+    northWallTiers: 2,
     /** Stack height weights for 1, 2, 3 high (per row; single cells vary by one tier). */
     heightWeights: [0.15, 0.4, 0.45] as readonly number[],
     /** Chance that one cell of a row differs by a tier, and that a cell is left empty. */
@@ -45,6 +48,8 @@ export const WORLD_LOCAL = {
       { minX: 13, maxX: 28, minZ: -33, maxZ: -29 },
       { minX: 20, maxX: 28, minZ: -39, maxZ: -33 },
       { minX: 16, maxX: 32, minZ: -40, maxZ: -36 },
+      // court: in front of the warehouse back door and under its windows (spec 29)
+      { minX: 8, maxX: 31, minZ: -30, maxZ: -24 },
       // quay: east beat, supplies (the other beats run on the free ring around the boss arena)
       { minX: 14, maxX: 36, minZ: -47, maxZ: -40 },
       { minX: 3, maxX: 11, minZ: -48, maxZ: -42 },

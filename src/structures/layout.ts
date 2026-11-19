@@ -2,7 +2,7 @@ import { CRANE_SITES, LAND, fromLegacyZ } from '@/config/level';
 
 /**
  * Pure placement data of everything that stands on the quay besides containers: flood-light masts,
- * the gantry crane's solid parts, the perimeter fence and small props. No three.js here, so the
+ * the gantry crane's solid parts and small props (the warehouse shell has its own layout, warehouseLayout.ts). No three.js here, so the
  * layout is unit-testable and the world module can read lamp positions for the reflection probe.
  */
 
@@ -26,9 +26,11 @@ const LED = 0xcfe0ff;
 
 const LEGACY_FLOOD_LIGHTS: readonly FloodLight[] = [
   { id: 'gate-w', x: -21, z: 25, height: 11, aimX: -9, aimZ: 13, color: SODIUM, intensity: 2600, castShadow: true },
-  { id: 'gate-e', x: 21, z: 25, height: 11, aimX: 9, aimZ: 13, color: SODIUM, intensity: 2600, castShadow: true },
+  // spec 29: east gate mast moved in front of the dock wall (the old spot is in the closed loading dock)
+  { id: 'gate-e', x: 4.6, z: 25, height: 11, aimX: -6, aimZ: 13, color: SODIUM, intensity: 2600, castShadow: true },
   { id: 'yard-w', x: -33.6, z: 2, height: 12, aimX: -14, aimZ: 3, color: LED, intensity: 2300, castShadow: false },
-  { id: 'yard-e', x: 33.6, z: 2, height: 12, aimX: 14, aimZ: 3, color: LED, intensity: 2300, castShadow: false },
+  // spec 29: east yard mast moved onto the strip along the warehouse west wall (the old spot is inside it)
+  { id: 'yard-e', x: 6.8, z: 2, height: 12, aimX: -8, aimZ: 3, color: LED, intensity: 2300, castShadow: false },
   { id: 'court-w', x: -19, z: -15, height: 11, aimX: -3, aimZ: -14, color: SODIUM, intensity: 2800, castShadow: true },
   { id: 'court-e', x: 19, z: -15, height: 11, aimX: 4, aimZ: -17, color: SODIUM, intensity: 2400, castShadow: false },
   { id: 'quay-w', x: -32, z: -24, height: 13, aimX: -12, aimZ: -36, color: LED, intensity: 3600, castShadow: true },
@@ -109,18 +111,19 @@ function row(kind: PropKind, x0: number, z0: number, dx: number, dz: number, n: 
  * bollards along the quay edge.
  */
 const LEGACY_PROPS: readonly Prop[] = [
-  // gate chicane: two staggered rows of concrete barriers
-  ...row('barrier', -13.5, 22.6, 3.15, 0, 3, 0, 0.2),
-  ...row('barrier', 7.2, 24.4, 3.15, 0, 3, 0, 0.6),
-  { kind: 'cone', x: -3.4, z: 22.7, yaw: 0, variant: 0.1 },
-  { kind: 'cone', x: 5.2, z: 24.5, yaw: 0, variant: 0.5 },
-  { kind: 'cone', x: -1.0, z: 26.4, yaw: 0, variant: 0.9 },
-  // site office and its yard clutter (south-east corner)
-  { kind: 'cabin', x: 27.5, z: 29.6, yaw: 0, variant: 0.3 },
-  ...row('drum', 22.2, 31.6, 0.72, 0, 3, 0, 0.15),
-  { kind: 'drum', x: 22.6, z: 30.9, yaw: 0.6, variant: 0.8 },
-  { kind: 'pallet', x: 31.6, z: 25.6, yaw: 0.2, variant: 0.9 },
-  { kind: 'pallet', x: 33.0, z: 26.9, yaw: 1.4, variant: 0.4 },
+  // gate chicane: two staggered rows of concrete barriers north of the spawn (spec 29: the apron is the
+  // west leg of the L, x -36..6)
+  ...row('barrier', -11, 22.6, 3.15, 0, 3, 0, 0.2),
+  ...row('barrier', -21.5, 24.4, 3.15, 0, 2, 0, 0.6),
+  { kind: 'cone', x: -1.6, z: 22.7, yaw: 0, variant: 0.1 },
+  { kind: 'cone', x: 4.9, z: 24.5, yaw: 0, variant: 0.5 },
+  { kind: 'cone', x: -10.0, z: 26.4, yaw: 0, variant: 0.9 },
+  // site office and its clutter (south-east corner of the apron, against the dock wall)
+  { kind: 'cabin', x: 1.5, z: 31.8, yaw: 0, variant: 0.3 },
+  ...row('drum', -3.9, 31.6, 0.72, 0, 3, 0, 0.15),
+  { kind: 'drum', x: -3.5, z: 30.9, yaw: 0.6, variant: 0.8 },
+  { kind: 'pallet', x: 5.2, z: 27.6, yaw: 0.2, variant: 0.9 },
+  { kind: 'pallet', x: 5.2, z: 28.9, yaw: 1.4, variant: 0.4 },
   // south-west dump
   ...row('pallet', -31.5, 30.5, 1.5, 0, 3, 0.05, 0.3),
   ...row('drum', -26.4, 31.8, 0.7, 0.05, 4, 0, 0.55),
@@ -202,13 +205,13 @@ export const VEHICLES: readonly Vehicle[] = [
   { kind: 'sedan', x: -31, z: 19.3, yaw: 0, tint: SILVER },
   { kind: 'hatchback', x: -28, z: 19.3, yaw: 0, tint: RED },
   { kind: 'suv', x: -25, z: 19.3, yaw: 0, tint: NAVY },
-  // gate apron: east car park
-  { kind: 'van', x: 17.6, z: 18.4, yaw: 0, tint: WHITE },
-  { kind: 'pickup', x: 21, z: 18.2, yaw: 0, tint: OLIVE },
+  // gate apron: east car park, against the dock wall (spec 29)
+  { kind: 'van', x: 3.6, z: 16.6, yaw: 0, tint: WHITE },
+  { kind: 'pickup', x: 0.6, z: 16.6, yaw: 0, tint: OLIVE },
   // truck with trailer queuing at the gate
-  { kind: 'semi', x: -12, z: 24, yaw: Q, tint: WHITE },
+  { kind: 'semi', x: -2, z: 25, yaw: Q, tint: WHITE },
   // forklift at the south-west pallet dump, forks towards the pallets
-  { kind: 'forklift', x: -21, z: 31.2, yaw: -Q, tint: WHITE },
+  { kind: 'forklift', x: -21.8, z: 31.6, yaw: -Q, tint: WHITE },
   // relay court, west edge
   { kind: 'pickup', x: -30, z: -39.2, yaw: Q, tint: SILVER },
   // quay
@@ -301,31 +304,23 @@ export const DRESSING: readonly Dressing[] = [
   { kind: 'generator', x: -33.3, z: 24.2, yaw: Q, jitter: 0.15 },
   { kind: 'worklight', x: -33.6, z: 26.6, yaw: Q, jitter: -0.3 },
   // barrier walls: narrow the apron into lanes on both sides of the spawn
-  ...barrierRow(-12.4, 28.6, 4),
-  ...barrierRow(8.0, 28.6, 4),
-  ...barrierRow(16.0, 21.9, 3),
-  // tyre dump between the truck and the forklift
-  { kind: 'tyre', x: -26.4, z: 27.4, yaw: 0, stack: 4 },
-  { kind: 'tyre', x: -25.6, z: 28.1, yaw: 0, stack: 2 },
-  { kind: 'tyre', x: -26.6, z: 28.4, yaw: 0, stack: 1, jitter: 0.4 },
+  ...barrierRow(-26.2, 28.6, 4),
+  ...barrierRow(-9.0, 28.6, 4),
+  // tyre dump by the west wall
+  { kind: 'tyre', x: -30.4, z: 27.6, yaw: 0, stack: 4 },
+  { kind: 'tyre', x: -29.6, z: 28.3, yaw: 0, stack: 2 },
+  { kind: 'tyre', x: -30.6, z: 28.6, yaw: 0, stack: 1, jitter: 0.4 },
   // barrels by the west car park
   { kind: 'barrel_red', x: -22.8, z: 17.3, yaw: 0, jitter: 0.4 },
   { kind: 'barrel_red', x: -22.2, z: 17.8, yaw: 0, jitter: 1.1 },
   { kind: 'barrel_blue', x: -22.9, z: 18.0, yaw: 0, jitter: 2.0 },
-  // east: cabinets by the gate mast, barrels by the site office
-  { kind: 'cabinet_b', x: 18.6, z: 25.0, yaw: Math.PI },
-  { kind: 'cabinet_a', x: 19.9, z: 25.0, yaw: Math.PI },
-  { kind: 'barrel_blue', x: 23.6, z: 26.0, yaw: 0, jitter: 0.7 },
-  { kind: 'barrel_red', x: 24.3, z: 25.8, yaw: 0, jitter: 2.4 },
-  { kind: 'barrel_blue', x: 23.6, z: 25.1, yaw: 0, jitter: 1.6 },
-  // generator and work light by the east barrier wall
-  { kind: 'generator', x: 25.1, z: 24.1, yaw: Q, jitter: -0.2 },
-  { kind: 'worklight', x: 25.2, z: 22.2, yaw: -Q, jitter: 0.35 },
-  // site office: water tower and cable drums behind the cabin
-  { kind: 'water_tower', x: 33.2, z: 31.9, yaw: 0 },
-  { kind: 'cable_drum', x: 28.6, z: 31.6, yaw: 0, jitter: 0.2 },
-  { kind: 'cable_drum', x: 30.2, z: 32.1, yaw: Q, jitter: -0.1 },
-  { kind: 'street_box', x: 26.0, z: 31.9, yaw: Q },
+  // east (spec 29: against the dock wall): barrels by the site office, generator and work light by the mast
+  { kind: 'barrel_blue', x: 5.3, z: 29.9, yaw: 0, jitter: 0.7 },
+  { kind: 'barrel_red', x: 4.6, z: 29.7, yaw: 0, jitter: 2.4 },
+  { kind: 'generator', x: 3.4, z: 21.0, yaw: Q, jitter: -0.2 },
+  { kind: 'worklight', x: 5.2, z: 20.6, yaw: -Q, jitter: 0.35 },
+  // water tower in the south-west corner (was behind the old site office, now in the closed loading dock)
+  { kind: 'water_tower', x: -33.6, z: 32.0, yaw: 0 },
 
   // relay court, west: a small construction site
   { kind: 'cement_mixer', x: -24.5, z: -30.2, yaw: 0, jitter: 0.4 },
