@@ -84,14 +84,8 @@ describe('placements against the real layout', () => {
     }
   });
 
-  it('puts every elevated supply on a one-high container top, inside the top face (double jump)', () => {
-    const elevated = ZONE_PLACEMENTS.filter((q) => q.elevated);
-    expect(elevated.length).toBeGreaterThanOrEqual(2);
-    for (const p of elevated) {
-      const top = surfaceAt(p.x, p.z, -0.6);
-      expect(top, `${p.kind} at ${p.x}, ${p.z}`).toBeGreaterThanOrEqual(2.5);
-      expect(top).toBeLessThan(3);
-    }
+  it('keeps every supply on the ground (the lowered jump cannot reach container tops)', () => {
+    expect([...ZONE_PLACEMENTS, ...BOSS_PLACEMENTS].filter((q) => q.elevated)).toHaveLength(0);
   });
 
   it('keeps every supply off the tower', () => {
