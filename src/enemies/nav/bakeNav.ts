@@ -1,4 +1,4 @@
-import { LAND } from '@/config/level';
+import { LAND, isInPlayArea } from '@/config/level';
 import { AI_SCHEDULING } from '@/config/tunables';
 import type { GameContext } from '@/core/GameContext';
 import { QueryGroups } from '@/physics/groups';
@@ -34,7 +34,10 @@ export interface BakeResult {
 
 /**
  * Bakes the nav grid from static colliders: per cell, a box overlap query over the obstacle
- * height band (0.2 .. 2.0 m) plus one downward ray that must find ground. Sea (no ground) is blocked.
+ * height band (0.2 .. 2.0 m) plus one downward ray that must find ground. Sea (no ground) is blocked,
+ * and so is the closed loading dock outside the L (spec 29). The warehouse walls are colliders, so robots
+ * on foot enter it through the door openings only; the mezzanine deck lies above the band (walkable
+ * under it) and robots do not climb the stair (its ramp blocks the cells where it is below 2 m).
  */
 export function bakeNav(ctx: GameContext, cellSize: number = AI_SCHEDULING.navCellSize): BakeResult {
   const t0 = performance.now();
@@ -52,10 +55,15 @@ export function bakeNav(ctx: GameContext, cellSize: number = AI_SCHEDULING.navCe
   const origin = { x: 0, y: OBSTACLE_MIN_Y + 0.05, z: 0 };
   const down = { x: 0, y: -1, z: 0 };
 
+  const harbor = !ctx.flags.sandbox;
   for (let row = 0; row < nav.rows; row++) {
     const z = nav.centerZ(row);
     for (let col = 0; col < nav.cols; col++) {
       const x = nav.centerX(col);
+      if (harbor && !isInPlayArea(x, z)) {
+        nav.setBlocked(col, row);
+        continue;
+      }
       position.x = x;
       position.z = z;
       const blockedByObstacle =
