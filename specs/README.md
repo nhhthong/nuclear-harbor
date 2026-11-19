@@ -30,6 +30,6 @@
 | T-21-dinosaur | dinosaur semi-boss | REPLACED by the mecha scorpion STINGER-7 (`src/scorpion`) |
 | T-22-final-boss | spherical boss, cinematic | landing cinematic kept for the crab; boss body replaced (`27-crab-boss`) |
 
-Folders numbered 24 and above are current and describe the game as built: `24-ads-autoreload-gravity`, `25-world-dressing-and-mood`, `26-enemy-models-and-biped` (Biped, Striker, Spot model; roster 22) and `27-crab-boss` (Gunslinger Crab Mech, dragonfly drones; ammo budget 348 hits). Each has `spec.md`, `checklists/requirements.md`, `plan.md` and a fully ticked `tasks.md`.
+Folders numbered 24 and above are current and describe the game as built: `24-ads-autoreload-gravity`, `25-world-dressing-and-mood`, `26-enemy-models-and-biped` (Biped, Striker, Spot model; roster 22) `27-crab-boss` (Gunslinger Crab Mech, dragonfly drones; ammo budget 348 hits) and `28-scorpion-model` (STINGER-7 look and animation from an authored GLB; gameplay unchanged). Each has `spec.md`, `checklists/requirements.md`, `plan.md` and a fully ticked `tasks.md`.
 
 New work: follow `docs/SPECKIT.md` (new features use Spec Kit; small fixes and tuning do not).

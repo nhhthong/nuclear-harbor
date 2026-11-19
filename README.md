@@ -112,7 +112,7 @@ Budgets: 60 FPS desktop target, at most 350 draw calls (about 100 to 180 measure
 ## Status and limitations
 
 - Verified: `tsc`, **513 unit tests**, build, CI. Not verified: a full run, balance, frame rate on a real GPU. `tests/e2e/` scripts are stale and `smoke` was not re-run after the reworks.
-- The scorpion and the Bomber Duck are primitive-built and read as low-poly; the crab can show a pale orange wash while a skill telegraphs; the in-game Restart reloads the page.
+- The Bomber Duck is primitive-built and reads as low-poly (the scorpion is an authored model with a procedural fallback; its legs swing rigidly about the hips, so feet slide a little); the crab can show a pale orange wash while a skill telegraphs; the in-game Restart reloads the page.
 - Differences from the original design: [`docs/DEVIATIONS.md`](docs/DEVIATIONS.md). Architecture and conventions: [`docs/PLAN.md`](docs/PLAN.md). Assets: [`docs/ASSETS.md`](docs/ASSETS.md). AI session rules: [`CLAUDE.md`](CLAUDE.md).
 
 ## Contributing
@@ -142,10 +142,11 @@ Run `npm run typecheck && npm test && npm run build`, keep gameplay numbers in t
 | Medium Mech Striker ([Medium Mech Striker](https://sketchfab.com/3d-models/27ba717c173a40b7841d2f2c6a89d823) by **MSGDI**) | CC-BY 4.0 | Decimated, 512 px textures, idle, walk and run clips; in-game Credits |
 | Spot dog ([Walking Robotic Dog](https://sketchfab.com/3d-models/cb8157f40d39456d9f37865b4e6e7477) by **reececreoplan (CreoPlan Ltd)**) | CC-BY 4.0 | Decimated, 512 px textures, leg clips merged; in-game Credits |
 | Final boss ([Gunslinger Crab Mech v1.2](https://sketchfab.com/3d-models/5147619f337a45b0974f349eac27b34a) by **vaportrash**) | CC-BY 4.0 | Legs split at the hips, decimated, textures resized (`public/assets/enemies/crab-boss.glb`, `tools/asset-pipeline/boss_sf.py`); in-game Credits |
+| Semi-boss STINGER-7 ([Scorpion Robot](https://sketchfab.com/3d-models/e44be9a622af4e85b4b10cf59b25de1a) by **Mirandanimator**) | CC-BY 4.0 | Split into body, four legs and a four-segment tail, decimated to 15.6k triangles, recoloured (dark gunmetal, green emissive accents) (`public/assets/enemies/scorpion.glb`, `scorpion_sf.py`); in-game Credits |
 | Boss drones ([Light Assault Mech](https://sketchfab.com/3d-models/d1ca5065b5184646bc7028597d0ce049) by **Lagst**) | CC-BY 4.0 | Armature applied, decimated (`public/assets/enemies/dragonfly-drone.glb`, `drone_sf.py`); in-game Credits |
 | Samurai naginata ([Naginata](https://opengameart.org/content/naginata) by Bioxx) | CC0 | Held forward from the wrist (`samurai.glb`) |
 
-Everything else (the scorpion, the Bomber Duck, containers, crane, sounds, UI) is generated procedurally by this repository's code. The raw source downloads are not committed; each build script lists the exact source files.
+Everything else (the Bomber Duck, the procedural fallback scorpion, containers, crane, sounds, UI) is generated procedurally by this repository's code. The raw source downloads are not committed; each build script lists the exact source files.
 
 **Acknowledgements.** The reference models in [`docs/reference-models/`](docs/reference-models) inspired the robot
 designs; they are visual references only. This project was developed with substantial help from AI coding agents

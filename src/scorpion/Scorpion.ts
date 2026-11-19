@@ -17,11 +17,11 @@ import type { ResourceTracker } from '@/assets/ResourceTracker';
 import { DEFAULT_ZONE_MULTIPLIERS, resolveDamage } from '@/combat/damage';
 import { isOnLand } from '@/config/level';
 import type { GameContext } from '@/core/GameContext';
-import type { Damageable, DamageInfo, DamageResult, HitZone } from '@/core/types';
+import type { Damageable, DamageInfo, DamageResult } from '@/core/types';
 import { Groups, QueryGroups } from '@/physics/groups';
 import { chooseSkill, createCooldowns, skillTelegraph, startCooldown, tickCooldowns } from './brain';
 import { arcPosition, fanHit, inPool, ramContact, shieldedDamage, venomBurstDamage } from './combat';
-import { createScorpionRig, createPose, type ScorpionAssets, type ScorpionRig } from './ScorpionModel';
+import { createPose, type ScorpionAssets, type ScorpionRig } from './ScorpionModel';
 import type { ScorpionAudio } from './scorpionAudio';
 import type { ScorpionSkill } from './events';
 import { SCORPION } from './tunables';
@@ -302,7 +302,7 @@ export class Scorpion implements Damageable {
     this.spot.set(spotX, 0, spotZ);
     this.position.set(spotX, -SCORPION.heightM, spotZ);
 
-    this.rig = createScorpionRig(assets);
+    this.rig = assets.makeRig();
     this.root.add(this.rig.group);
     ctx.scene.add(this.root);
     res.track(this.root);
@@ -421,28 +421,17 @@ export class Scorpion implements Damageable {
     return { dealt: result.dealt, zone: result.zone, killed: result.killed, absorbed: result.absorbed };
   }
 
-  // ---- hit volumes (model frame: +Z forward, y from the model origin) ----------------------
+  // ---- hit volumes (model frame: head towards -Z, y from the ground; the boxes come from the look in use) ----
 
   private buildColliders(CD: typeof ColliderDesc): void {
-    const s = this.assets.scale;
-    const g = this.assets.groundOffset;
-    const add = (zone: HitZone, rx: number, ry: number, rz: number, hx: number, hy: number, hz: number): void => {
-      const desc = CD.cuboid(hx * s, hy * s, hz * s)
-        .setTranslation(-rx * s, (ry + g) * s, -rz * s)
+    for (const box of this.assets.colliders) {
+      const desc = CD.cuboid(box.half.x, box.half.y, box.half.z)
+        .setTranslation(box.center.x, box.center.y, box.center.z)
         .setCollisionGroups(Groups.enemy);
       this.colliders.push(
-        this.ctx.physics.addCollider(desc, { kind: 'enemy', damageable: this, hitZone: zone, owner: this }, this.body),
+        this.ctx.physics.addCollider(desc, { kind: 'enemy', damageable: this, hitZone: box.zone, owner: this }, this.body),
       );
-    };
-    // carapace, head sensors (critical), claws, tail arch, stinger bulb (critical)
-    add('body', 0, 1.08, -0.15, 0.62, 0.34, 1.3);
-    add('critical', 0, 1.36, 0.98, 0.42, 0.2, 0.42);
-    add('body', -0.85, 1.08, 1.95, 0.42, 0.26, 0.7);
-    add('body', 0.85, 1.08, 1.95, 0.42, 0.26, 0.7);
-    add('body', 0, 1.75, -1.55, 0.3, 0.5, 0.32);
-    add('body', 0, 2.75, -1.55, 0.3, 0.52, 0.36);
-    add('body', 0, 3.15, -0.8, 0.28, 0.3, 0.6);
-    add('critical', 0, 3.0, 0.05, 0.26, 0.34, 0.4);
+    }
   }
 
   // ---- helpers -----------------------------------------------------------------------------
