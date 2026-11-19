@@ -1,18 +1,6 @@
-import {
-  AdditiveBlending,
-  BoxGeometry,
-  CapsuleGeometry,
-  Color,
-  InstancedMesh,
-  Matrix4,
-  MeshBasicMaterial,
-  MeshStandardMaterial,
-  Object3D,
-  SphereGeometry,
-  Vector3,
-} from 'three';
+import { AdditiveBlending, Color, InstancedMesh, Matrix4, MeshBasicMaterial, Object3D, SphereGeometry, Vector3 } from 'three';
 import type { BufferGeometry, Material, Scene } from 'three';
-import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { proceduralDroneGeometry, proceduralDroneMaterial } from '@/assets/droneAsset';
 import type { ResourceTracker } from '@/assets/ResourceTracker';
 import { resolveDamage } from '@/combat/damage';
 import type { Damageable, DamageInfo, DamageResult } from '@/core/types';
@@ -100,8 +88,8 @@ export class Drones {
       geometry = assets.geometry;
       material = assets.material;
     } else {
-      geometry = proceduralDrone();
-      material = new MeshStandardMaterial({ color: 0x3a3f4a, metalness: 0.6, roughness: 0.4, emissive: new Color(0x401008) });
+      geometry = proceduralDroneGeometry();
+      material = proceduralDroneMaterial();
     }
     this.mesh = new InstancedMesh(geometry, material, D.cap);
     this.mesh.frustumCulled = false;
@@ -278,26 +266,4 @@ export class Drones {
     this.mesh.visible = live > 0;
     this.glow.visible = live > 0;
   }
-}
-
-/** Small procedural dragonfly (fallback when the GLB is missing): body, head, tail, four thin wings. */
-function proceduralDrone(): BufferGeometry {
-  const parts: BufferGeometry[] = [];
-  const body = new CapsuleGeometry(0.16, 0.7, 4, 8);
-  body.rotateX(Math.PI / 2);
-  parts.push(body);
-  const head = new SphereGeometry(0.2, 10, 8);
-  head.translate(0, 0, -0.6);
-  parts.push(head);
-  for (const sx of [-1, 1]) {
-    for (const z of [-0.15, 0.2]) {
-      const wing = new BoxGeometry(1.5, 0.02, 0.28);
-      wing.translate(sx * 0.85, 0.12, z);
-      parts.push(wing);
-    }
-  }
-  const merged = mergeGeometries(parts.map((g) => (g.index ? g.toNonIndexed() : g)), false);
-  for (const g of parts) g.dispose();
-  if (!merged) throw new Error('drone geometry merge failed');
-  return merged;
 }

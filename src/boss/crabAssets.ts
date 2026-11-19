@@ -1,13 +1,14 @@
-import { Box3, Mesh, Vector3 } from 'three';
-import type { BufferGeometry, Material, Object3D } from 'three';
+import { Box3, Vector3 } from 'three';
+import type { Object3D } from 'three';
+import { droneFrom, loadDroneAsset, type DroneAssets } from '@/assets/droneAsset';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { CRAB } from './tunables';
 
 /**
  * Optional authored look of the final boss (spec 27): the "Gunslinger Crab Mech v1.2" by vaportrash and the
  * "Light Assault Mech" dragonfly by Lagst (Sketchfab, CC-BY 4.0), built by `tools/asset-pipeline/boss_sf.py`
- * and `drone_sf.py` (credits: docs/ASSETS.md, src/ui/credits.ts). The loader lives in the boss module on
- * purpose (nothing is shared with src/enemies). When the crab fails to load the procedural TITAN-04 body is
+ * and `drone_sf.py` (credits: docs/ASSETS.md, src/ui/credits.ts). The crab loader lives in the boss module; the
+ * dragonfly is loaded once through `src/assets/droneAsset.ts`, shared with the `drone` enemy (spec 29). When the crab fails to load the procedural TITAN-04 body is
  * used; without the dragonfly the drones are small procedural flyers.
  */
 
@@ -31,10 +32,7 @@ export interface CrabAssets {
   arms: Map<string, { shoulder: Vector3; tip: Vector3 }>;
 }
 
-export interface DroneAssets {
-  geometry: BufferGeometry;
-  material: Material;
-}
+export { droneFrom, type DroneAssets };
 
 interface LoadedGltf {
   scene: Object3D;
@@ -79,22 +77,6 @@ export function crabFrom(gltf: LoadedGltf): CrabAssets {
   return { scene: root, muzzleL: at('muzzle_L'), muzzleR: at('muzzle_R'), mortar: at('mortar'), bay: at('bay'), bones, arms };
 }
 
-/** First mesh of the dragonfly GLB (one node, `drone_body`). */
-export function droneFrom(gltf: LoadedGltf): DroneAssets {
-  let mesh: Mesh | null = null;
-  gltf.scene.traverse((o) => {
-    if (!mesh && o instanceof Mesh) mesh = o;
-  });
-  const m = mesh as Mesh | null;
-  if (!m) throw new Error('drone: no mesh');
-  const material = Array.isArray(m.material) ? m.material[0] : m.material;
-  if (!material) throw new Error('drone: no material');
-  gltf.scene.updateMatrixWorld(true);
-  const geometry = m.geometry.clone();
-  geometry.applyMatrix4(m.matrixWorld);
-  return { geometry, material };
-}
-
 const defaultLoader: AssetLoader = (url) => new GLTFLoader().loadAsync(url);
 
 export interface BossAssets {
@@ -112,7 +94,11 @@ export async function loadBossAssets(loader: AssetLoader = defaultLoader): Promi
       return null;
     }
   };
-  const [crab, drone] = await Promise.all([one(CRAB.crabUrl, crabFrom, 'crab model'), one(CRAB.droneUrl, droneFrom, 'drone model')]);
+  // the dragonfly goes through the shared cache (one fetch for the boss and the drone enemies); a custom loader bypasses it
+  const [crab, drone] = await Promise.all([
+    one(CRAB.crabUrl, crabFrom, 'crab model'),
+    loadDroneAsset(CRAB.droneUrl, loader === defaultLoader ? undefined : loader, 'boss'),
+  ]);
   return { crab, drone };
 }
 

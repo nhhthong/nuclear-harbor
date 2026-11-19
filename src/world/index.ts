@@ -6,6 +6,8 @@ import { PERFORMANCE, WORLD } from '@/config/tunables';
 import type { GameContext } from '@/core/GameContext';
 import type { GameModule } from '@/core/GameModule';
 import { buildBarriers } from './barriers';
+import { perimeterBoxes } from './perimeter';
+import { createPerimeterMeshes } from './perimeterModel';
 import { applyWeatheredPaint, buildShelterGeometry, createContainerMeshes } from './containerModel';
 import { SHELTERS, shelterBoxes, shelterFootprint } from './shelters';
 import { generateContainerLayout } from './containerLayout';
@@ -160,6 +162,15 @@ export function createWorldModule(): GameModule {
       kerb.receiveShadow = true;
       scope.track(kerb);
       scene.add(kerb);
+
+      // ---- 7 m perimeter wall around the L (spec 29) and its invisible blockers -----------------
+      for (const b of perimeterBoxes()) {
+        addCollider(ctx.physics.addStaticBox({ center: b.center, halfExtents: b.halfExtents, meta: { kind: 'static' } }));
+      }
+      for (const m of createPerimeterMeshes().meshes) {
+        scope.track(m);
+        scene.add(m);
+      }
 
       // ---- ocean, ship backdrop with lit windows ------------------------------------------------
       ocean = createOcean(lighting.sunDir, lighting.fogColor);

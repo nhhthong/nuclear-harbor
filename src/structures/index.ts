@@ -1,63 +1,31 @@
 import {
-  CanvasTexture,
   Color,
-  DoubleSide,
   InstancedMesh,
   Mesh,
   MeshBasicMaterial,
   MeshStandardMaterial,
   Object3D,
-  RepeatWrapping,
   type BufferGeometry,
   type Material,
 } from 'three';
 import type { Collider } from '@dimforge/rapier3d-compat';
-import { CRANE_SITES, LAND } from '@/config/level';
+import { CRANE_SITES } from '@/config/level';
 import type { GameContext } from '@/core/GameContext';
 import type { GameModule } from '@/core/GameModule';
 import { applyWeatheredPaint } from '@/world/containerModel';
-import { WORLD_LOCAL } from '@/world/tunables';
 import { CRANE, FLOOD_LIGHTS, PROPS, VEHICLES, structureSolids, type Prop, type PropKind } from './layout';
-import { buildBarrier, buildBollard, buildCabin, buildCone, buildCrane, buildDrum, buildFence, buildMast, buildPallet } from './models';
-import { STRUCTURES } from './tunables';
+import { buildBarrier, buildBollard, buildCabin, buildCone, buildCrane, buildDrum, buildMast, buildPallet } from './models';
 import { buildVehicleMeshes, loadVehicleGeometries } from './vehicles';
 import { buildDressingMeshes, loadDressingModels } from './dressing';
+import { createWarehouseMeshes } from './warehouse';
+import { warehouseColliders } from './warehouseLayout';
+import { mountWarehouseProps } from './warehousePropMeshes';
 
 const MODULE_ID = 'structures';
 
-function createChainLinkTexture(): CanvasTexture {
-  const size = 128;
-  const canvas = document.createElement('canvas');
-  canvas.width = size;
-  canvas.height = size;
-  const g = canvas.getContext('2d');
-  if (g) {
-    g.clearRect(0, 0, size, size);
-    g.strokeStyle = 'rgba(190,196,200,1)';
-    g.lineWidth = 5;
-    // two diagonal wire families = diamond mesh, 2 diamonds per tile
-    for (let i = -2; i <= 4; i++) {
-      g.beginPath();
-      g.moveTo(i * 64, 0);
-      g.lineTo(i * 64 + size, size);
-      g.stroke();
-      g.beginPath();
-      g.moveTo(i * 64, 0);
-      g.lineTo(i * 64 - size, size);
-      g.stroke();
-    }
-  }
-  const tex = new CanvasTexture(canvas);
-  tex.wrapS = RepeatWrapping;
-  tex.wrapT = RepeatWrapping;
-  tex.repeat.set(4, 4);
-  tex.anisotropy = 8;
-  return tex;
-}
-
 /**
  * Everything that stands on the quay besides containers: the gantry crane, flood-light masts (emissive lenses
- * only: the sun is the single real light), the perimeter fence and the hand-placed props.
+ * only: the sun is the single real light), the warehouse shell and the hand-placed props.
  */
 export function createStructuresModule(): GameModule {
   let res: ReturnType<GameContext['resources']['scope']> | null = null;
@@ -124,25 +92,12 @@ export function createStructuresModule(): GameModule {
         }
       }
 
-      // ---- fence on the kerb (west, south, east; the quay edge stays open to the water) ---------
-      const k = WORLD_LOCAL.barriers;
-      const inset = k.parapetThickness / 2;
-      const { minX, maxX, minZ, maxZ } = LAND;
-      const fence = buildFence(
-        [
-          { x0: minX + inset, z0: minZ + 4, x1: minX + inset, z1: maxZ - inset },
-          { x0: minX + inset, z0: maxZ - inset, x1: maxX - inset, z1: maxZ - inset },
-          { x0: maxX - inset, z0: maxZ - inset, x1: maxX - inset, z1: minZ + 4 },
-        ],
-        k.parapetHeight,
-        STRUCTURES.fenceHeight,
-      );
-      const frame = add(new Mesh(fence.frame, galvanised));
-      frame.castShadow = true;
-      const chain = createChainLinkTexture();
-      const meshMat = new MeshStandardMaterial({ map: chain, alphaTest: 0.45, side: DoubleSide, roughness: 0.45, metalness: 0.9, color: 0xaab0b4 });
-      const fenceMesh = add(new Mesh(fence.mesh, meshMat));
-      fenceMesh.name = 'fence-mesh';
+      // ---- warehouse shell (spec 29; the 7 m perimeter wall in the world module replaced the fence) ----
+      const warehouse = createWarehouseMeshes();
+      for (const m of warehouse.meshes) add(m);
+      for (const b of warehouseColliders()) {
+        colliders.push(ctx.physics.addStaticBox({ center: b.center, halfExtents: b.half, rotation: b.rotation, meta: { kind: 'static' } }));
+      }
 
       // ---- props --------------------------------------------------------------------------------
       const byKind = (kind: PropKind): Prop[] => PROPS.filter((p) => p.kind === kind);
@@ -219,6 +174,14 @@ export function createStructuresModule(): GameModule {
         }
         ctx.renderer.markShadowsDirty();
       });
+
+      // ---- warehouse interior props (spec 29, stream C: racks, GLB props, their colliders) ----------
+      const warehouseProps = mountWarehouseProps(ctx, scope, () => res === scope);
+      ctx.testHooks.warehouseProps = { summary: warehouseProps.summary };
+      scope.onDispose(() => {
+        delete ctx.testHooks.warehouseProps;
+      });
+      // ---- end warehouse interior props ------------------------------------------------------------
 
       // ---- colliders ----------------------------------------------------------------------------
       for (const s of structureSolids()) {

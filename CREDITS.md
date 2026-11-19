@@ -29,6 +29,18 @@ Project code is released under the [MIT License](LICENSE). Third-party assets an
 | Final boss | [Gunslinger Crab Mech v1.2](https://sketchfab.com/3d-models/5147619f337a45b0974f349eac27b34a) | vaportrash | Legs split at the hips, decimated, textures resized | `enemies/crab-boss.glb`, `boss_sf.py` |
 | Boss drones | [Light Assault Mech](https://sketchfab.com/3d-models/d1ca5065b5184646bc7028597d0ce049) | Lagst | Armature applied, decimated | `enemies/dragonfly-drone.glb`, `drone_sf.py` |
 
+## Warehouse props (spec 29)
+
+| Asset | Source | Author | Licence | Built into |
+|---|---|---|---|---|
+| Pallet jack | [Low Poly Pallet Jack](https://sketchfab.com/3d-models/5b0b9b7b1e1640cf9804588a763cc9f1) | Monke (cosmiccobra) | CC-BY 4.0 | `props/warehouse.glb`, `warehouse_props.py` (decimated, textures resized) |
+| IBC tank | [IBC Tank](https://sketchfab.com/3d-models/55723c0e512242e989dbb996fbef095e) | DartleDyan | CC-BY 4.0 | `props/warehouse.glb`, `warehouse_props.py` (decimated, textures resized) |
+| Wooden pallet | [Wooden Pallets](https://sketchfab.com/3d-models/dba5c00928cd400796d9f6fffdd724b3) | YadroGames | CC-BY 4.0 | `props/warehouse.glb`, `warehouse_props.py` (decimated, textures resized) |
+| Computer desk set | [Low Poly Computer Desk](https://sketchfab.com/3d-models/c67f61fa444044bcb88ec3e28f0ca7ac) | Glowbox 3D | CC-BY 4.0 | `props/warehouse.glb`, `warehouse_props.py` (decimated, textures resized) |
+| Crates, boxes, plastic crates, barrel, jerrycan, propane tank, tool cart, welding cart, tool chest, bench vice, ladder, office desk, drawer cabinet, stool, binder, trash can, fire extinguisher, hanging lamp, wet floor sign, cement bag (`cardboard_box_01`, `wooden_crate_01`, `wooden_crate_02`, `plastic_crate_01`, `Barrel_02`, `metal_jerrycan`, `propane_tank`, `tool_cart`, `portable_welding_cart`, `metal_tool_chest`, `bench_vice_01`, `ladder_sectioned_01`, `metal_office_desk`, `drawer_cabinet`, `metal_stool_01`, `binder_notebook`, `metal_trash_can`, `korean_fire_extinguisher_01`, `hanging_industrial_lamp`, `WetFloorSign_01`, `cement_bag`) | [Poly Haven](https://polyhaven.com) | Poly Haven contributors | CC0 | `props/warehouse.glb`, `warehouse_props.py` |
+
+The pallet racks and the workbench are procedural (`src/structures/warehousePropMeshes.ts`).
+
 ## Vehicles (Sketchfab, CC-BY 4.0)
 
 | Vehicle | Model | Author | Changes |
@@ -49,6 +61,7 @@ All vehicles are built into `public/assets/props/vehicles.glb` by `tools/asset-p
 
 | Asset | Source | License | Built into |
 |---|---|---|---|
+| Warehouse floor texture (`concrete_floor_worn_001`: colour, normal, AO/roughness/metal maps at 1k) | [Poly Haven](https://polyhaven.com/a/concrete_floor_worn_001) | CC0 | `public/assets/textures/warehouse-floor/` |
 | Cabinets, barrier, barrels, tyre, generator, work light (`utility_box_01/02`, `concrete_road_barrier_02`, `Barrel_01`, `barrel_03`, `old_tyre`, `portable_generator`, `flood_lights`) | [Poly Haven](https://polyhaven.com) | CC0 | `props/industrial.glb`, `industrial.py` |
 | Water tower, dumpster, AC unit, cable drum, switchgear, street box, gas cylinder, water barrel, light tower, cement mixer, pallet, portable toilet, roadblock, trash bin | [3DModelsCC0](https://3dmodelscc0.itch.io) packs: City Environment 1 and 2, Industrial 1 and 2 | CC0 | `props/terminal.glb`, `terminal.py` |
 | Naginata (held by the samurai) | [Naginata](https://opengameart.org/content/naginata) by Bioxx | CC0 | `enemies/samurai.glb` |

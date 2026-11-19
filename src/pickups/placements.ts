@@ -1,4 +1,5 @@
-import { BOSS_ARENA, fromLegacyZ, type ZoneId } from '@/config/level';
+import { BOSS_ARENA, fromLegacyZ, zoneAt, type ZoneId } from '@/config/level';
+import { WAREHOUSE } from '@/config/warehouse';
 import { ECONOMY } from '@/config/tunables';
 import type { PickupKind } from '@/core/types';
 import { PICKUP } from './tunables';
@@ -35,23 +36,27 @@ const m = (zone: ZoneId, x: number, z: number, elevated = false, castFromY?: num
 
 
 /**
- * Zone placement for the quay: 7 crates and 2 medkits. All of them are on the ground since the jump was lowered (the double jump no longer reaches 2.6 m container tops). `placements.test.ts` checks every position against the
+ * Zone placement for the quay: 8 crates (the last one at `WAREHOUSE.supplySpot`, spec 29) and 2 medkits. All of them are on the ground since the jump was lowered (the double jump no longer reaches 2.6 m container tops). `placements.test.ts` checks every position against the
  * generated container layout and the props.
  */
 export const ZONE_PLACEMENTS: readonly PickupCandidate[] = [
-  // C Gate Apron
+  // C Gate Apron (spec 29: the west leg of the L; the east crate moved out of the closed loading dock)
   c('C', -24, fromLegacyZ(27)),
-  c('C', 26, fromLegacyZ(23)),
-  // A Container Yard: lane and aisle crossings and open ground (all supplies are on the ground)
-  c('A', -11, 9),
-  c('A', 9, -8),
-  c('A', -16, -11), // west blocks, on the ground (was on a one-high stack; the lower jump no longer reaches container tops)
-  m('A', -0.5, -27.5), // aisle facing the relay court, on the ground (was on a one-high stack)
+  c('C', -0.5, 21.2),
+  // A Container Yard (west leg): lanes and the aisle to the warehouse door (all supplies are on the ground)
+  c('A', -15, 9),
+  c('A', 3.5, -12),
+  c('A', -16, -11),
+  // A Warehouse: on the mezzanine deck (ray cast from below the roof); the floor spot under it is
+  // WAREHOUSE.supplySpot, reserved for the drone stream's extra crate
+  m('A', 21, -20.5, false, 5.5),
   // B Relay Court
   c('B', -4, fromLegacyZ(-16.5)),
   // D Quay, east of the boss arena
   c('D', 30, fromLegacyZ(-26)),
   m('D', 28, fromLegacyZ(-35)),
+  // spec 29: the drones' crate, inside the warehouse under the mezzanine (reserved spot; cast from below its floor)
+  c(zoneAt(WAREHOUSE.supplySpot.x, WAREHOUSE.supplySpot.z) ?? 'A', WAREHOUSE.supplySpot.x, WAREHOUSE.supplySpot.z, false, WAREHOUSE.mezzanine.floorY - 0.6),
 ];
 
 /** Boss supplies: ring just outside the arena, spread over the landward half so every spot is on land. */

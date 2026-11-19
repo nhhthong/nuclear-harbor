@@ -18,6 +18,8 @@ export interface StaticBoxOptions {
   halfExtents: Vec3;
   /** Rotation around Y in radians. */
   yaw?: number;
+  /** Full rotation (unit quaternion); overrides `yaw` (stair ramps, roof planes). */
+  rotation?: { x: number; y: number; z: number; w: number };
   /** Interaction groups; defaults to Groups.world (or worldGrappleable when meta.grappleable). */
   groups?: number;
   meta?: ColliderMeta;
@@ -183,7 +185,8 @@ export class PhysicsWorld {
     const desc = RAPIER.ColliderDesc.cuboid(halfExtents.x, halfExtents.y, halfExtents.z)
       .setTranslation(center.x, center.y, center.z)
       .setCollisionGroups(options.groups ?? (meta?.grappleable ? Groups.worldGrappleable : Groups.world));
-    if (yaw !== 0) desc.setRotation({ x: 0, y: Math.sin(yaw / 2), z: 0, w: Math.cos(yaw / 2) });
+    if (options.rotation) desc.setRotation(options.rotation);
+    else if (yaw !== 0) desc.setRotation({ x: 0, y: Math.sin(yaw / 2), z: 0, w: Math.cos(yaw / 2) });
     const collider = this.world.createCollider(desc);
     this.setMeta(collider, meta ?? { kind: 'static' });
     return collider;
