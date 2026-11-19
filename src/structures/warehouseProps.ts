@@ -119,9 +119,16 @@ const Q = Math.PI / 2;
 const Z = WAREHOUSE.propZones;
 const R = WAREHOUSE_PROPS.racks;
 
+/** Upright cylinders: their footprint does not depend on the yaw. */
+const ROUND_KINDS = new Set<WarehousePropKind>(['barrel', 'propane_tank']);
+
 /** Axis-aligned footprint of a placed item (rotation and lean included). */
 export function propFootprint(p: Pick<PlacedProp, 'kind' | 'x' | 'z' | 'yaw' | 'tilt'>): Rect {
   const s = WAREHOUSE_PROP_SIZE[p.kind];
+  if (ROUND_KINDS.has(p.kind)) {
+    const r = Math.max(s.w, s.d) / 2;
+    return { minX: p.x - r, maxX: p.x + r, minZ: p.z - r, maxZ: p.z + r };
+  }
   const d = s.d + (p.tilt ? Math.abs(Math.sin(p.tilt)) * s.h * 2 : 0);
   const c = Math.abs(Math.cos(p.yaw));
   const n = Math.abs(Math.sin(p.yaw));
@@ -333,7 +340,7 @@ function buildWorkshop(b: Builder): void {
   // carts along the south edge, backs to the wall
   const cart = b.put('tool_cart', w.minX + 2.2, w.maxZ - WAREHOUSE_PROP_SIZE.tool_cart.d / 2, 0, 'workshop');
   b.solid('tool_cart', propFootprint(cart), 0, WAREHOUSE_PROP_SIZE.tool_cart.h);
-  const weld = b.put('welding_cart', w.minX + 3.9, w.maxZ - WAREHOUSE_PROP_SIZE.welding_cart.d / 2 - 0.05, b.jitter(0.15), 'workshop');
+  const weld = b.put('welding_cart', w.minX + 3.9, w.maxZ - WAREHOUSE_PROP_SIZE.welding_cart.d / 2 - 0.05, 0, 'workshop');
   b.solid('welding_cart', propFootprint(weld), 0, WAREHOUSE_PROP_SIZE.welding_cart.h);
   // ladder leaning on the south wall
   const tilt = 0.14;
@@ -388,8 +395,8 @@ function buildUnderMezzanine(b: Builder): void {
     [0, 0.3],
     [0.52, 0.3],
     [1.04, 0.32],
-    [0.25, 0.78],
-    [0.8, 0.8],
+    [0.25, 0.83],
+    [0.8, 0.84],
   ] as const) {
     const p = b.put('barrel', u.minX + 10.5 + dx, back + dz, b.jitter(0.6), 'underMezzanine');
     b.solid(`barrel@${p.x.toFixed(1)},${p.z.toFixed(1)}`, propFootprint(p), 0, WAREHOUSE_PROP_SIZE.barrel.h);
@@ -421,7 +428,7 @@ function buildOffice(b: Builder): void {
   const c2 = b.put('drawer_cabinet', o.maxX - cab.d / 2, o.minZ + cab.d + 0.2 + cab.w / 2, Q, 'office');
   b.solid('cabinet-e', propFootprint(c2), y, y + cab.h);
   b.put('trash_can', minX + 0.5, maxZ - 0.35, b.jitter(0.4), 'office');
-  b.put('extinguisher', o.maxX - 0.2, maxZ - 0.25, Q, 'office');
+  b.put('extinguisher', o.maxX - 0.2, pc.z - WAREHOUSE_PROP_SIZE.computer_desk.w / 2 - 0.35, Q, 'office');
 }
 
 function buildLamps(b: Builder): void {
