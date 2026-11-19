@@ -3,6 +3,7 @@ import { Box3, Texture, Vector3, type Object3D } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { describe, expect, it } from 'vitest';
 import { buildWarehousePropMeshes, buildWarehouseStatic, loadWarehousePropModels, warehousePropModelsFrom } from './warehousePropMeshes';
+import { CREDITS } from '@/ui/credits';
 import { WAREHOUSE_GLB_KINDS, WAREHOUSE_PROP_SIZE, layoutWarehouseProps } from './warehouseProps';
 
 const FILE = new URL('../../public/assets/props/warehouse.glb', import.meta.url);
@@ -79,5 +80,12 @@ describe('warehouse prop meshes', () => {
     expect(b.max.x).toBeLessThanOrEqual(34);
     expect(b.max.y).toBeLessThanOrEqual(9);
     expect(wraps!.count).toBe(layout.wraps.length);
+  });
+});
+
+describe('warehouse prop credits', () => {
+  it('names every CC-BY author and Poly Haven in the in-game credits', () => {
+    const names = CREDITS.map((c) => c.name);
+    for (const author of ['Monke (cosmiccobra)', 'DartleDyan', 'YadroGames', 'Glowbox 3D', 'Poly Haven']) expect(names).toContain(author);
   });
 });
