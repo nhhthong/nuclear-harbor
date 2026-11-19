@@ -41,7 +41,7 @@ export const DRONE = {
   lookAhead: 4,
   yawOffsets: [0.5, -0.5, 1.0, -1.0, 1.6, -1.6, 2.2, -2.2, Math.PI] as readonly number[],
   pitchOffsets: [0, 0.6, -0.5] as readonly number[],
-  /** Unstick: less than `progress` metres closer to the target in `window` s -> climb for `climbTime`, then turn. */
+  /** Unstick: less than `progress` metres moved (net) in `window` s while the target is away -> climb for `climbTime`, then turn. */
   stuck: { window: 1.5, progress: 0.4, climbTime: 1.0, turnTime: 1.2, turnAngle: Math.PI / 2 },
 
   /** Perception and memory. */

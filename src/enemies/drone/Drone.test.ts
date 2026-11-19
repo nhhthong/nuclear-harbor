@@ -35,7 +35,6 @@ function tick(r: Rig, seconds: number, each?: () => void): void {
     r.w.clock.simTime += dt;
     r.w.clock.fixedTick++;
     r.m.fixedUpdate(dt);
-    r.w.physics.syncQueries();
     each?.();
   }
 }

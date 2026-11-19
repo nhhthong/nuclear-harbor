@@ -208,36 +208,40 @@ export function keepOutOf(r: RectXZ, p: V3, margin = 0.5): V3 {
 }
 
 /**
- * Stuck detection: the drone must get `progress` metres closer to its target within each `window` seconds.
- * `update` returns true once when it did not (the caller climbs, then turns).
+ * Stuck detection: while the drone wants to move (target farther than the arrive radius), it must cover `progress`
+ * metres (net) within each `window` seconds. `update` returns true once when it did not (the caller climbs, then
+ * turns). Net displacement, not distance to the target: an orbit target that leads the drone stays at the same
+ * distance while the drone flies freely.
  */
 export class StuckMonitor {
   private t = 0;
-  private best = Infinity;
+  private sx = NaN;
+  private sy = 0;
+  private sz = 0;
 
   constructor(private readonly cfg: { window: number; progress: number }) {}
 
-  update(dt: number, distanceToTarget: number, arrived: boolean): boolean {
-    if (arrived) {
-      this.reset();
+  update(dt: number, p: V3, wantsToMove: boolean): boolean {
+    if (!wantsToMove || Number.isNaN(this.sx)) {
+      this.start(p);
       return false;
     }
-    if (distanceToTarget < this.best - this.cfg.progress) {
-      this.best = distanceToTarget;
-      this.t = 0;
-      return false;
-    }
-    if (this.best === Infinity) this.best = distanceToTarget;
     this.t += dt;
-    if (this.t >= this.cfg.window) {
-      this.reset();
-      return true;
-    }
-    return false;
+    if (this.t < this.cfg.window) return false;
+    const moved = Math.hypot(p.x - this.sx, p.y - this.sy, p.z - this.sz);
+    this.start(p);
+    return moved < this.cfg.progress;
+  }
+
+  private start(p: V3): void {
+    this.t = 0;
+    this.sx = p.x;
+    this.sy = p.y;
+    this.sz = p.z;
   }
 
   reset(): void {
     this.t = 0;
-    this.best = Infinity;
+    this.sx = NaN;
   }
 }

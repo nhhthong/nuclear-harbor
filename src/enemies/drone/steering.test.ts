@@ -231,16 +231,17 @@ describe('drone steering: through the warehouse openings (fake colliders)', () =
 });
 
 describe('drone unstick', () => {
-  it('reports stuck once when no progress is made over the window, never while closing in', () => {
+  it('reports stuck when the drone does not move over the window, never while it flies', () => {
     const s = new StuckMonitor(DRONE.stuck);
-    let d = 20;
+    const p = v(0, 4, 0);
     for (let i = 0; i < 100; i++) {
-      d -= 0.1;
-      expect(s.update(0.1, d, false)).toBe(false);
+      p.x += 0.3;
+      expect(s.update(0.1, p, true)).toBe(false);
     }
     let fired = 0;
-    for (let i = 0; i < Math.round(DRONE.stuck.window / 0.1) + 1; i++) if (s.update(0.1, d, false)) fired++;
-    expect(fired).toBe(1);
-    expect(s.update(0.1, d, true)).toBe(false);
+    for (let i = 0; i < Math.round((2 * DRONE.stuck.window) / 0.1) + 1; i++) if (s.update(0.1, p, true)) fired++;
+    expect(fired).toBeGreaterThanOrEqual(1);
+    // arrived (no wish to move): never stuck
+    for (let i = 0; i < 100; i++) expect(s.update(0.1, p, false)).toBe(false);
   });
 });

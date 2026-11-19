@@ -172,7 +172,7 @@ export class Drone extends BaseEnemy {
     }
 
     // unstick: climb, then turn
-    if (this.stuck.update(dt, dist, dist < DRONE.opening.arrive * 2)) {
+    if (this.climbLeft <= 0 && this.turnLeft <= 0 && this.stuck.update(dt, this.position, dist > DRONE.opening.arrive * 2)) {
       this.climbLeft = DRONE.stuck.climbTime;
       this.turnLeft = DRONE.stuck.turnTime;
       // try the other side next time round
@@ -206,8 +206,10 @@ export class Drone extends BaseEnemy {
     tmpFeet.x = feet.x;
     tmpFeet.y = feet.y + 0.5;
     tmpFeet.z = feet.z;
-    const playerIn = insideWarehouse(tmpFeet);
-    const droneIn = insideWarehouse(this.position);
+    // the sandbox has no warehouse: no opening routes there
+    const harbor = !ctx.flags.sandbox;
+    const playerIn = harbor && insideWarehouse(tmpFeet);
+    const droneIn = harbor && insideWarehouse(this.position);
 
     // a route already past its approach point is flown to the end (the drone is in the frame)
     const committed = this.route !== null && this.routeIndex >= 1;
