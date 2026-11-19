@@ -117,23 +117,35 @@ export interface WallPiece {
 }
 
 /**
- * The wall split into solid rectangles around its openings, from the ground to `top` (the eave): full
- * height pieces between openings, a sill piece below and a lintel piece above each opening.
+ * The wall split into solid rectangles around its openings, from the ground to `top` (the eave). The wall
+ * is cut into vertical strips at every opening edge (openings may share a strip: the north window win-n1
+ * sits partly over the back door); each strip keeps the solid height ranges between its openings.
  */
 export function wallPieces(wall: WallDef, top: number = EAVE): WallPiece[] {
-  const ops = openingsOf(wall)
-    .map((o) => ({ lo: alongOf(wall, o) - o.width / 2, hi: alongOf(wall, o) + o.width / 2, y0: o.y - o.height / 2, y1: o.y + o.height / 2 }))
-    .sort((p, q) => p.lo - q.lo);
+  const ops = openingsOf(wall).map((o) => ({ lo: alongOf(wall, o) - o.width / 2, hi: alongOf(wall, o) + o.width / 2, y0: o.y - o.height / 2, y1: o.y + o.height / 2 }));
+  const cuts = [...new Set([wall.from, wall.to, ...ops.flatMap((o) => [o.lo, o.hi])])].filter((c) => c >= wall.from && c <= wall.to).sort((p, q) => p - q);
   const out: WallPiece[] = [];
-  let cursor = wall.from;
-  for (const o of ops) {
-    if (o.lo > cursor + 1e-6) out.push({ wall, a: cursor, b: o.lo, y0: 0, y1: top });
-    if (o.y0 > 0.01) out.push({ wall, a: o.lo, b: o.hi, y0: 0, y1: o.y0 });
-    if (o.y1 < top - 0.01) out.push({ wall, a: o.lo, b: o.hi, y0: o.y1, y1: top });
-    cursor = Math.max(cursor, o.hi);
+  for (let i = 0; i + 1 < cuts.length; i++) {
+    const a = cuts[i] as number;
+    const b = cuts[i + 1] as number;
+    if (b - a < 1e-6) continue;
+    const mid = (a + b) / 2;
+    const holes = ops.filter((o) => mid > o.lo && mid < o.hi).sort((p, q) => p.y0 - q.y0);
+    let y = 0;
+    for (const h of holes) {
+      if (h.y0 > y + 0.01) out.push({ wall, a, b, y0: y, y1: h.y0 });
+      y = Math.max(y, h.y1);
+    }
+    if (top > y + 0.01) out.push({ wall, a, b, y0: y, y1: top });
   }
-  if (wall.to > cursor + 1e-6) out.push({ wall, a: cursor, b: wall.to, y0: 0, y1: top });
-  return out;
+  // merge neighbouring strips with the same height range (fewer colliders, longer cladding runs)
+  const merged: WallPiece[] = [];
+  for (const p of out.sort((p, q) => p.y0 - q.y0 || p.y1 - q.y1 || p.a - q.a)) {
+    const last = merged[merged.length - 1];
+    if (last && Math.abs(last.y0 - p.y0) < 1e-6 && Math.abs(last.y1 - p.y1) < 1e-6 && Math.abs(last.b - p.a) < 1e-6) last.b = p.b;
+    else merged.push({ ...p });
+  }
+  return merged.sort((p, q) => p.a - q.a || p.y0 - q.y0);
 }
 
 function pieceBox(p: WallPiece, thickness = T): Box {

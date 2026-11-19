@@ -261,10 +261,6 @@ function openingsDetail(steel: MeshBuilder, yellow: MeshBuilder): void {
         put(c, y0 - 0.04, o.width / 2 + 0.1, 0.04, d + 0.08, 0.08);
         put(c, (y0 + y1) / 2, 0.025, (y1 - y0) / 2, 0.03); // mullion
       }
-      if (o.kind === 'door') {
-        // canopy over the back door
-        put(c, y1 + 0.35, o.width / 2 + 0.4, 0.05, 0.6, T / 2 + 0.6);
-      }
       if (o.kind === 'roller-door') {
         // drum housing inside above the opening, guide rails, outer hood
         const xin = F.minX + T + 0.45;
