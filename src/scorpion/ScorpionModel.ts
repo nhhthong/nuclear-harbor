@@ -22,6 +22,8 @@ import {
 } from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { applyWeatheredPaint } from '@/world/containerModel';
+import { createAuthoredRig } from './ScorpionSkin';
+import type { AuthoredScorpion, ColliderBox } from './scorpionAssets';
 import { SCORPION } from './tunables';
 
 /**
@@ -80,7 +82,7 @@ interface PartGeometries {
   glow: BufferGeometry | null;
 }
 
-export interface ScorpionAssets {
+interface ProceduralData {
   parts: Record<PivotName, PartGeometries>;
   orbGeometry: BufferGeometry;
   armorMaterial: MeshStandardMaterial;
@@ -390,7 +392,7 @@ function nearestPivot(node: Object3D): PivotName | null {
 const tmpColor = new Color();
 
 /** Builds the shared geometries (once per module init). */
-export function createScorpionAssets(): ScorpionAssets {
+function createProceduralData(): ProceduralData {
   const { root, orb, telson } = buildReference();
   root.updateMatrixWorld(true);
 
@@ -540,7 +542,7 @@ const STRIKE = [-0.55, -0.34, -0.3, -0.26, -0.2, -0.35] as const;
 const WIND = [0.3, 0.2, 0.16, 0.12, 0.1, 0.2] as const;
 const AIM = [0.12, 0.12, 0.1, -0.1, -0.2, -0.35] as const;
 
-export function createScorpionRig(assets: ScorpionAssets): ScorpionRig {
+function createProceduralRig(assets: ProceduralData): ScorpionRig {
   const group = new Group();
   const turn = new Group();
   turn.rotation.y = Math.PI;
@@ -638,5 +640,51 @@ export function createScorpionRig(assets: ScorpionAssets): ScorpionRig {
     dispose() {
       glowMaterial.dispose();
     },
+  };
+}
+
+/** Hit boxes of the procedural model: centre (rx, ry, rz) in model units, +Z forward, and half extents. */
+const PROCEDURAL_BOXES: ReadonlyArray<readonly ['body' | 'critical', number, number, number, number, number, number]> = [
+  // carapace, head sensors (critical), claws, tail arch, stinger bulb (critical)
+  ['body', 0, 1.08, -0.15, 0.62, 0.34, 1.3],
+  ['critical', 0, 1.36, 0.98, 0.42, 0.2, 0.42],
+  ['body', -0.85, 1.08, 1.95, 0.42, 0.26, 0.7],
+  ['body', 0.85, 1.08, 1.95, 0.42, 0.26, 0.7],
+  ['body', 0, 1.75, -1.55, 0.3, 0.5, 0.32],
+  ['body', 0, 2.75, -1.55, 0.3, 0.52, 0.36],
+  ['body', 0, 3.15, -0.8, 0.28, 0.3, 0.6],
+  ['critical', 0, 3.0, 0.05, 0.26, 0.34, 0.4],
+];
+
+/** What the scorpion module needs from a look: hit volumes (model frame, head towards -Z) and a rig factory. */
+export interface ScorpionAssets {
+  readonly kind: 'procedural' | 'authored';
+  readonly colliders: readonly ColliderBox[];
+  makeRig(): ScorpionRig;
+  dispose(): void;
+}
+
+/** The authored look when its GLB loaded, else the procedural one (built once per module init). */
+export function createScorpionAssets(authored: AuthoredScorpion | null = null): ScorpionAssets {
+  if (authored) {
+    return {
+      kind: 'authored',
+      colliders: authored.colliders,
+      makeRig: () => createAuthoredRig(authored),
+      dispose() {},
+    };
+  }
+  const data = createProceduralData();
+  const s = data.scale;
+  const g = data.groundOffset;
+  return {
+    kind: 'procedural',
+    colliders: PROCEDURAL_BOXES.map(([zone, rx, ry, rz, hx, hy, hz]) => ({
+      zone,
+      center: new Vector3(-rx * s, (ry + g) * s, -rz * s),
+      half: new Vector3(hx * s, hy * s, hz * s),
+    })),
+    makeRig: () => createProceduralRig(data),
+    dispose: () => data.dispose(),
   };
 }
