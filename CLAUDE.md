@@ -23,7 +23,7 @@ npm run smoke / npm run e2e -- T-XX    # optional browser checks (e2e scripts ar
 - **Verify with** `npx tsc --noEmit && npm test && npm run build`. Smoke/e2e are optional (slow without a GPU) and the e2e scripts are stale. Never claim something is verified that was not run; write "skipped" instead.
 - Read only what the task needs; pass file paths instead of pasting files.
 - Never commit `node_modules`. Raw third-party archives stay out of git (`tools/asset-pipeline/input/`).
-- No network at runtime (no CDN, no backend). Art is procedural or an authored GLB built offline from CC0/CC-BY sources (G36C, robots, boss, drone, vehicles, props; `public/assets/**`, `docs/ASSETS.md`), each with a procedural fallback where one exists. New third-party assets: CC0/CC-BY only, credited in `src/ui/credits.ts`, `docs/ASSETS.md` and the README table. `docs/reference-models/*.html` are visual references only.
+- No network at runtime (no CDN, no backend). Art is procedural or an authored GLB built offline from CC0/CC-BY sources (G36C, robots, boss, drone, vehicles, props; `public/assets/**`, `docs/ASSETS.md`), each with a procedural fallback where one exists. New third-party assets: CC0/CC-BY only, credited in `src/ui/credits.ts`, `docs/ASSETS.md` and `CREDITS.md`. `docs/reference-models/*.html` are visual references only.
 - AI agents: sub-agents should use their own git worktree and not push; one coordinator merges.
 
 ## Status (update this block when it changes)
