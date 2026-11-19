@@ -1,4 +1,5 @@
-import { BOSS_ARENA, fromLegacyZ, type ZoneId } from '@/config/level';
+import { BOSS_ARENA, fromLegacyZ, zoneAt, type ZoneId } from '@/config/level';
+import { WAREHOUSE } from '@/config/warehouse';
 import { ECONOMY } from '@/config/tunables';
 import type { PickupKind } from '@/core/types';
 import { PICKUP } from './tunables';
@@ -35,7 +36,7 @@ const m = (zone: ZoneId, x: number, z: number, elevated = false, castFromY?: num
 
 
 /**
- * Zone placement for the quay: 7 crates and 2 medkits. All of them are on the ground since the jump was lowered (the double jump no longer reaches 2.6 m container tops). `placements.test.ts` checks every position against the
+ * Zone placement for the quay: 8 crates (the last one at `WAREHOUSE.supplySpot`, spec 29) and 2 medkits. All of them are on the ground since the jump was lowered (the double jump no longer reaches 2.6 m container tops). `placements.test.ts` checks every position against the
  * generated container layout and the props.
  */
 export const ZONE_PLACEMENTS: readonly PickupCandidate[] = [
@@ -54,6 +55,8 @@ export const ZONE_PLACEMENTS: readonly PickupCandidate[] = [
   // D Quay, east of the boss arena
   c('D', 30, fromLegacyZ(-26)),
   m('D', 28, fromLegacyZ(-35)),
+  // spec 29: the drones' crate, inside the warehouse under the mezzanine (reserved spot; cast from below its floor)
+  c(zoneAt(WAREHOUSE.supplySpot.x, WAREHOUSE.supplySpot.z) ?? 'A', WAREHOUSE.supplySpot.x, WAREHOUSE.supplySpot.z, false, WAREHOUSE.mezzanine.floorY - 0.6),
 ];
 
 /** Boss supplies: ring just outside the arena, spread over the landward half so every spot is on land. */

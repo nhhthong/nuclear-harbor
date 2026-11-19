@@ -10,7 +10,8 @@ import { bakeNav, registerNav } from './nav/bakeNav';
 import type { NavGrid } from './nav/NavGrid';
 import { PLAYER_SPAWN, SPAWN_SAFE_RADIUS, ZONES, zoneAt, type ZoneId } from '@/config/level';
 import { AreaSpawner } from './areaSpawner';
-import { getPopulation } from './population';
+import { droneRoster, getPopulation } from './population';
+import { CallInDirector, callInSpawnPoints, clearWrecks, DRONE, onMezzanine, stepWrecks } from './drone';
 import { ENEMY_LOCAL } from './tunables';
 import { SharedAssets } from './SharedAssets';
 
@@ -38,6 +39,9 @@ export class EnemyManager {
   private time = 0;
   private areas: AreaSpawner<BaseEnemy> | null = null;
   private readonly fx = new Vector3();
+  // ---- spec 29: anti-camping drone call-in (not part of the roster) ----
+  private readonly callIn = new CallInDirector(DRONE.callIn);
+  private readonly callIns = new Set<BaseEnemy>();
 
   constructor(
     private readonly ctx: GameContext,
@@ -61,9 +65,11 @@ export class EnemyManager {
       for (const spawn of population) this.spawn(spawn);
       return;
     }
-    this.prewarm(population);
+    // spec 29: the flying roster drones are streamed with the ground roster
+    const all = [...population, ...droneRoster()];
+    this.prewarm(all);
     // harbor: nothing is alive at load; the roster is streamed by area as the player moves
-    const roster = population.map((spawn) => ({ spawn, zone: (zoneAt(spawn.position.x, spawn.position.z) ?? 'A') as ZoneId }));
+    const roster = all.map((spawn) => ({ spawn, zone: (zoneAt(spawn.position.x, spawn.position.z) ?? 'A') as ZoneId }));
     this.areas = new AreaSpawner<BaseEnemy>(roster, ZONES, ENEMY_LOCAL.area, {
       spawn: (s) => {
         const e = this.spawn(s);
@@ -71,7 +77,51 @@ export class EnemyManager {
         return e;
       },
       despawn: (e) => this.despawn(e),
-    }, [{ x: PLAYER_SPAWN.position.x, z: PLAYER_SPAWN.position.z, radius: SPAWN_SAFE_RADIUS }]);
+    }, [{ x: PLAYER_SPAWN.position.x, z: PLAYER_SPAWN.position.z, radius: SPAWN_SAFE_RADIUS }], () => this.liveCallIns());
+  }
+
+  // ---- spec 29: anti-camping drone call-in ----------------------------------------------------
+
+  private liveCallIns(): number {
+    let n = 0;
+    for (const e of this.callIns) {
+      if (e.alive) n++;
+      else this.callIns.delete(e);
+    }
+    return n;
+  }
+
+  private liveCount(): number {
+    let n = 0;
+    for (const e of this.robots) if (e.alive) n++;
+    return n;
+  }
+
+  /** Player on the mezzanine for `DRONE.callIn.campSeconds`: drones come in from the north windows or the roller door. */
+  private updateCallIn(dt: number): void {
+    if (this.ctx.flags.sandbox) return;
+    const p = this.ctx.player;
+    const camping = p.alive && onMezzanine(p.position, DRONE.callIn.yMargin);
+    const n = this.callIn.update(dt, camping, this.liveCallIns(), this.liveCount(), ENEMY_LOCAL.area.liveCap);
+    if (n > 0) this.spawnCallIn(n, this.callIn.waves - 1);
+  }
+
+  /** Spawns `count` hunter drones outside the warehouse openings (test hook and the call-in). Returns their ids. */
+  spawnCallIn(count: number, wave = 0): string[] {
+    const ids: string[] = [];
+    const pts = callInSpawnPoints(this.ctx.player.position, count, wave, { ...DRONE.opening, spawnOut: DRONE.callIn.spawnOut });
+    for (const pt of pts) {
+      const e = this.spawn({ type: 'drone', position: new Vector3(pt.x, pt.y, pt.z), patrol: [] });
+      if (!e) continue;
+      this.callIns.add(e);
+      ids.push(e.id);
+    }
+    return ids;
+  }
+
+  /** Call-in state for tests and the debug overlay. */
+  callInState(): { camp: number; called: number; alive: number } {
+    return { camp: this.callIn.camp, called: this.callIn.called, alive: this.liveCallIns() };
   }
 
   /** Robots still to be destroyed in the harbor roster (live or not yet spawned). */
@@ -134,6 +184,7 @@ export class EnemyManager {
     this.prune();
     const player = this.ctx.player;
     this.areas?.update(dt, player.position.x, player.position.z);
+    this.updateCallIn(dt);
     this.scheduler.update(this.robots, player.position.x, player.position.z, dt, this.thinking);
     for (let i = 0; i < this.thinking.length; i++) this.thinking[i]?.runThink();
     for (let i = 0; i < this.robots.length; i++) {
@@ -147,6 +198,7 @@ export class EnemyManager {
 
   update(dt: number): void {
     this.time += dt;
+    stepWrecks(dt);
     for (let i = 0; i < this.robots.length; i++) {
       const e = this.robots[i];
       if (e?.alive && e.simLevel === 'active') e.animate(dt, this.time);
@@ -194,6 +246,8 @@ export class EnemyManager {
     this.robots.length = 0;
     this.thinking.length = 0;
     this.projectiles.releaseAll();
+    this.callIns.clear();
+    clearWrecks();
   }
 
   private prune(): void {

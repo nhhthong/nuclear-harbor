@@ -123,8 +123,11 @@ export const WEAPON = {
 /** GDD 5.4 */
 export const ECONOMY = {
   ammoCrateAmount: 30,
-  /** Owner request: fewer supplies (was 10 + 6 crates, 4 + 2 medkits). */
-  ammoCratesInZones: 7,
+  /**
+   * Owner request: fewer supplies (was 10 + 6 crates, 4 + 2 medkits). Spec 29: + 1 crate at `WAREHOUSE.supplySpot`
+   * (under the mezzanine) for the four roster drones.
+   */
+  ammoCratesInZones: 8,
   ammoCratesInBossArena: 4,
   medkitHeal: 40,
   medkitsInZones: 2,
@@ -151,7 +154,14 @@ export const ENEMY_COUNTS = {
   biped: 4,
   /** Elites: twice the HP and damage of a regular robot, one per area. */
   samurai: 3,
+  /** Ground roster (the five types above). */
   total: 22,
+  /**
+   * Flying dragonfly drones of the roster (spec 29): two over the yard's west leg / warehouse roof line, two over
+   * the court and quay. Not in `total` or ENEMY_DISTRIBUTION (they fly, no nav grid). The anti-camping call-in
+   * drones (`DRONE.callIn`, src/enemies/drone/tunables.ts) come on top and are not part of the roster.
+   */
+  drone: 4,
 } as const;
 
 /**

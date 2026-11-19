@@ -38,7 +38,7 @@ function attackVariant(attack: BossAttackId): number {
   return Math.max(0, BOSS_ATTACK_ORDER.indexOf(attack));
 }
 
-const ENEMY_VARIANT = { army: 0, spot: 1, duck: 2, biped: 1, samurai: 0 } as const;
+const ENEMY_VARIANT = { army: 0, spot: 1, duck: 2, biped: 1, samurai: 0, drone: 2 } as const;
 
 /** Event -> sound routing. Stateful sounds (tower hum, beacon, ambience) live in the module. */
 export const EVENT_ROUTES = {

@@ -34,6 +34,8 @@ export const ENEMY_LOCAL = {
 export const ENEMY_PROJECTILE = {
   poolCap: 48,
   radius: 0.12,
+  /** Visual radius of the drone plasma bolt (spec 29; collision still uses `radius`). */
+  plasmaRadius: 0.3,
   lifetime: 3,
   maxRange: 60,
   /** Player hit capsule used when no physics collider represents the player. */

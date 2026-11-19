@@ -1,3 +1,4 @@
+import { DRONE_ASSET_URL } from '@/assets/droneAsset';
 /**
  * Leg angles (radians in the reference model frame) of the four legs of the procedural TITAN-04 body.
  * That body (`BossBody.ts`) is only the FALLBACK look when the crab GLB does not load; it has no weak
@@ -68,7 +69,8 @@ export const BOSS_LOCAL = {
 export const CRAB = {
   /** GLBs (relative to the page like the samurai skin); the boss spawn waits at most `loadWaitSeconds` for them. */
   crabUrl: 'assets/enemies/crab-boss.glb',
-  droneUrl: 'assets/enemies/dragonfly-drone.glb',
+  /** Shared with the `drone` enemy (spec 29): one fetch through `src/assets/droneAsset.ts`. */
+  droneUrl: DRONE_ASSET_URL,
   loadWaitSeconds: 5,
   /** Hit volume (primitives, body space, +Y up, front = -Z). */
   hull: { halfX: 3.0, halfY: 1.5, halfZ: 2.7, y: 5.1, z: 0.3 },
