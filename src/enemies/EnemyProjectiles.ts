@@ -1,4 +1,4 @@
-import { CylinderGeometry, Mesh, MeshBasicMaterial, SphereGeometry, Vector3 } from 'three';
+import { AdditiveBlending, Color, CylinderGeometry, Mesh, MeshBasicMaterial, SphereGeometry, Vector3, type BufferGeometry, type Material } from 'three';
 import type { ResourceTracker } from '@/assets/ResourceTracker';
 import type { GameContext } from '@/core/GameContext';
 import { ObjectPool } from '@/core/ObjectPool';
@@ -62,9 +62,13 @@ function segmentHitsCapsule(
  * Pooled enemy bolts (GDD 13.4): at most `poolCap` alive; an empty pool drops the shot.
  * Each bolt advances per fixed tick as a ray segment against world + player (QueryGroups.enemyShot).
  */
+/** Bolt look: the orange tracer of the robots, or the green plasma ball of the dragonfly drones (spec 29). */
+export type BoltStyle = 'bolt' | 'plasma';
+
 export class EnemyProjectiles {
   private readonly pool: ObjectPool<Bolt>;
   private readonly rockets: ObjectPool<Rocket>;
+  private readonly looks: Record<BoltStyle, { geometry: BufferGeometry; material: Material }>;
 
   constructor(
     private readonly ctx: GameContext,
@@ -73,6 +77,15 @@ export class EnemyProjectiles {
   ) {
     const geometry = res.track(new SphereGeometry(ENEMY_PROJECTILE.radius, 8, 6));
     const material = res.track(new MeshBasicMaterial({ color: 0xff5a2a }));
+    // drone plasma: the boss drone bolt look (additive green ball), bigger than the collision radius on purpose
+    const plasma = Object.assign(
+      new MeshBasicMaterial({ color: new Color(1.2, 3.0, 1.6), transparent: true, opacity: 0.95, blending: AdditiveBlending, depthWrite: false }),
+      { toneMapped: false },
+    );
+    this.looks = {
+      bolt: { geometry, material },
+      plasma: { geometry: res.track(new SphereGeometry(ENEMY_PROJECTILE.plasmaRadius, 10, 8)), material: res.track(plasma) },
+    };
     this.pool = new ObjectPool<Bolt>({
       capacity,
       create: () => {
@@ -161,9 +174,12 @@ export class EnemyProjectiles {
   }
 
   /** Fires a bolt; returns false when the pool is exhausted (shot skipped). */
-  fire(from: Vector3, direction: Vector3, speed: number, damage: number): boolean {
+  fire(from: Vector3, direction: Vector3, speed: number, damage: number, style: BoltStyle = 'bolt'): boolean {
     const bolt = this.pool.acquire();
     if (!bolt) return false;
+    const look = this.looks[style];
+    bolt.mesh.geometry = look.geometry;
+    bolt.mesh.material = look.material;
     bolt.mesh.position.copy(from);
     bolt.mesh.visible = true;
     bolt.velocity.copy(direction).normalize().multiplyScalar(speed);

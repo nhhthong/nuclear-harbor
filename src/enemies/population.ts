@@ -7,7 +7,7 @@ import { navFor } from './nav/bakeNav';
 import type { NavGrid, PathPoint } from './nav/NavGrid';
 import { ENEMY_LOCAL } from './tunables';
 
-const TYPES: readonly EnemyType[] = ['army', 'spot', 'duck', 'biped', 'samurai'];
+const TYPES: readonly EnemyType[] = ['army', 'spot', 'duck', 'biped', 'samurai', 'drone'];
 
 /** Parses `?enemies=army,spot|none`; the default is a single army robot. */
 export function parseEnemyParam(value: string | null): EnemyType[] {
@@ -247,4 +247,25 @@ export function getPopulation(
   if (ctx.flags.sandbox) return sandboxPopulation(parseEnemyParam(ctx.flags.params.get('enemies')));
   if (!nav) return [];
   return toSpawns(authoredHarbor(harborInputs(ctx)), nav);
+}
+
+// ---- flying drones (spec 29) ------------------------------------------------------------------
+// Kept apart from the ground roster: drones fly (no nav grid, so no walkable check) and are streamed with the
+// same area spawner. Altitude comes from the drone's cruise band, the patrols here are only x/z.
+
+/** Roster drones: two over the yard's west leg and the warehouse roof line, two over the relay court and the quay. */
+export const DRONE_POSTS: readonly Authored[] = [
+  { type: 'drone', at: [-30, -18], patrol: [[-30, -18], [0, -18], [0, -6], [-30, -6]] },
+  { type: 'drone', at: [4, -20], patrol: [[4, -20], [4, -4]] },
+  { type: 'drone', at: [12, -31], patrol: [[12, -31], [30, -31]] },
+  { type: 'drone', at: [14, -50], patrol: [[14, -50], [30, -50]] },
+];
+
+/** The roster drones as spawns (y = 0: the drone starts at its cruise height). */
+export function droneRoster(): EnemySpawn[] {
+  return DRONE_POSTS.map((a) => ({
+    type: a.type,
+    position: new Vector3(a.at[0], 0, a.at[1]),
+    patrol: a.patrol.map((p) => new Vector3(p[0], 0, p[1])),
+  }));
 }

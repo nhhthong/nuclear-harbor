@@ -77,6 +77,8 @@ export class AreaSpawner<R extends LiveRobot> {
     private readonly cfg: AreaSpawnerConfig,
     private readonly io: AreaIo<R>,
     private readonly safe: readonly SafeDisc[] = [],
+    /** Live robots outside the roster (spec 29: call-in drones); they count against `liveCap` too. */
+    private readonly externalLive: () => number = () => 0,
   ) {
     this.entries = roster.map((r) => ({ spawn: r.spawn, zone: r.zone, state: 'waiting', robot: null }));
   }
@@ -134,7 +136,7 @@ export class AreaSpawner<R extends LiveRobot> {
       }
       live++;
     }
-    if (live >= cfg.liveCap) return;
+    if (live + this.externalLive() >= cfg.liveCap) return;
 
     // one spawn per pass: the waiting post of an awake area nearest to the player, beyond the minimum
     let best: Entry<R> | null = null;

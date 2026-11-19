@@ -11,6 +11,9 @@ import {
 } from '@/config/tunables';
 import { DUCK } from '@/enemies/duck/tunables';
 import { SPOT } from '@/enemies/spot/tunables';
+import { SAMURAI } from '@/enemies/samurai/tunables';
+import { DRONE } from '@/enemies/drone/tunables';
+import { WAREHOUSE } from '@/config/warehouse';
 import { structureSolids } from '@/structures/layout';
 import { generateContainerLayout } from '@/world/containerLayout';
 import { supplyBudget } from './logic';
@@ -26,17 +29,28 @@ describe('placement budget', () => {
     expect(count(BOSS_PLACEMENTS, 'medkit')).toBe(ECONOMY.medkitsInBossArena);
   });
 
-  it('supply (start 210 + crates) covers the demand at 50% accuracy without drops', () => {
+  it('supply (start 210 + crates = 570) covers the demand (356 hits) at the assumed accuracy without drops', () => {
     const hits =
       ENEMY_COUNTS.army * shotsToKill(ARMY_ROBOT.hp) +
       ENEMY_COUNTS.spot * shotsToKill(SPOT.hp) +
       ENEMY_COUNTS.duck * shotsToKill(DUCK.hp) +
       ENEMY_COUNTS.biped * shotsToKill(BIPED.hp) +
+      ENEMY_COUNTS.samurai * shotsToKill(SAMURAI.hp) +
+      ENEMY_COUNTS.drone * shotsToKill(DRONE.hp) +
       shotsToKill(BOSS.hp);
+    expect(hits).toBe(356);
     const crates = count(ZONE_PLACEMENTS, 'ammo') + count(BOSS_PLACEMENTS, 'ammo');
     const supply = supplyBudget(WEAPON.magazineSize + WEAPON.reserveAmmo, crates);
     expect(supply).toBe(WEAPON.magazineSize + WEAPON.reserveAmmo + (ECONOMY.ammoCratesInZones + ECONOMY.ammoCratesInBossArena) * ECONOMY.ammoCrateAmount);
+    expect(supply).toBe(570);
     expect(supply).toBeGreaterThanOrEqual(hits / ECONOMY.assumedAccuracy);
+  });
+
+  it('puts exactly one crate at the reserved warehouse supply spot (spec 29)', () => {
+    const at = ZONE_PLACEMENTS.filter((p) => Math.hypot(p.x - WAREHOUSE.supplySpot.x, p.z - WAREHOUSE.supplySpot.z) < 1.2);
+    expect(at).toHaveLength(1);
+    expect(at[0]!.kind).toBe('ammo');
+    expect(at[0]!.castFromY).toBeLessThan(WAREHOUSE.mezzanine.floorY);
   });
 
   it('lie on land inside their declared zone, away from the spawn', () => {
@@ -68,19 +82,34 @@ const solids = [
   ...structureSolids().map((b) => ({ c: b.center, h: b.half })),
 ];
 
-/** Height of the highest surface at (x, z); boxes are grown by `grow` metres (negative shrinks). */
-function surfaceAt(x: number, z: number, grow = 0): number {
+/**
+ * Height of the highest surface at (x, z); boxes are grown by `grow` metres (negative shrinks). Boxes whose bottom
+ * is at or above `below` (an indoor crate's ray start, e.g. under the mezzanine) are ignored.
+ */
+function surfaceAt(x: number, z: number, grow = 0, below = Infinity): number {
   let best = 0;
   for (const b of solids) {
+    if (b.c.y - b.h.y >= below) continue;
     if (Math.abs(x - b.c.x) <= b.h.x + grow && Math.abs(z - b.c.z) <= b.h.z + grow) best = Math.max(best, b.c.y + b.h.y);
   }
   return best;
 }
 
+/** Spec 29: stream A clears the yard containers out of the warehouse block; before that merge the indoor check is skipped. */
+const containersInWarehouse = layout.boxes.some(
+  (b) => b.center.x > WAREHOUSE.footprint.minX && b.center.x < WAREHOUSE.footprint.maxX && b.center.z > WAREHOUSE.footprint.minZ && b.center.z < WAREHOUSE.footprint.maxZ,
+);
+
 describe('placements against the real layout', () => {
   it('rests ground supplies on the ground with 0.6 m clearance from containers and props', () => {
-    for (const p of [...ZONE_PLACEMENTS, ...BOSS_PLACEMENTS].filter((q) => !q.elevated)) {
+    for (const p of [...ZONE_PLACEMENTS, ...BOSS_PLACEMENTS].filter((q) => !q.elevated && q.castFromY === undefined)) {
       expect(surfaceAt(p.x, p.z, 0.6), `${p.kind} at ${p.x}, ${p.z}`).toBe(0);
+    }
+  });
+
+  it.skipIf(containersInWarehouse)('rests indoor supplies (warehouse) on the floor below their ray start', () => {
+    for (const p of [...ZONE_PLACEMENTS, ...BOSS_PLACEMENTS].filter((q) => q.castFromY !== undefined)) {
+      expect(surfaceAt(p.x, p.z, 0.6, p.castFromY), `${p.kind} at ${p.x}, ${p.z}`).toBe(0);
     }
   });
 

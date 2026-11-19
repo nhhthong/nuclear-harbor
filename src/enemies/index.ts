@@ -2,6 +2,7 @@ import { Vector3 } from 'three';
 import type { GameContext } from '@/core/GameContext';
 import type { GameModule } from '@/core/GameModule';
 import type { EnemyType } from '@/core/types';
+import { loadDroneAsset, loadedDroneAsset } from '@/assets/droneAsset';
 import { authoredModel, disposeAuthored, loadAllAuthored } from './authored';
 import { EnemyManager } from './EnemyManager';
 import { loadSamuraiSkin, samuraiSkin, setSamuraiSkin } from './samurai/skin';
@@ -35,6 +36,8 @@ export function createEnemiesModule(): GameModule {
         ? Promise.all([
             ctx.flags.params.has('procedural-samurai') ? Promise.resolve(null) : loadSamuraiSkin(),
             ctx.flags.params.has('procedural') ? Promise.resolve([]) : loadAllAuthored(),
+            // spec 29: the dragonfly GLB, shared with the boss drones (one fetch)
+            ctx.flags.params.has('procedural') ? Promise.resolve(null) : loadDroneAsset(),
           ])
         : Promise.resolve(null);
       const startWhenReady = (): void => {
@@ -63,6 +66,11 @@ export function createEnemiesModule(): GameModule {
         authored: () => ({ biped: authoredModel('biped') !== null, striker: authoredModel('striker') !== null, spot: authoredModel('spot') !== null }),
         rosterRemaining: () => m.rosterRemaining,
         projectiles: () => ({ live: m.projectiles.liveCount, cap: m.projectiles.capacity }),
+        // spec 29: flying drones
+        droneModel: () => loadedDroneAsset() !== null,
+        /** Spawns `count` hunter drones outside the warehouse openings, as the anti-camping call-in does. */
+        callInDrones: (count = 2) => m.spawnCallIn(count),
+        callIn: () => m.callInState(),
       };
     },
 
