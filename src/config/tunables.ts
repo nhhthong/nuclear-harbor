@@ -28,14 +28,13 @@ export const PLAYER = {
   walkSpeed: 6.5,
   sprintSpeed: 10,
   /**
-   * Owner request: high jumps that do not feel floaty. The player has its own gravity (the world value
-   * `SIM.gravity` stays -24): a ground jump rises 3.9 m and lasts 1.0 s (about 10 m at sprint speed),
-   * the air jump adds 3.3 m (7.2 m when chained at the apex). Two-high stacks (5.2 m) are reachable,
-   * three-high ones (7.8 m) are not. Speeds follow v = sqrt(2 g h) so heights stay when g changes.
+   * Owner request: a natural jump, not a rocket. Player gravity stays -30 (world `SIM.gravity` is -24). Apex = v^2 / (2 g):
+   * a ground jump rises 0.95 m (0.5 s in the air), the air jump adds 0.85 m, so 1.8 m when chained at the apex
+   * (was 3.9 m, +3.3 m, 7.2 m with 15.3 and 14.1 m/s). A one-high container top (2.6 m) is no longer reachable.
    */
   gravity: -30,
-  jumpSpeed: 15.3,
-  airJumpSpeed: 14.1,
+  jumpSpeed: 7.55,
+  airJumpSpeed: 7.15,
   airJumps: 1,
   /** Jump still allowed this long after walking off an edge (s). */
   coyoteTime: 0.1,

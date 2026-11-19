@@ -36,14 +36,14 @@ export const BIPED = {
     /** Claw reach at landing (m) and in the air (m); feet this far above the ground dodge it (double jump). */
     radius: 2,
     contactRadius: 1.3,
-    clearance: 1.8,
+    clearance: 1.3,
     knockback: 5,
     /** Frozen after landing (s), then the next leap needs `cooldown` seconds from the landing. */
     recover: 1.2,
     cooldown: 3,
   },
   /** Quick swipe with both claws when the player is adjacent. */
-  claw: { range: 2.2, windup: 0.22, recover: 0.4, damage: 9, cooldown: 1.1, knockback: 3, clearance: 1.8 },
+  claw: { range: 2.2, windup: 0.22, recover: 0.4, damage: 9, cooldown: 1.1, knockback: 3, clearance: 1.3 },
   /** Hit volumes relative to the body centre (forward is -z). */
   hit: {
     torso: { y: 0.4, hx: 0.42, hy: 0.45, hz: 0.3 },

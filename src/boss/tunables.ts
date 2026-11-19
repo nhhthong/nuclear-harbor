@@ -147,7 +147,7 @@ export const CRAB = {
     halfWidth: 0.16,
     armAngles: [0, Math.PI] as readonly number[],
     /** The player is safe above this height (m, feet) when the legs sweep. */
-    safeHeight: 2.4,
+    safeHeight: 1.4,
     damage: 25,
     knockback: 17,
     knockbackUp: 5,
@@ -162,7 +162,7 @@ export const CRAB = {
     length: 70,
     /** Vertical band the beam occupies (m above the ground): the player must jump above `top`. */
     bottom: 0.4,
-    top: 1.7,
+    top: 1.3,
     /** Beams are drawn at this height. */
     height: 1.0,
     tickDamage: 10,
