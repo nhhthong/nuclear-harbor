@@ -1,5 +1,6 @@
 import {
   Color,
+  DataTexture,
   HalfFloatType,
   LinearFilter,
   Matrix4,
@@ -7,6 +8,10 @@ import {
   MeshStandardMaterial,
   PerspectiveCamera,
   PlaneGeometry,
+  RepeatWrapping,
+  SRGBColorSpace,
+  TextureLoader,
+  type Texture,
   Vector2,
   Vector3,
   WebGLRenderTarget,
@@ -15,6 +20,7 @@ import {
   type WebGLRenderer,
 } from 'three';
 import { LAND, ZONES } from '@/config/level';
+import { createMarkingsTexture } from './markings';
 import { WORLD_LOCAL } from './tunables';
 
 /**
@@ -98,6 +104,16 @@ uniform sampler2D tRefl;
 uniform mat4 uReflMatrix;
 uniform vec4 uYard;   // minZ, maxZ of the container yard, lane half width, quay line z
 uniform vec3 uLanes;  // x of the two N-S lanes, unused
+uniform sampler2D tAsphD;
+uniform sampler2D tAsphN;
+uniform sampler2D tAsphA;
+uniform sampler2D tConD;
+uniform sampler2D tConN;
+uniform sampler2D tConA;
+uniform sampler2D tMark;
+uniform vec4 uTexOn;  // asphalt maps, concrete maps, road paint, unused (0 = procedural fallback)
+uniform vec4 uTexTile; // asphalt tile, concrete tile, normal strength, unused
+uniform vec4 uLand;   // minX, minZ, width, depth of the land rectangle (road-paint UVs)
 varying vec3 vWPos;
 
 float gHash(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
@@ -129,6 +145,83 @@ float gLine(float coord, float centre, float halfWidth) {
 }
 `;
 
+const GT = WORLD_LOCAL.groundTextures;
+
+/** 1x1 neutral texture so the shader always has a valid sampler before the maps arrive. */
+function placeholder(): DataTexture {
+  const t = new DataTexture(new Uint8Array([128, 128, 255, 255]), 1, 1);
+  t.needsUpdate = true;
+  return t;
+}
+
+type GroundMapUniforms = {
+  tAsphD: { value: Texture };
+  tAsphN: { value: Texture };
+  tAsphA: { value: Texture };
+  tConD: { value: Texture };
+  tConN: { value: Texture };
+  tConA: { value: Texture };
+  tMark: { value: Texture };
+  uTexOn: { value: number[] };
+};
+
+/**
+ * Loads the CC0 ground maps and paints the road markings (DOM only). Each set switches on in the shader
+ * once all of its maps are in; until then (or if one fails) the procedural surface stays.
+ */
+function loadGroundMaps(u: GroundMapUniforms, material: MeshStandardMaterial): void {
+  const owned: Texture[] = [u.tAsphD.value, u.tAsphN.value, u.tAsphA.value, u.tConD.value, u.tConN.value, u.tConA.value, u.tMark.value];
+  material.addEventListener('dispose', () => {
+    for (const t of new Set(owned)) t.dispose();
+  });
+  if (typeof document === 'undefined') return;
+  const marks = createMarkingsTexture();
+  if (marks) {
+    u.tMark.value = marks;
+    owned.push(marks);
+    u.uTexOn.value[2] = 1;
+  }
+  const loader = new TextureLoader();
+  const set = (keys: ReadonlyArray<[keyof GroundMapUniforms, string, boolean]>, flag: number): void => {
+    let left = keys.length;
+    for (const [key, url, srgb] of keys) {
+      loader.load(
+        url,
+        (t) => {
+          t.wrapS = RepeatWrapping;
+          t.wrapT = RepeatWrapping;
+          t.anisotropy = 8;
+          if (srgb) t.colorSpace = SRGBColorSpace;
+          (u[key] as { value: Texture }).value = t;
+          owned.push(t);
+          left--;
+          if (left === 0) u.uTexOn.value[flag] = 1;
+        },
+        undefined,
+        () => {
+          /* keep the procedural surface for this set */
+        },
+      );
+    }
+  };
+  set(
+    [
+      ['tAsphD', GT.asphaltDiffuse, true],
+      ['tAsphN', GT.asphaltNormal, false],
+      ['tAsphA', GT.asphaltArm, false],
+    ],
+    0,
+  );
+  set(
+    [
+      ['tConD', GT.concreteDiffuse, true],
+      ['tConN', GT.concreteNormal, false],
+      ['tConA', GT.concreteArm, false],
+    ],
+    1,
+  );
+}
+
 /**
  * Wet quay surface as one plane: asphalt in the yard, concrete slabs on the quay, crane rails,
  * worn paint, cracks, still puddles and a planar reflection. Everything is evaluated
@@ -146,7 +239,18 @@ export function createWetGround(reflection: PlanarReflection, lanesX: readonly n
     uReflMatrix: { value: reflection.textureMatrix },
     uYard: { value: [ZONES.A.minZ, ZONES.A.maxZ, 3.0, ZONES.D.maxZ] },
     uLanes: { value: [lanesX[0] ?? -9, lanesX[1] ?? 9, 0] },
+    tAsphD: { value: placeholder() as Texture },
+    tAsphN: { value: placeholder() as Texture },
+    tAsphA: { value: placeholder() as Texture },
+    tConD: { value: placeholder() as Texture },
+    tConN: { value: placeholder() as Texture },
+    tConA: { value: placeholder() as Texture },
+    tMark: { value: placeholder() as Texture },
+    uTexOn: { value: [0, 0, 0, 0] as number[] },
+    uTexTile: { value: [GT.asphaltTile, GT.concreteTile, GT.normalStrength, 0] },
+    uLand: { value: [LAND.minX, LAND.minZ, w, d] },
   };
+  loadGroundMaps(uniforms, material);
   material.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, uniforms);
     shader.vertexShader = shader.vertexShader
@@ -166,6 +270,12 @@ export function createWetGround(reflection: PlanarReflection, lanesX: readonly n
         // --- asphalt (yard, court, apron) ---
         vec3 asphalt = diffuseColor.rgb * (0.62 + 0.55 * nMid) * (0.82 + 0.3 * nFine);
         asphalt += vec3(0.05, 0.05, 0.048) * step(0.9, speck);                          // light aggregate
+        vec2 uvA = gp / uTexTile.x;
+        vec3 aTex = texture2D(tAsphD, uvA).rgb;
+        vec4 aArm = texture2D(tAsphA, uvA);
+        // scanned asphalt scaled to the quay's dark tone, broken up by large noise so the tiles do not repeat
+        vec3 asphaltT = aTex * (diffuseColor.rgb / 0.11) * (0.78 + 0.42 * nLarge) * (0.9 + 0.2 * nMid);
+        asphalt = mix(asphalt, asphaltT, uTexOn.x);
         float repair = smoothstep(0.58, 0.6, gNoise(floor(gp / vec2(7.0, 4.0)) * 1.7 + 3.0)) ; // repair patches
         asphalt *= mix(1.0, 0.72, repair);
         // --- concrete slabs (quay) ---
@@ -174,6 +284,10 @@ export function createWetGround(reflection: PlanarReflection, lanesX: readonly n
         float joint = smoothstep(0.492, 0.498, max(slabF.x, slabF.y));
         float slabTone = 0.85 + 0.3 * gHash(floor(slabUv) + 4.0);
         vec3 concrete = vec3(0.21, 0.21, 0.2) * slabTone * (0.75 + 0.45 * nMid) * (0.9 + 0.2 * nFine);
+        vec2 uvC = gp / uTexTile.y;
+        vec3 concreteT = texture2D(tConD, uvC).rgb * 2.15 * slabTone * (0.82 + 0.3 * nLarge);
+        vec4 cArm = texture2D(tConA, uvC);
+        concrete = mix(concrete, concreteT, uTexOn.y);
         concrete = mix(concrete, vec3(0.03), joint);
         vec3 base = mix(asphalt, concrete, quay);
         // --- cracks ---
@@ -182,18 +296,15 @@ export function createWetGround(reflection: PlanarReflection, lanesX: readonly n
         base = mix(base, vec3(0.012), crack * 0.85);
         // --- paint: lane edge lines in the yard, hazard hatching on the quay edge, stop bar at the gate ---
         float wear = smoothstep(0.25, 0.75, gFbm(gp * 1.7 + 23.0)) * (0.55 + 0.45 * nFine);
-        float inYard = step(uYard.x - 1.0, gp.y) * step(gp.y, uYard.y + 1.0);
-        float lines = 0.0;
-        lines += gLine(gp.x, uLanes.x - uYard.z, 0.07) + gLine(gp.x, uLanes.x + uYard.z, 0.07);
-        lines += gLine(gp.x, uLanes.y - uYard.z, 0.07) + gLine(gp.x, uLanes.y + uYard.z, 0.07);
-        lines *= inYard;
-        float dash = step(0.45, fract(gp.x / 3.0));
-        lines += gLine(gp.y, uYard.y + 4.5, 0.09) * dash;
+        // road paint (zebras, bays, lane lines, zone names...) painted once into a top-down canvas
+        vec4 mk = texture2D(tMark, (gp - uLand.xy) / uLand.zw) * uTexOn.z;
+        float lines = mk.a;
         vec3 paintCol = vec3(0.78, 0.6, 0.08);
         float hatchBand = step(gp.y, uYard.w - 31.6) ;                                    // last 2.4 m before the edge
         float hatch = step(0.5, fract((gp.x + gp.y) / 1.4)) * hatchBand;
-        float paint = clamp(lines, 0.0, 1.0) * wear;
-        base = mix(base, paintCol * (0.55 + 0.45 * nMid), paint * 0.9);
+        float paint = clamp(lines, 0.0, 1.0) * (0.35 + 0.65 * wear);
+        vec3 markCol = mk.a > 0.001 ? mk.rgb / max(mk.a, 0.001) : paintCol;
+        base = mix(base, markCol * 0.62 * (0.6 + 0.4 * nMid), paint * 0.92);
         base = mix(base, paintCol * 0.8, hatch * wear * 0.85);
         // --- crane rails (two steel strips along the quay) ---
         float rail = (gLine(gp.y, uYard.w - 20.0, 0.06) + gLine(gp.y, uYard.w - 30.0, 0.06)) * quay;
@@ -210,6 +321,8 @@ export function createWetGround(reflection: PlanarReflection, lanesX: readonly n
         float gRail = rail;
         float gPaint = max(paint, hatch * wear);
         float gMicro = nFine;
+        float gTexRough = mix(aArm.g, cArm.g, quay);
+        vec3 gTexNor = mix(texture2D(tAsphN, uvA).xyz, texture2D(tConN, uvC).xyz, quay) * 2.0 - 1.0;
         `,
       )
       .replace(
@@ -220,6 +333,7 @@ export function createWetGround(reflection: PlanarReflection, lanesX: readonly n
         roughnessFactor = mix(roughnessFactor, 0.38, gPaint);
         roughnessFactor = mix(roughnessFactor, 0.2, gRail);
         roughnessFactor = mix(roughnessFactor, 0.035, gPuddle);
+        roughnessFactor = mix(roughnessFactor, roughnessFactor * (0.55 + 0.75 * gTexRough), uTexOn.x * (1.0 - gPuddle) * (1.0 - gPaint));
         roughnessFactor = clamp(roughnessFactor + (gMicro - 0.5) * 0.06 * (1.0 - gPuddle), 0.02, 1.0);
         `,
       )
@@ -232,6 +346,8 @@ export function createWetGround(reflection: PlanarReflection, lanesX: readonly n
         float hx = gNoise((gp + vec2(e, 0.0)) * 9.0) - gNoise((gp - vec2(e, 0.0)) * 9.0);
         float hz = gNoise((gp + vec2(0.0, e)) * 9.0) - gNoise((gp - vec2(0.0, e)) * 9.0);
         vec2 bump = vec2(hx, hz) * 0.22 * (1.0 - gPuddle);
+        // scanned micro relief (tangent space: u = +x, v = +z on this plane), flattened under water and paint
+        bump -= vec2(gTexNor.x, gTexNor.y) * uTexTile.z * uTexOn.x * (1.0 - gPuddle) * (1.0 - 0.7 * gPaint);
         // still water: a faint slow swell so reflections are not a perfect mirror
         bump += vec2(gNoise(gp * 1.3 + uTime * 0.25) - 0.5, gNoise(gp * 1.3 - uTime * 0.21 + 7.0) - 0.5) * 0.035 * gPuddle;
         vec3 nW = normalize(vec3(-bump.x, 1.0, -bump.y));
@@ -256,7 +372,7 @@ export function createWetGround(reflection: PlanarReflection, lanesX: readonly n
         `,
       );
   };
-  material.customProgramCacheKey = () => 'wet-ground-v2';
+  material.customProgramCacheKey = () => 'wet-ground-v3';
   const mesh = new Mesh(geometry, material);
   mesh.name = 'ground';
   mesh.position.set((LAND.minX + LAND.maxX) / 2, 0, (LAND.minZ + LAND.maxZ) / 2);

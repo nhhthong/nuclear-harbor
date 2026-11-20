@@ -100,6 +100,23 @@ export const WORLD_LOCAL = {
   ground: {
     asphalt: 0x2a2c30,
   },
+  /**
+   * Ground maps (CC0, Poly Haven): `asphalt_02` for the yard, court and apron; the quay slabs reuse the
+   * warehouse floor's `concrete_floor_worn_001`. `*Tile` = metres one repeat covers. Road paint is painted
+   * into a top-down canvas at `markingsPxPerM` (see markings.ts).
+   */
+  groundTextures: {
+    asphaltDiffuse: 'assets/textures/ground/asphalt-diff.jpg',
+    asphaltNormal: 'assets/textures/ground/asphalt-nor.jpg',
+    asphaltArm: 'assets/textures/ground/asphalt-arm.jpg',
+    concreteDiffuse: 'assets/textures/warehouse-floor/diff.jpg',
+    concreteNormal: 'assets/textures/warehouse-floor/nor.jpg',
+    concreteArm: 'assets/textures/warehouse-floor/arm.jpg',
+    asphaltTile: 4,
+    concreteTile: 3,
+    normalStrength: 0.35,
+    markingsPxPerM: 16,
+  },
   /** Ship backdrop. */
   ship: { length: 170, beam: 30, hullDepth: 14, hullBottom: -4 },
   /** Player collision radius used by pure path checks (m). */
