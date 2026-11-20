@@ -66,8 +66,9 @@ export const SAMURAI = {
   },
   /**
    * Skill 4 (owner request 2026-11-20): the body glows red, then a vertical overhead cut releases a
-   * crescent of sword energy (standing upright, facing its flight) that glides at the player: slower than
-   * a bullet, hard hitting. Too tall to jump over (the double jump reaches 1.8 m): step aside.
+   * crescent of sword energy that glides at the player: upright in the vertical plane of its flight and
+   * bulging forward, so it reads "(" from the side and a vertical blade "|" to the player. Slower than a
+   * bullet, hard hitting. Too tall to jump over (the double jump reaches 1.8 m): step aside.
    */
   wave: {
     min: 6,
@@ -86,8 +87,8 @@ export const SAMURAI = {
     /** Crescent size: height of the arc and its sideways bulge (m). */
     height: 2.9,
     bulge: 0.75,
-    /** Hit volume: half width across the flight, half depth along it (m). */
-    hitHalfWidth: 1.05,
+    /** Hit volume: half width across the flight (a blade), half depth along it (m). */
+    hitHalfWidth: 0.55,
     hitHalfDepth: 0.45,
     /** Glow of the armour while charging (skin emissive intensity at the peak). */
     chargeGlow: 1.6,

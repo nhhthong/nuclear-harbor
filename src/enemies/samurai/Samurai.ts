@@ -185,17 +185,27 @@ function createCrescent(shared: SharedAssets): CrescentWave {
     mats.push(m);
     return m;
   };
+  // The crescent stands in the vertical plane of its flight (group local +x = flight direction), bulging
+  // forward: seen from the side it reads "(", seen by the player it is a vertical blade "|". A slim strip
+  // facing the flight gives that blade its glowing width.
   const group = new Group();
   const haloMesh = new Mesh(halo, material(1, true));
-  // centre the arc on the flight line (the horns sit at x = 0, the bulge at +x): it matches the hit volume
-  haloMesh.position.set(-(w.bulge + 0.4) / 2, -0.35, 0.02);
+  haloMesh.position.set(-(w.bulge + 0.4) / 2, -0.35, 0);
   const coreMesh = new Mesh(core, material(1, false));
   coreMesh.position.x = -w.bulge / 2;
-  group.add(haloMesh, coreMesh);
+  const blade = shared.get('samurai:wave-blade', () => crescentRibbon(w.height, 0.2, 0.2));
+  const front = new Mesh(blade, material(0.9, false));
+  front.rotation.y = Math.PI / 2; // faces the flight direction (local +x)
+  front.position.set(w.bulge / 2 - 0.05, 0, 0.1);
+  const bladeHalo = shared.get('samurai:wave-blade-halo', () => crescentRibbon(w.height + 0.5, 0.55, 0.55));
+  const frontHalo = new Mesh(bladeHalo, material(0.8, true));
+  frontHalo.rotation.y = Math.PI / 2;
+  frontHalo.position.set(w.bulge / 2 - 0.1, -0.25, 0.27);
+  group.add(haloMesh, coreMesh, frontHalo, front);
   for (const [back, alpha] of WAVE_GHOSTS) {
     const ghost = new Mesh(core, material(alpha, false));
-    ghost.position.set(-w.bulge / 2, 0, -back); // the group faces its flight along +z
-    ghost.scale.set(1 - back * 0.08, 1 - back * 0.03, 1);
+    ghost.position.set(-w.bulge / 2 - back, 0, 0); // after-images trail behind along -x
+    ghost.scale.set(1, 1 - back * 0.04, 1);
     group.add(ghost);
   }
   group.visible = false;
@@ -744,7 +754,8 @@ export class Samurai extends BaseEnemy {
     w.pos.set(this.position.x + dx * 1.2, 0, this.position.z + dz * 1.2);
     w.group.visible = true;
     w.group.position.copy(w.pos);
-    w.group.rotation.set(0, Math.atan2(dx, dz), 0);
+    // local +x along the flight: rotating +x by yaw gives (cos, -sin), so yaw = atan2(-dz, dx)
+    w.group.rotation.set(0, Math.atan2(-dz, dx), 0);
     this.waveCooldown = SAMURAI.wave.cooldown;
     this.swing = 1;
     ctx.events.emit('enemy:attacked', { id: this.id, type: this.type, position: this.position });
@@ -785,9 +796,10 @@ export class Samurai extends BaseEnemy {
     if (w.sparkT <= 0) {
       w.sparkT = 0.07;
       const up = 0.3 + Math.random() * (SAMURAI.wave.height - 0.6);
-      const side = SAMURAI.wave.bulge * (Math.sin((Math.PI * up) / SAMURAI.wave.height) - 0.5);
-      // local +x of the group (the bulge side) in world space: (dir.z, -dir.x)
-      ctx.events.emit('vfx:spawn', { kind: 'spark', position: fxPos.set(bx + w.dir.z * side, up, bz - w.dir.x * side), scale: 0.7 });
+      // from the leading edge (the bulge points along the flight), with a little sideways scatter
+      const ahead = SAMURAI.wave.bulge * (Math.sin((Math.PI * up) / SAMURAI.wave.height) - 0.5);
+      const side = (Math.random() - 0.5) * 0.4;
+      ctx.events.emit('vfx:spawn', { kind: 'spark', position: fxPos.set(bx + w.dir.x * ahead + w.dir.z * side, up, bz + w.dir.z * ahead - w.dir.x * side), scale: 0.7 });
     }
     if (w.travelled >= SAMURAI.wave.range) this.endWave(bx, bz);
   }
