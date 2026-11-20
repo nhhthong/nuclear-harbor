@@ -18,6 +18,7 @@ import { buildBarrier, buildBollard, buildCabin, buildCone, buildCrane, buildDru
 import { buildVehicleMeshes, loadVehicleGeometries } from './vehicles';
 import { buildDressingMeshes, loadDressingModels } from './dressing';
 import { createWarehouseMeshes } from './warehouse';
+import { mountGates } from './gateMeshes';
 import { warehouseColliders } from './warehouseLayout';
 import { mountWarehouseProps } from './warehousePropMeshes';
 
@@ -31,6 +32,7 @@ export function createStructuresModule(): GameModule {
   let res: ReturnType<GameContext['resources']['scope']> | null = null;
   let colliders: Collider[] = [];
   let beaconMat: MeshBasicMaterial | null = null;
+  let gates: ReturnType<typeof mountGates> | null = null;
   let time = 0;
 
   return {
@@ -98,6 +100,12 @@ export function createStructuresModule(): GameModule {
       for (const b of warehouseColliders()) {
         colliders.push(ctx.physics.addStaticBox({ center: b.center, halfExtents: b.half, rotation: b.rotation, meta: { kind: 'static' } }));
       }
+
+      // ---- chain-link fences with swing gates (spec 30) ------------------------------------------
+      gates = mountGates(ctx, scope, galvanised);
+      scope.onDispose(() => {
+        gates = null;
+      });
 
       // ---- props --------------------------------------------------------------------------------
       const byKind = (kind: PropKind): Prop[] => PROPS.filter((p) => p.kind === kind);
@@ -201,8 +209,13 @@ export function createStructuresModule(): GameModule {
       });
 
       ctx.testHooks[MODULE_ID] = {
+        gates: () => gates?.summary(),
         summary: () => ({ floodLights: FLOOD_LIGHTS.length, props: PROPS.length, vehicles: VEHICLES.length, vehiclesShown, dressingShown, cranes: CRANE_SITES.length, colliders: colliders.length }),
       };
+    },
+
+    fixedUpdate(dt) {
+      gates?.update(dt);
     },
 
     update(dt) {

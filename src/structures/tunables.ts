@@ -20,3 +20,36 @@ export const STRUCTURES = {
     normalScale: 0.7,
   },
 } as const;
+
+/**
+ * Chain-link fences with swing gates (spec 30). A gate opens when the player touches it (or a robot comes
+ * near), swings away from whoever opened it and closes again once nobody has been near for `closeDelay`.
+ */
+export const GATES = {
+  fenceHeight: 2.4,
+  /** Fence lines: x0..x1 at z (E-W runs), gaps are the gates below. */
+  lines: [
+    { id: 'apron-yard', z: 12.4, x0: -35.6, x1: 5.75 },
+    { id: 'court-quay', z: -40.75, x0: -35.6, x1: 35.6 },
+  ],
+  /** Gates: centre x on a line, total width, 1 or 2 leaves. */
+  gates: [
+    { id: 'apron-lane-west', line: 'apron-yard', x: -15, width: 6.6, leaves: 2 },
+    { id: 'apron-lane-east', line: 'apron-yard', x: 2, width: 6.6, leaves: 2 },
+    { id: 'apron-walk', line: 'apron-yard', x: -29, width: 1.2, leaves: 1 },
+    { id: 'court-quay-west', line: 'court-quay', x: -10, width: 6.6, leaves: 2 },
+    { id: 'court-quay-east', line: 'court-quay', x: 14, width: 6.6, leaves: 2 },
+  ],
+  /** The player opens a gate within this distance of a leaf (capsule radius 0.4 + reach). */
+  touchDistance: 0.9,
+  /** Robots open it within this distance of a leaf (they arrive faster and wider than the player). */
+  enemyDistance: 1.8,
+  openAngle: (100 * Math.PI) / 180,
+  /** rad/s */
+  swingSpeed: 3.2,
+  closeDelay: 5,
+  /** Nobody within this distance of the gate centre before it may close. */
+  clearRadius: 2.2,
+  leafThickness: 0.08,
+} as const;
+

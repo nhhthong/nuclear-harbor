@@ -51,6 +51,7 @@ export const EVENT_ROUTES = {
   'player:damaged': () => ({ id: 'hurt' }),
   'player:died': () => ({ id: 'death' }),
   'player:jumped': (e) => ({ id: e.air ? 'airJump' : 'jump' }),
+  'world:gateMoved': (e) => ({ id: 'hitArmor', position: e.position, intensity: e.open ? 0.8 : 0.55 }),
   'pickup:collected': (e) => ({ id: e.kind === 'medkit' ? 'pickupMedkit' : 'pickupAmmo' }),
   'combat:hit': (e) => {
     const armored = e.absorbed || e.zone === 'armor';
