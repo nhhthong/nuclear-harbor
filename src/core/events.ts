@@ -78,6 +78,8 @@ export interface GameEvents {
   'enemy:spawned': { id: string; type: EnemyType; position: Vector3 };
   'enemy:alerted': { id: string; type: EnemyType; position: Vector3 };
   'enemy:attacked': { id: string; type: EnemyType; position: Vector3 };
+  /** The samurai let its sword-energy crescent go (spec 31). */
+  'enemy:waveReleased': { id: string; position: Vector3 };
   'enemy:damaged': { id: string; type: EnemyType; hp: number; maxHp: number; zone: HitZone };
   'enemy:destroyed': { id: string; type: EnemyType; position: Vector3; remaining: number };
   'duck:windup': { id: string; position: Vector3; direction: Vector3; duration: number };

@@ -44,7 +44,7 @@ npx tsc --noEmit && npm test && npm run build
 
 **Verified by running** (scratch dir, then deleted): with `SPECIFY_FEATURE_DIRECTORY` and `SPECIFY_FEATURE_NO_PERSIST=1`, `check-prerequisites.sh --paths-only`, `setup-plan.sh --json` (copies the plan template with its Constitution Check), `resolve-template.sh spec-template`, `setup-tasks.sh --json` and `check-prerequisites.sh --json --require-tasks --include-tasks` all work and fail with a clear message when the previous artifact is missing. Only `create-new-feature.sh` mis-numbers (above); the scripts and templates stay untouched.
 
-**Next spec number:** `ls specs | grep -E '^[0-9]'`, take the highest and add 1 (spec 30 is the fences and gates, so the next is 31; 23 was never used). Name: `NN-short-kebab-name`.
+**Next spec number:** `ls specs | grep -E '^[0-9]'`, take the highest and add 1 (spec 32 is the recorded sound effects, so the next is 33; 23 was never used). Name: `NN-short-kebab-name`.
 
 **Order of skills:** `speckit-specify` -> (`speckit-clarify`, optional) -> `speckit-plan` -> `speckit-tasks` -> (`speckit-analyze`, optional) -> `speckit-implement` -> verify -> (`speckit-converge` to append unbuilt work as tasks, `speckit-checklist` for extra checklists, optional).
 
@@ -74,4 +74,4 @@ Run /speckit-specify, /speckit-plan, /speckit-tasks, /speckit-implement in that 
 - Rewrite `tests/e2e/*.mjs` (stale: old coordinates, four towers, grapple) and re-check `scripts/smoke.mjs` (not run since the reworks); neither is in CI.
 - Pale orange wash on the crab while skills telegraph (seen in screenshots, cause not found).
 - Walls and warehouses idea: tall perimeter walls (6 to 8 m) and large warehouses so the sea and ships are not visible. Proposed only; the owner has not decided. Ask before building it.
-- Known limits: no ambient audio; bundle about 5.3 MB (Rapier 82%); in-game Restart reloads the page; `docs/PLAN.md` sections 1 to 9 and `docs/GDD.md` are the original design.
+- Known limits: recorded audio not yet mixed on a real device (spec 32 phase 6); bundle about 5.3 MB (Rapier 82%); in-game Restart reloads the page; `docs/PLAN.md` sections 1 to 9 and `docs/GDD.md` are the original design.

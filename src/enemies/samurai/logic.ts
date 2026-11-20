@@ -70,3 +70,29 @@ export function pickDashPoint(
   }
   return out;
 }
+
+/**
+ * Does the crescent, moving this step from (ax, az) to (bx, bz) along unit direction (dx, dz), hit a player
+ * standing at (px, pz) with feet `feetY` above the ground? Hit volume: `halfWidth` across the flight,
+ * `halfDepth` along it (swept over the step), `height` tall from the ground.
+ */
+export function crescentHit(
+  ax: number,
+  az: number,
+  bx: number,
+  bz: number,
+  dx: number,
+  dz: number,
+  px: number,
+  pz: number,
+  feetY: number,
+): boolean {
+  const w = SAMURAI.wave;
+  if (feetY > w.height - 0.3) return false;
+  // along-track coordinate relative to the step start, and the step length
+  const along = (px - ax) * dx + (pz - az) * dz;
+  const stepLen = (bx - ax) * dx + (bz - az) * dz;
+  if (along < -w.hitHalfDepth || along > stepLen + w.hitHalfDepth) return false;
+  const across = Math.abs((px - ax) * -dz + (pz - az) * dx);
+  return across <= w.hitHalfWidth + 0.35; // + player capsule radius
+}

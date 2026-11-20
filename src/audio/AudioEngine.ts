@@ -2,13 +2,16 @@ import { Ambience } from './ambience';
 import { soundDef, type SoundCategory, type SoundId } from './catalogue';
 import { humFrequency } from './math';
 import type { SoundRequest } from './eventMap';
+import { SampleBank } from './sampleBank';
+import { LOOPS, pickSample, SAMPLE_MANIFEST, sampleFiles, type LoopId } from './samples';
+import { SampleVoice, type Voice } from './sampleVoice';
 import { SOUNDS } from './sounds';
 import { createNoiseBuffer, VoiceBuilder } from './synth';
 import { AUDIO } from './tunables';
 import { VoiceAllocator } from './voiceAllocator';
 
 interface ActiveVoice {
-  builder: VoiceBuilder;
+  builder: Voice;
   gain: GainNode;
   panner: PannerNode | null;
   done: boolean;
@@ -28,6 +31,11 @@ export class AudioEngine {
   private ambience: Ambience | null = null;
   private hum: { nodes: AudioNode[]; osc: OscillatorNode[]; gain: GainNode } | null = null;
   private readonly voices = new Map<number, ActiveVoice>();
+  private bank: SampleBank | null = null;
+  private readonly lastFile = new Map<SoundId, string>();
+  private readonly loops = new Map<LoopId, { src: AudioBufferSourceNode; gain: GainNode; level: number; rate: number }>();
+  private readonly loopTargets = new Map<LoopId, { level: number; rate: number }>();
+  private sampledPlays = 0;
   private readonly allocator = new VoiceAllocator<SoundId>(AUDIO.voiceCap, (id) => soundDef(id));
   private masterTarget = 1;
   private ambienceTarget: number = AUDIO.ambience.duckedLevel;
@@ -50,6 +58,20 @@ export class AudioEngine {
     return this.allocator.peak;
   }
 
+  /** One-shots that played a recorded sample instead of the recipe (spec 32). */
+  get samplePlays(): number {
+    return this.sampledPlays;
+  }
+
+  sampleSummary(): { loading: number; ready: number; failed: number } {
+    return this.bank?.summary() ?? { loading: 0, ready: 0, failed: 0 };
+  }
+
+  /** Whether `file` is decoded (test hook / fallback checks). */
+  sampleReady(file: string): boolean {
+    return this.bank?.isReady(file) ?? false;
+  }
+
   playedCount(id: SoundId): number {
     return this.allocator.playedCount(id);
   }
@@ -66,6 +88,7 @@ export class AudioEngine {
   get liveNodes(): number {
     let n = this.ambience?.nodeCount ?? 0;
     for (const v of this.voices.values()) n += v.builder.liveSources;
+    n += this.loops.size;
     if (this.hum) n += this.hum.nodes.length + this.hum.osc.length;
     return n;
   }
@@ -159,11 +182,26 @@ export class AudioEngine {
       }
 
       const voiceId = grant.voiceId;
+      const at = ctx.currentTime + AUDIO.lookahead + Math.max(0, req.delay ?? 0);
+      // spec 32: a decoded recorded variant when there is one, the procedural recipe otherwise
+      const sample = SAMPLE_MANIFEST[id];
+      const bank = this.bank;
+      if (sample && bank) {
+        const pick = pickSample(sample, Math.random, req.intensity ?? 1, this.lastFile.get(id), (f) => bank.isReady(f));
+        const buffer = pick ? bank.get(pick.file) : null;
+        if (pick && buffer) {
+          this.lastFile.set(id, pick.file);
+          const voice = new SampleVoice(ctx, buffer, gain, at, pick, sample.offset ?? 0, () => this.finish(voiceId, false));
+          this.voices.set(voiceId, { builder: voice, gain, panner, done: false });
+          this.sampledPlays += 1;
+          return true;
+        }
+      }
       const builder = new VoiceBuilder(
         ctx,
         this.noise,
         gain,
-        ctx.currentTime + AUDIO.lookahead,
+        at,
         {
           pitch: 1 + (Math.random() * 2 - 1) * AUDIO.pitchJitter,
           intensity: req.intensity ?? 1,
@@ -179,6 +217,42 @@ export class AudioEngine {
     } catch {
       return false;
     }
+  }
+
+  /**
+   * Drive a recorded loop (low-health heartbeat / breathing): level 0..1 and playback rate. Returns
+   * false when the sample is not decoded (the caller then uses the procedural fallback).
+   */
+  setLoop(id: LoopId, level: number, rate = 1): boolean {
+    this.loopTargets.set(id, { level, rate });
+    const ctx = this.ctx;
+    const bank = this.bank;
+    if (!ctx || !bank || !this.buses) return false;
+    const buffer = bank.get(LOOPS[id].file);
+    if (!buffer) return false;
+    let loop = this.loops.get(id);
+    if (!loop) {
+      if (level <= 0.001) return true;
+      const src = ctx.createBufferSource();
+      src.buffer = buffer;
+      src.loop = true;
+      const gain = ctx.createGain();
+      gain.gain.value = 0.0001;
+      src.connect(gain);
+      gain.connect(this.buses.sfx);
+      src.start();
+      loop = { src, gain, level: -1, rate: -1 };
+      this.loops.set(id, loop);
+    }
+    // only touch the params on a real change (this runs every frame)
+    if (Math.abs(loop.level - level) < 0.01 && Math.abs(loop.rate - rate) < 0.01) return true;
+    loop.level = level;
+    loop.rate = rate;
+    loop.gain.gain.cancelScheduledValues(ctx.currentTime);
+    loop.src.playbackRate.cancelScheduledValues(ctx.currentTime);
+    loop.gain.gain.setTargetAtTime(Math.max(0.0001, level * LOOPS[id].gain), ctx.currentTime, AUDIO.samples.loopFade / 3);
+    loop.src.playbackRate.setTargetAtTime(rate, ctx.currentTime, 0.2);
+    return true;
   }
 
   /** Tower activation hum: starts once, then follows progress 0..1. */
@@ -229,6 +303,18 @@ export class AudioEngine {
     this.closed = true;
     for (const id of [...this.voices.keys()]) this.finish(id, true);
     this.stopHum();
+    for (const l of this.loops.values()) {
+      try {
+        l.src.stop();
+      } catch {
+        // already stopped
+      }
+      l.src.disconnect();
+      l.gain.disconnect();
+    }
+    this.loops.clear();
+    this.bank?.dispose();
+    this.bank = null;
     this.ambience?.dispose();
     this.ambience = null;
     const ctx = this.ctx;
@@ -266,6 +352,18 @@ export class AudioEngine {
     this.ambience = new Ambience(ctx, this.noise, this.buses.ambience, this.ambienceTarget);
     // initial fade-in if the game is already playing
     this.ambience.fadeTo(ctx, this.ambienceTarget, AUDIO.ambience.fadeIn);
+    // spec 32: recorded samples load in the background; until then (or if they fail) recipes play
+    const bank = new SampleBank(ctx, sampleFiles());
+    this.bank = bank;
+    bank.onReady((file) => {
+      for (const id of ['wind', 'sea'] as const) {
+        if (LOOPS[id].file !== file) continue;
+        const buffer = bank.get(file);
+        if (buffer && this.ambience) this.ambience.addLoop(ctx, buffer, LOOPS[id].gain);
+      }
+      // a loop requested before its file was ready starts now
+      for (const [id, t] of this.loopTargets) if (LOOPS[id].file === file) this.setLoop(id, t.level, t.rate);
+    });
   }
 
   /** Stop and release one voice. Idempotent; independent of `ended` events. */

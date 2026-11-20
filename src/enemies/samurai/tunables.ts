@@ -64,4 +64,33 @@ export const SAMURAI = {
     /** Lightning trail fade time (s). */
     trailSeconds: 0.9,
   },
+  /**
+   * Skill 4 (owner request 2026-11-20): the body glows red, then a vertical overhead cut releases a
+   * crescent of sword energy that glides at the player: upright in the vertical plane of its flight and
+   * bulging forward, so it reads "(" from the side and a vertical blade "|" to the player. Slower than a
+   * bullet, hard hitting. Too tall to jump over (the double jump reaches 1.8 m): step aside.
+   */
+  wave: {
+    min: 6,
+    max: 26,
+    charge: 0.95,
+    /** Overhead cut; the crescent leaves at `release` of it. */
+    slash: 0.32,
+    release: 0.5,
+    recover: 0.55,
+    cooldown: 8.5,
+    /** m/s (rifle-hit enemy bolts fly at 24 to 30). */
+    speed: 12,
+    damage: 32,
+    knockback: 6,
+    range: 30,
+    /** Crescent size: height of the arc and its sideways bulge (m). */
+    height: 2.9,
+    bulge: 0.75,
+    /** Hit volume: half width across the flight (a blade), half depth along it (m). */
+    hitHalfWidth: 0.55,
+    hitHalfDepth: 0.45,
+    /** Glow of the armour while charging (skin emissive intensity at the peak). */
+    chargeGlow: 1.6,
+  },
 } as const;

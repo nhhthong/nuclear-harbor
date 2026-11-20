@@ -105,6 +105,48 @@ export const SOUNDS: Record<SoundId, SoundFn> = {
     return s.stopTime;
   },
 
+  // ---- spec 32 fallbacks (the recorded samples replace these when decoded) --------------
+  reloadMagOut: (s) => {
+    s.noise({ dur: 0.05, gain: 0.5, filter: bp(2500, undefined, 1.5) });
+    s.osc({ type: 'square', f0: 320, f1: 150, dur: 0.05, gain: 0.12 });
+    return s.stopTime;
+  },
+  reloadMagIn: (s) => {
+    s.noise({ dur: 0.07, gain: 0.6, filter: bp(1800, undefined, 1.5) });
+    s.osc({ type: 'square', f0: 240, f1: 110, dur: 0.06, gain: 0.15 });
+    return s.stopTime;
+  },
+  reloadBolt: (s) => {
+    s.noise({ dur: 0.04, gain: 0.55, filter: hp(2200) });
+    s.noise({ at: 0.09, dur: 0.05, gain: 0.6, filter: bp(1500, undefined, 1.2) });
+    return s.stopTime;
+  },
+  shellCasing: (s) => {
+    s.osc({ type: 'sine', f0: 5200, dur: 0.05, gain: 0.05 });
+    s.osc({ at: 0.11, type: 'sine', f0: 4700, dur: 0.04, gain: 0.03 });
+    return s.stopTime;
+  },
+  impactMetal: (s) => {
+    s.noise({ dur: 0.05, gain: 0.45 * s.intensity, filter: hp(3000) });
+    s.osc({ type: 'triangle', f0: 1900, f1: 1500, dur: 0.18, gain: 0.12 * s.intensity });
+    return s.stopTime;
+  },
+  impactConcrete: (s) => {
+    s.noise({ dur: 0.07, gain: 0.5 * s.intensity, filter: bp(1400, 500, 0.9) });
+    s.noise({ at: 0.03, dur: 0.15, gain: 0.15 * s.intensity, filter: hp(4000) });
+    return s.stopTime;
+  },
+  footstepMetal: (s) => {
+    s.noise({ dur: 0.06, gain: 0.3 * s.intensity, filter: bp(900, undefined, 1.2) });
+    s.osc({ type: 'triangle', f0: 620, f1: 480, dur: 0.12, gain: 0.06 * s.intensity });
+    return s.stopTime;
+  },
+  heartbeat: (s) => {
+    s.osc({ type: 'sine', f0: 62, f1: 40, dur: 0.12, gain: 0.7 * s.intensity, attack: 0.01 });
+    s.osc({ at: 0.24, type: 'sine', f0: 55, f1: 38, dur: 0.1, gain: 0.5 * s.intensity, attack: 0.01 });
+    return s.stopTime;
+  },
+
   // ---- enemies -----------------------------------------------------------------------
   enemyAlert: (s) => {
     if (s.variant === 1) {
@@ -144,6 +186,30 @@ export const SOUNDS: Record<SoundId, SoundFn> = {
     return s.stopTime;
   },
 
+  enemyMelee: (s) => {
+    s.osc({ type: 'sawtooth', f0: 380, f1: 900, dur: 0.18, gain: 0.08, filter: lp(2500) });
+    s.noise({ at: 0.12, dur: 0.06, gain: 0.35, filter: bp(1800, undefined, 1.4) });
+    return s.stopTime;
+  },
+  swordSwing: (s) => {
+    s.noise({ dur: 0.28, gain: 0.45, attack: 0.08, filter: bp(900, 3500, 1.5) });
+    return s.stopTime;
+  },
+  energyWave: (s) => {
+    s.noise({ dur: 0.5, gain: 0.5, attack: 0.1, filter: bp(500, 2500, 1.2) });
+    s.osc({ type: 'sawtooth', f0: 220, f1: 660, dur: 0.45, gain: 0.08, filter: lp(1800) });
+    return s.stopTime;
+  },
+  droneBuzz: (s) => {
+    s.osc({ type: 'sawtooth', f0: 190, f1: 210, dur: 1.2, gain: 0.07, attack: 0.2, release: 0.4, filter: lp(1400) });
+    s.osc({ type: 'sawtooth', f0: 241, f1: 236, dur: 1.2, gain: 0.05, attack: 0.2, release: 0.4, filter: lp(1400) });
+    return s.stopTime;
+  },
+  steamHiss: (s) => {
+    s.noise({ dur: 1.2, gain: 0.4, attack: 0.05, release: 0.6, filter: hp(2500) });
+    return s.stopTime;
+  },
+
   // ---- objective ---------------------------------------------------------------------
   towerCancel: (s) => {
     s.osc({ type: 'sine', f0: 600, f1: 300, dur: 0.15, gain: 0.25 });
@@ -173,6 +239,17 @@ export const SOUNDS: Record<SoundId, SoundFn> = {
   beacon: (s) => {
     s.osc({ type: 'sine', f0: 1200, dur: 0.18, gain: 0.35, attack: 0.005 });
     s.osc({ type: 'sine', f0: 1800, dur: 0.12, gain: 0.1, attack: 0.005 });
+    return s.stopTime;
+  },
+
+  gate: (s) => {
+    s.noise({ dur: 0.9, gain: 0.18, attack: 0.1, filter: bp(1200, 700, 4) });
+    s.osc({ type: 'sawtooth', f0: 140, f1: 120, dur: 0.9, gain: 0.05, filter: lp(900) });
+    s.noise({ at: 0.85, dur: 0.12, gain: 0.5, filter: bp(900, undefined, 1.2) });
+    return s.stopTime;
+  },
+  metalCreak: (s) => {
+    s.osc({ type: 'sawtooth', f0: 95, f1: 130, dur: 1.4, gain: 0.04, attack: 0.3, release: 0.5, filter: bp(700, 1100, 6) });
     return s.stopTime;
   },
 
@@ -238,6 +315,12 @@ export const SOUNDS: Record<SoundId, SoundFn> = {
     [0, 0.5, 1.1, 1.8, 2.6].forEach((at, i) => explosion(s, at, 1 + i * 0.1));
     explosion(s, 3.4, 2);
     s.osc({ type: 'sawtooth', f0: 400, f1: 25, dur: 4.5, gain: 0.35, filter: lp(900, 100) });
+    return s.stopTime;
+  },
+
+  laserCharge: (s) => {
+    const dur = s.duration > 0 ? Math.min(2.5, s.duration) : 1.2;
+    s.osc({ type: 'sawtooth', f0: 200, f1: 1200, dur, gain: 0.08, attack: dur * 0.8, filter: lp(3000) });
     return s.stopTime;
   },
 

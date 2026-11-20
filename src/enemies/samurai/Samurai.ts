@@ -8,7 +8,10 @@ import {
   MeshStandardMaterial,
   PlaneGeometry,
   ShaderMaterial,
+  Shape,
   Vector3,
+  BufferGeometry,
+  Float32BufferAttribute,
 } from 'three';
 import type { DamageInfo, DamageResult } from '@/core/types';
 import { BaseEnemy, type EnemyDeps, type EnemySpawn } from '../BaseEnemy';
@@ -16,12 +19,220 @@ import { createVertexColorMaterial } from '../duck/modelKit';
 import { forgetTarget, markAware, type Perception } from '../perception';
 import type { SharedAssets } from '../SharedAssets';
 import { approach, createGaitPose, gaitPose, strideLength } from '../gait';
-import { coneHit, dashUsesDue, deflectedDamage, distanceToSegment, pickDashPoint } from './logic';
+import { coneHit, crescentHit, dashUsesDue, deflectedDamage, distanceToSegment, pickDashPoint } from './logic';
+import { QueryGroups } from '@/physics/groups';
 import { buildSamuraiModel, type SamuraiModel } from './model';
 import { samuraiSkin } from './skin';
 import { SAMURAI } from './tunables';
 
-export type SamuraiState = 'patrol' | 'chase' | 'cutWindup' | 'cutRecover' | 'leapTelegraph' | 'leap' | 'leapRecover' | 'spin' | 'dashCharge' | 'dash' | 'dashRecover' | 'destroyed';
+/** The spinning fan sits this far in front of the grip (m), so the disc clears the torso. */
+const SPIN_FORWARD = 0.55;
+const waveOrigin = new Vector3();
+
+interface CrescentWave {
+  readonly group: Group;
+  /** Every shader material of the wave (core, halo, after-images): disposed together. */
+  readonly mats: ShaderMaterial[];
+  /** Shared uniforms: time, life (0..1 of its range), seed. */
+  readonly uniforms: { uTime: { value: number }; uLife: { value: number }; uSeed: { value: number } };
+  readonly pos: Vector3;
+  readonly dir: Vector3;
+  active: boolean;
+  travelled: number;
+  sparkT: number;
+}
+
+/**
+ * Upright crescent in its local XY plane (x = sideways bulge, y = up, from the ground), facing +z: built as
+ * the area between two arcs, horns at the top and bottom. Shared geometry per bulge/height.
+ */
+export function crescentShape(height: number, bulge: number, thickness: number): Shape {
+  const h = height / 2;
+  const outer = (h * h + bulge * bulge) / (2 * bulge); // circle through both horns and the bulge tip
+  const innerBulge = Math.max(0.05, bulge - thickness);
+  const inner = (h * h + innerBulge * innerBulge) / (2 * innerBulge);
+  const shape = new Shape();
+  const n = 24;
+  for (let i = 0; i <= n; i++) {
+    const y = -h + (2 * h * i) / n;
+    const x = Math.sqrt(Math.max(0, outer * outer - y * y)) - (outer - bulge);
+    if (i === 0) shape.moveTo(x, y + h);
+    else shape.lineTo(x, y + h);
+  }
+  for (let i = n; i >= 0; i--) {
+    const y = -h + (2 * h * i) / n;
+    const x = Math.sqrt(Math.max(0, inner * inner - y * y)) - (inner - innerBulge);
+    shape.lineTo(x, y + h);
+  }
+  return shape;
+}
+
+/**
+ * The crescent as a ribbon: `segments` slices from the bottom horn (u = 0) to the top horn (u = 1), each
+ * slice from the inner arc (v = 0) to the outer arc, the cutting edge (v = 1). Same frame as `crescentShape`.
+ */
+export function crescentRibbon(height: number, bulge: number, thickness: number, segments = 40): BufferGeometry {
+  const h = height / 2;
+  const outer = (h * h + bulge * bulge) / (2 * bulge);
+  const innerBulge = Math.max(0.05, bulge - thickness);
+  const inner = (h * h + innerBulge * innerBulge) / (2 * innerBulge);
+  const pos: number[] = [];
+  const uv: number[] = [];
+  const idx: number[] = [];
+  for (let i = 0; i <= segments; i++) {
+    const u = i / segments;
+    const y = -h + 2 * h * u;
+    const xo = Math.sqrt(Math.max(0, outer * outer - y * y)) - (outer - bulge);
+    const xi = Math.sqrt(Math.max(0, inner * inner - y * y)) - (inner - innerBulge);
+    pos.push(xi, y + h, 0, xo, y + h, 0);
+    uv.push(u, 0, u, 1);
+    if (i > 0) {
+      const k = i * 2;
+      idx.push(k - 2, k - 1, k + 1, k - 2, k + 1, k);
+    }
+  }
+  const g = new BufferGeometry();
+  g.setAttribute('position', new Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new Float32BufferAttribute(uv, 2));
+  g.setIndex(idx);
+  g.computeBoundingSphere();
+  return g;
+}
+
+const CRESCENT_VERTEX = /* glsl */ `
+varying vec2 vUv;
+void main() {
+  vUv = uv;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}
+`;
+
+/**
+ * Layered energy crescent: tapered horns, a white-hot cutting edge over an orange-to-deep-red body, fibres
+ * of energy streaming along the arc, a ragged edge from scrolling noise, and a dissolve over its range.
+ * `uHalo` = 1 draws the wide soft glow layer instead. Output is HDR (blooms on medium/high).
+ */
+const CRESCENT_FRAGMENT = /* glsl */ `
+uniform float uTime;
+uniform float uLife;
+uniform float uSeed;
+uniform float uAlpha;
+uniform float uHalo;
+varying vec2 vUv;
+float hash(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
+float noise(vec2 p) {
+  vec2 i = floor(p); vec2 f = fract(p); vec2 u = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);
+}
+float fbm(vec2 p) { float v = 0.0; float a = 0.5; for (int i = 0; i < 4; i++) { v += a * noise(p); p = p * 2.03 + 17.1; a *= 0.5; } return v; }
+void main() {
+  float s = vUv.x;          // along the arc, horn to horn
+  float a = vUv.y;          // 0 inner arc .. 1 cutting edge
+  float taper = pow(sin(3.14159 * s), 0.7);
+  // the band narrows towards the horns: its inner border moves out to the edge
+  float innerEdge = 1.0 - taper;
+  float n = fbm(vec2(s * 5.0 - uTime * 3.2 + uSeed, a * 2.2 + uTime * 0.8));
+  float ragged = innerEdge + (n - 0.5) * 0.35;
+  float band = smoothstep(ragged - 0.02, ragged + 0.3, a);
+  float rim = 1.0 - smoothstep(0.9, 1.0, a);
+  float fibres = smoothstep(0.5, 0.95, fbm(vec2(s * 16.0 - uTime * 11.0 + uSeed * 3.0, a * 5.0)));
+  float edge = smoothstep(0.6, 0.93, a) * rim;              // the hot cutting edge
+  // dissolve: holes eat in from the inner side as it reaches the end of its range
+  float dis = smoothstep(uLife * 1.15 - 0.12, uLife * 1.15 + 0.02, n * 0.8 + a * 0.35);
+  if (uHalo > 0.5) {
+    float glow = pow(a, 1.6) * (1.0 - smoothstep(0.82, 1.0, a)) * taper;
+    vec3 col = vec3(1.0, 0.16, 0.05) * (1.2 + 0.6 * n);
+    gl_FragColor = vec4(col, glow * 0.55 * uAlpha * dis);
+    return;
+  }
+  float heat = clamp(edge * 1.15 + fibres * 0.45 * band, 0.0, 1.0);
+  vec3 deep = vec3(0.45, 0.01, 0.02);
+  vec3 mid = vec3(1.0, 0.22, 0.04);
+  vec3 hot = vec3(1.0, 0.72, 0.38);
+  vec3 white = vec3(1.0, 0.97, 0.92);
+  vec3 col = mix(deep, mid, smoothstep(0.0, 0.45, heat));
+  col = mix(col, hot, smoothstep(0.4, 0.8, heat));
+  col = mix(col, white, smoothstep(0.8, 1.0, heat));
+  float alpha = (band * rim * (0.3 + 0.7 * n) + edge) * taper * dis * uAlpha;
+  gl_FragColor = vec4(col * (1.4 + 3.0 * heat), clamp(alpha, 0.0, 1.0));
+}
+`;
+
+/** After-images trail behind the crescent at these distances (m) and strengths. */
+const WAVE_GHOSTS: ReadonlyArray<readonly [number, number]> = [
+  [0.75, 0.42],
+  [1.5, 0.22],
+  [2.25, 0.1],
+];
+
+function createCrescent(shared: SharedAssets): CrescentWave {
+  const w = SAMURAI.wave;
+  const core = shared.get('samurai:wave-ribbon', () => crescentRibbon(w.height, w.bulge, 0.55));
+  const halo = shared.get('samurai:wave-halo-ribbon', () => crescentRibbon(w.height + 0.7, w.bulge + 0.4, 1.25));
+  const uniforms = { uTime: { value: 0 }, uLife: { value: 0 }, uSeed: { value: Math.random() * 10 } };
+  const mats: ShaderMaterial[] = [];
+  const material = (alpha: number, halo: boolean): ShaderMaterial => {
+    const m = new ShaderMaterial({
+      uniforms: { ...uniforms, uAlpha: { value: alpha }, uHalo: { value: halo ? 1 : 0 } },
+      vertexShader: CRESCENT_VERTEX,
+      fragmentShader: CRESCENT_FRAGMENT,
+      transparent: true,
+      depthWrite: false,
+      blending: AdditiveBlending,
+      side: DoubleSide,
+      fog: false,
+    });
+    mats.push(m);
+    return m;
+  };
+  // The crescent stands in the vertical plane of its flight (group local +x = flight direction), bulging
+  // forward: seen from the side it reads "(", seen by the player it is a vertical blade "|". A slim strip
+  // facing the flight gives that blade its glowing width.
+  const group = new Group();
+  const haloMesh = new Mesh(halo, material(1, true));
+  haloMesh.position.set(-(w.bulge + 0.4) / 2, -0.35, 0);
+  const coreMesh = new Mesh(core, material(1, false));
+  coreMesh.position.x = -w.bulge / 2;
+  const blade = shared.get('samurai:wave-blade', () => crescentRibbon(w.height, 0.2, 0.2));
+  const front = new Mesh(blade, material(0.9, false));
+  front.rotation.y = Math.PI / 2; // faces the flight direction (local +x)
+  front.position.set(w.bulge / 2 - 0.05, 0, 0.1);
+  const bladeHalo = shared.get('samurai:wave-blade-halo', () => crescentRibbon(w.height + 0.5, 0.55, 0.55));
+  const frontHalo = new Mesh(bladeHalo, material(0.8, true));
+  frontHalo.rotation.y = Math.PI / 2;
+  frontHalo.position.set(w.bulge / 2 - 0.1, -0.25, 0.27);
+  group.add(haloMesh, coreMesh, frontHalo, front);
+  for (const [back, alpha] of WAVE_GHOSTS) {
+    const ghost = new Mesh(core, material(alpha, false));
+    ghost.position.set(-w.bulge / 2 - back, 0, 0); // after-images trail behind along -x
+    ghost.scale.set(1, 1 - back * 0.04, 1);
+    group.add(ghost);
+  }
+  group.visible = false;
+  group.userData.noReflect = true;
+  group.traverse((o) => {
+    o.frustumCulled = false;
+    o.userData.noReflect = true;
+  });
+  return { group, mats, uniforms, pos: new Vector3(), dir: new Vector3(0, 0, -1), active: false, travelled: 0, sparkT: 0 };
+}
+
+export type SamuraiState =
+  | 'patrol'
+  | 'chase'
+  | 'cutWindup'
+  | 'cutRecover'
+  | 'leapTelegraph'
+  | 'leap'
+  | 'leapRecover'
+  | 'spin'
+  | 'dashCharge'
+  | 'dash'
+  | 'dashRecover'
+  | 'waveCharge'
+  | 'waveSlash'
+  | 'waveRecover'
+  | 'destroyed';
 
 const models = new WeakMap<SharedAssets, SamuraiModel>();
 function modelFor(shared: SharedAssets): SamuraiModel {
@@ -87,6 +298,9 @@ export class Samurai extends BaseEnemy {
   private cutCooldown = 0;
   private leapCooldown = 0;
   private spinCooldown = 0;
+  private waveCooldown = 0;
+  private waveReleased = false;
+  private readonly wave: CrescentWave;
   private recentDamage = 0;
   private dashUsed = 0;
   private dashLeft = 0;
@@ -131,6 +345,7 @@ export class Samurai extends BaseEnemy {
   private readonly trails: Trail[] = [];
   private trailNext = 0;
   private readonly restAngle: number;
+  private readonly gripZ: number;
 
   constructor(deps: EnemyDeps, spawn: EnemySpawn) {
     super(
@@ -189,6 +404,7 @@ export class Samurai extends BaseEnemy {
     edge.castShadow = true;
     this.weapon.add(blade, edge, new Mesh(geo('weaponGlow', m.weaponGlow), this.glow));
     this.weapon.position.copy(m.grip);
+    this.gripZ = m.grip.z;
     if (!this.skinned) this.weapon.rotation.z = m.restAngle;
     this.upper.add(this.weapon);
     this.cloth = new Mesh(geo('cloth', m.cloth), clothMat);
@@ -202,8 +418,8 @@ export class Samurai extends BaseEnemy {
     this.fan = new Mesh(shared.get('samurai:fan-geo', () => new CircleGeometry(3.25, 40)), this.fanMat);
     this.fan.position.copy(m.grip);
     this.fan.visible = false;
-    // the skin spins its forward-pointing naginata like a propeller beside the body (sagittal plane)
-    if (this.skinned) this.fan.rotation.y = Math.PI / 2;
+    // the fan spins in the frontal plane, in front of the body: it faces the player it deflects
+    if (this.skinned) this.fan.position.z -= SPIN_FORWARD;
     this.fan.userData.noReflect = true;
     this.upper.add(this.fan);
     this.root.add(this.model);
@@ -228,6 +444,10 @@ export class Samurai extends BaseEnemy {
       ctx.scene.add(mesh);
       this.trails.push({ mesh, mat, life: 0 });
     }
+
+    // crescent of sword energy (skill 4): one per samurai, lives in the scene while it flies
+    this.wave = createCrescent(shared);
+    ctx.scene.add(this.wave.group);
 
     const { ColliderDesc } = ctx.physics.rapier;
     const ch = SAMURAI.centerHeight;
@@ -307,6 +527,11 @@ export class Samurai extends BaseEnemy {
       }
       if (d <= SAMURAI.cut.range && this.cutCooldown <= 0) {
         this.transition('cutWindup');
+        return;
+      }
+      // crescent wave: from beyond leap range, or while the leap recharges
+      if (d >= SAMURAI.wave.min && d <= SAMURAI.wave.max && this.waveCooldown <= 0 && (d > SAMURAI.leap.max || this.leapCooldown > 0)) {
+        this.transition('waveCharge');
         return;
       }
       if (d >= SAMURAI.leap.min && d <= SAMURAI.leap.max && this.leapCooldown <= 0) {
@@ -396,6 +621,14 @@ export class Samurai extends BaseEnemy {
         this.dashCentre.set(pl.x, 0, pl.z);
         ctx.events.emit('vfx:spawn', { kind: 'telegraph-ring', position: fxPos.set(pl.x, 0.1, pl.z), scale: SAMURAI.dash.radius, duration: SAMURAI.dash.charge });
         break;
+      case 'waveCharge':
+        stop();
+        this.fx('armor-spark', 0, 0.4, 0, 1.4);
+        break;
+      case 'waveSlash':
+        this.face(pl.x, pl.z);
+        this.waveReleased = false;
+        break;
       case 'dash':
         this.dashLeft = SAMURAI.dash.count;
         this.dashPause = 0;
@@ -414,6 +647,7 @@ export class Samurai extends BaseEnemy {
     this.cutCooldown = Math.max(0, this.cutCooldown - dt);
     this.leapCooldown = Math.max(0, this.leapCooldown - dt);
     this.spinCooldown = Math.max(0, this.spinCooldown - dt);
+    this.waveCooldown = Math.max(0, this.waveCooldown - dt);
     this.recentDamage = Math.max(0, this.recentDamage - (SAMURAI.spin.triggerDamage / SAMURAI.spin.window) * 0.5 * dt);
     // ease in and out of a run instead of snapping to full speed (the brain writes the target)
     if (this.moveSpeed !== this.lastSetSpeed) this.speedTarget = this.moveSpeed;
@@ -468,6 +702,20 @@ export class Samurai extends BaseEnemy {
         this.face(pl.position.x, pl.position.z);
         if (t >= SAMURAI.dash.charge) this.transition('dash');
         break;
+      case 'waveCharge':
+        this.face(pl.position.x, pl.position.z);
+        if (t >= SAMURAI.wave.charge) this.transition('waveSlash');
+        break;
+      case 'waveSlash':
+        if (!this.waveReleased && t >= SAMURAI.wave.slash * SAMURAI.wave.release) {
+          this.waveReleased = true;
+          this.releaseWave();
+        }
+        if (t >= SAMURAI.wave.slash) this.transition('waveRecover');
+        break;
+      case 'waveRecover':
+        if (t >= SAMURAI.wave.recover) this.transition('chase');
+        break;
       case 'dash':
         this.dashStep(dt);
         break;
@@ -477,7 +725,91 @@ export class Samurai extends BaseEnemy {
       default:
         break;
     }
+    this.stepWave(dt);
     super.step(dt);
+  }
+
+  /** Launches the crescent from in front of the samurai towards where the player stands now. */
+  private releaseWave(): void {
+    const { ctx } = this.deps;
+    const pl = ctx.player.position;
+    const fx = -Math.sin(this.yaw);
+    const fz = -Math.cos(this.yaw);
+    let dx = pl.x - this.position.x;
+    let dz = pl.z - this.position.z;
+    const d = Math.hypot(dx, dz) || 1;
+    dx /= d;
+    dz /= d;
+    // aim at the player but never more than ~35 degrees off the facing (it is a forward cut)
+    if (dx * fx + dz * fz < 0.82) {
+      dx = fx;
+      dz = fz;
+    }
+    const w = this.wave;
+    w.active = true;
+    w.travelled = 0;
+    w.sparkT = 0;
+    w.uniforms.uLife.value = 0;
+    w.dir.set(dx, 0, dz);
+    w.pos.set(this.position.x + dx * 1.2, 0, this.position.z + dz * 1.2);
+    w.group.visible = true;
+    w.group.position.copy(w.pos);
+    // local +x along the flight: rotating +x by yaw gives (cos, -sin), so yaw = atan2(-dz, dx)
+    w.group.rotation.set(0, Math.atan2(-dz, dx), 0);
+    this.waveCooldown = SAMURAI.wave.cooldown;
+    this.swing = 1;
+    ctx.events.emit('enemy:attacked', { id: this.id, type: this.type, position: this.position });
+    this.fx('spark', dx * 1.4, 0.2, dz * 1.4, 2.2);
+    ctx.events.emit('enemy:waveReleased', { id: this.id, position: this.position });
+  }
+
+  /** Moves the crescent, hits the player once, dissolves on walls or at the end of its range. */
+  private stepWave(dt: number): void {
+    const w = this.wave;
+    if (!w.active) return;
+    const { ctx } = this.deps;
+    const step = SAMURAI.wave.speed * dt;
+    const ax = w.pos.x;
+    const az = w.pos.z;
+    // walls stop it: probe the static world at chest height over this step (plus its half depth)
+    waveOrigin.set(ax, 1.2, az);
+    const wall = ctx.physics.raycast(waveOrigin, w.dir, step + SAMURAI.wave.hitHalfDepth, { groups: QueryGroups.worldOnly });
+    const bx = ax + w.dir.x * step;
+    const bz = az + w.dir.z * step;
+    const pl = ctx.player;
+    if (pl.alive && crescentHit(ax, az, bx, bz, w.dir.x, w.dir.z, pl.position.x, pl.position.z, pl.position.y)) {
+      hitDir.copy(w.dir);
+      pl.applyDamage({ amount: SAMURAI.wave.damage, zone: 'body', source: 'enemy', point: w.pos, direction: hitDir });
+      impulse.copy(hitDir).multiplyScalar(SAMURAI.wave.knockback).setY(2.5);
+      pl.addImpulse(impulse);
+      this.endWave(pl.position.x, pl.position.z);
+      return;
+    }
+    if (wall) {
+      this.endWave(wall.point.x, wall.point.z);
+      return;
+    }
+    w.pos.set(bx, 0, bz);
+    w.travelled += step;
+    w.group.position.copy(w.pos);
+    // embers shed from the cutting edge
+    w.sparkT -= dt;
+    if (w.sparkT <= 0) {
+      w.sparkT = 0.07;
+      const up = 0.3 + Math.random() * (SAMURAI.wave.height - 0.6);
+      // from the leading edge (the bulge points along the flight), with a little sideways scatter
+      const ahead = SAMURAI.wave.bulge * (Math.sin((Math.PI * up) / SAMURAI.wave.height) - 0.5);
+      const side = (Math.random() - 0.5) * 0.4;
+      ctx.events.emit('vfx:spawn', { kind: 'spark', position: fxPos.set(bx + w.dir.x * ahead + w.dir.z * side, up, bz + w.dir.z * ahead - w.dir.x * side), scale: 0.7 });
+    }
+    if (w.travelled >= SAMURAI.wave.range) this.endWave(bx, bz);
+  }
+
+  private endWave(x: number, z: number): void {
+    const w = this.wave;
+    w.active = false;
+    w.group.visible = false;
+    this.deps.ctx.events.emit('vfx:spawn', { kind: 'spark', position: fxPos.set(x, 1.3, z), scale: 2.6 });
   }
 
   /** Cone attack in front of the samurai. */
@@ -604,6 +936,9 @@ export class Samurai extends BaseEnemy {
   }
 
   private removeTrails(): void {
+    this.wave.group.removeFromParent();
+    for (const m of this.wave.mats) m.dispose();
+    this.wave.active = false;
     for (const t of this.trails) {
       t.mesh.removeFromParent();
       t.mat.dispose();
@@ -637,6 +972,7 @@ export class Samurai extends BaseEnemy {
     let weaponZ = this.restAngle + Math.sin(time * 1.4 + this.seed * 6) * 0.03 + pose.twist * 0.4;
     let weaponX = 0;
     let glow = 2.4;
+    let redCharge = 0;
     this.swing = Math.max(0, this.swing - dt * 4);
     /** Both knees bent by `k` (0..1): thighs forward, shins back, pelvis lowered to keep the feet down. */
     const squat = (k: number): void => {
@@ -706,6 +1042,36 @@ export class Samurai extends BaseEnemy {
         glow = 2.4 + 7 * k * (0.75 + 0.25 * Math.sin(time * 40));
         break;
       }
+      case 'waveCharge': {
+        // gathers itself: blade raised overhead, armour burning red
+        const k = Math.min(1, t / SAMURAI.wave.charge);
+        squat(k * 0.5);
+        weaponZ = this.restAngle + 1.7 * k;
+        lean = -0.12 * k;
+        glow = 2.4 + 8 * k * (0.8 + 0.2 * Math.sin(time * 30));
+        redCharge = k;
+        break;
+      }
+      case 'waveSlash': {
+        // straight down through the vertical: the crescent leaves half way
+        const k = Math.min(1, t / SAMURAI.wave.slash);
+        weaponZ = this.restAngle + 1.7 - 3.1 * k;
+        lean = 0.45 * k;
+        hipL += 0.4 * k;
+        kneeL -= 0.5 * k;
+        hipR -= 0.35 * k;
+        crouch = 0.1 * k;
+        glow = 10 - 5 * k;
+        redCharge = 1 - k;
+        break;
+      }
+      case 'waveRecover': {
+        const k = Math.max(0, 1 - t / SAMURAI.wave.recover);
+        weaponZ = this.restAngle - 1.4 * k;
+        lean = 0.45 * k;
+        squat(0.4 * k);
+        break;
+      }
       case 'dash':
         hipL = 0.9;
         kneeL = -0.7;
@@ -720,7 +1086,7 @@ export class Samurai extends BaseEnemy {
         break;
     }
     // follow-through of a cut / cleave
-    if (this.swing > 0 && state !== 'spin') {
+    if (this.swing > 0 && state !== 'spin' && state !== 'waveSlash' && state !== 'waveRecover') {
       weaponZ = this.restAngle - 1.5 * this.swing;
       weaponX = 0.5 * this.swing;
     }
@@ -733,15 +1099,32 @@ export class Samurai extends BaseEnemy {
     this.upper.rotation.set(-lean, pose.twist, pose.sway);
     this.model.rotation.x = 0;
     if (this.skinned) {
-      // forward-pointing naginata: raise / lower it about X, turn it aside about Y
-      this.weapon.rotation.set(weaponZ - this.restAngle, weaponX, 0);
+      if (state === 'spin') {
+        // stand the forward-pointing naginata up (pitch +90 deg), then roll it about the facing axis:
+        // a propeller disc in the frontal plane, held a little out in front of the body
+        this.weapon.rotation.order = 'ZYX';
+        this.weapon.rotation.set(Math.PI / 2, 0, this.spinAngle);
+        this.weapon.position.z = this.gripZ - SPIN_FORWARD;
+      } else {
+        // forward-pointing naginata: raise / lower it about X, turn it aside about Y
+        this.weapon.rotation.order = 'XYZ';
+        this.weapon.rotation.set(weaponZ - this.restAngle, weaponX, 0);
+        this.weapon.position.z = this.gripZ;
+      }
     } else {
       this.weapon.rotation.z = weaponZ;
       this.weapon.rotation.x = weaponX;
     }
     this.cloth.rotation.x = 0.25 * f * this.walkAmount + Math.abs(pose.left.hip) * 0.2 + Math.sin(time * 3 + this.seed * 9) * 0.06 + (state === 'leap' || state === 'dash' ? 0.6 : 0);
     this.glow.emissiveIntensity = glow;
-    if (this.skinMat) this.skinMat.emissiveIntensity = Math.max(0, glow - 2.4) * SAMURAI.skinGlowTint;
+    if (this.skinMat) this.skinMat.emissiveIntensity = Math.max(Math.max(0, glow - 2.4) * SAMURAI.skinGlowTint, redCharge * SAMURAI.wave.chargeGlow * (0.85 + 0.15 * Math.sin(time * 24)));
+    if (this.wave.active) {
+      // the shader scrolls its energy with time; the arc breathes a little and fades over its range
+      this.wave.uniforms.uTime.value = time;
+      this.wave.uniforms.uLife.value = Math.min(1, this.wave.travelled / SAMURAI.wave.range);
+      const s = 1 + 0.05 * Math.sin(time * 17);
+      this.wave.group.scale.set(s, 1, 1);
+    }
     if (this.fan.visible) {
       const k = Math.min(1, t * 6) * Math.min(1, (SAMURAI.spin.seconds - t) * 6);
       this.fanMat.opacity = Math.max(0, 0.11 * k) * (0.8 + 0.2 * Math.sin(time * 50));
