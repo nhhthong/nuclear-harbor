@@ -274,7 +274,7 @@ export interface ContainerInstanceSpec {
   seed: number;
 }
 
-const LIVERIES = ['NORDHAVN', 'KESTREL LINE', 'ORION CARGO', 'HALCYON', 'TRIDENT SEA', 'VANTA FREIGHT'] as const;
+const LIVERIES = ['NORDHAVN', 'KESTREL LINE', 'ORION CARGO', 'HALCYON', 'TRIDENT SEA', 'VANTA FREIGHT', 'nhhthong@'] as const;
 
 /** Stencil atlas: one livery wordmark per row, white on transparent, with a small ID line. */
 function createLiveryAtlas(): CanvasTexture {
@@ -292,7 +292,7 @@ function createLiveryAtlas(): CanvasTexture {
       g.textBaseline = 'middle';
       g.fillText(name, 18, y + 50, 990);
       g.font = '600 22px "Courier New", monospace';
-      const id = `${name.slice(0, 3)}U ${100000 + ((i * 271828) % 899999)} ${(i * 3) % 10}   22G1   MAX GROSS 30,480 KG   TARE 2,230 KG`;
+      const id = `${name.slice(0, 3).toUpperCase()}U ${100000 + ((i * 271828) % 899999)} ${(i * 3) % 10}   22G1   MAX GROSS 30,480 KG   TARE 2,230 KG`;
       g.fillText(id, 22, y + 108, 990);
       // scuffs: knock holes into the stencil
       g.globalCompositeOperation = 'destination-out';

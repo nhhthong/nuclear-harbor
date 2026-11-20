@@ -27,22 +27,30 @@ Fight through the yard, bring down STINGER-7, the mecha scorpion that guards the
 
 ## Overview
 
-You are the only survivor of a container quay whose defence robots have been hijacked. The nuclear control system counts down from **08:00**. Fight through the container yard to the relay tower, where the mecha scorpion **STINGER-7** rises, hold **E** to activate the tower, then bring down the **Gunslinger Crab Mech**, a 10 m armoured boss with one huge health bar and four skills.
+You are the only survivor of a container quay whose defence robots have been hijacked. The nuclear control system counts down from **08:00**. Fight through the container yard and a steel warehouse to the relay tower, where the mecha scorpion **STINGER-7** rises, hold **E** to activate the tower, then bring down the **Gunslinger Crab Mech**, a 10 m armoured boss with one huge health bar and four skills.
 
-**Three.js + TypeScript + Vite + Rapier**: fixed 60 Hz simulation, procedural audio, no backend, no network at runtime. One small level (72 x 122 m) with modelled containers, wet ground with a planar reflection, a pale sun with one shadow map, an overcast sky, bloom and a cold film grade. Robots, vehicles and clutter are free CC0 or CC-BY models ([credits](CREDITS.md)). It is a **prototype**: nobody has play-tested a full run yet, so balance and real-GPU frame rate are unverified.
+**Three.js + TypeScript + Vite + Rapier**: fixed 60 Hz simulation, procedural audio, no backend, no network at runtime. One small L-shaped level (72 x 122 m, closed by a 7 m wall) with modelled containers, a two-storey warehouse, chain-link fences with swing gates, wet asphalt and concrete (CC0 scans) with painted road markings and a planar reflection, a pale sun with one shadow map, an overcast sky, bloom and a cold film grade. Robots, vehicles and clutter are free CC0 or CC-BY models ([credits](CREDITS.md)). It is a **prototype**: nobody has play-tested a full run yet, so balance and real-GPU frame rate are unverified.
 
 ## Screenshots
 
 <div align="center">
-  <img src="docs/media/map-overhead.jpg" alt="Overhead view of the whole quay: gate apron at the bottom, container yard, relay court, and the quay with the gantry crane at the top" width="460">
+  <img src="docs/media/map-overhead.jpg" alt="Overhead view of the L-shaped quay: gate apron and container yard on the west, the warehouse in the south-east, relay court and quay with the crane in the north" width="460">
 </div>
 
-<sub>Overhead, north at the top: gate apron (spawn, no robots), container yard, relay court around the tower, quay with the crane and boss arena. White boxes are the safe containers.</sub>
+<sub>Overhead, north at the top: the gate apron (spawn, car parks) and the container yard form the west leg of the L; the only way north is through the warehouse (bottom right); then the relay court (dashed ring around the tower) and the quay with the crane and the boss landing ring. White boxes are the safe containers.</sub>
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/media/yard.jpg" alt="A lane through the container yard with a robot at the far end"><br><sub>Container yard lane</sub></td>
-    <td width="50%"><img src="docs/media/court.jpg" alt="Relay court with a small construction site"><br><sub>Relay court</sub></td>
+    <td width="50%"><img src="docs/media/warehouse-door.jpg" alt="Yard aisle with a zebra crossing leading to the warehouse roller door"><br><sub>The yard aisle ends at the warehouse roller door: the only way north</sub></td>
+    <td width="50%"><img src="docs/media/warehouse-inside.jpg" alt="Warehouse interior: concrete floor, steel stair to the mezzanine, pallet racks"><br><sub>Inside: concrete floor, stair to the mezzanine, pallet racks</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/media/warehouse-racks.jpg" alt="Pallet racks loaded with wrapped pallets, cartons and crates"><br><sub>Racks loaded with wrapped pallets, cartons and crates (25 CC0/CC-BY props)</sub></td>
+    <td width="50%"><img src="docs/media/warehouse-mezzanine.jpg" alt="Mezzanine with yellow railings and the glazed control office"><br><sub>Mezzanine and glazed office; windows overlook the relay court (drones come in if you camp here)</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/media/gate-open.jpg" alt="A chain-link gate swung open into the container yard; a container reads nhhthong@"><br><sub>Swing gates open when you touch them and close behind you</sub></td>
+    <td width="50%"><img src="docs/media/carpark.jpg" alt="Staff car park with painted bays and STAFF PARKING lettering"><br><sub>Road paint: parking bays, zebra crossings, lane lines, zone names</sub></td>
   </tr>
   <tr>
     <td width="50%"><img src="docs/media/biped.jpg" alt="Biped robot raising its claws"><br><sub><b>Biped robot</b>: crouches, leaps at where you stood, claws on landing</sub></td>
@@ -58,21 +66,21 @@ You are the only survivor of a container quay whose defence robots have been hij
   </tr>
 </table>
 
-<sub>Captured from the production build with software rendering (no GPU). Robot and crab shots: quality "low"; the others: "medium".</sub>
+<sub>Captured from the production build with software rendering (no GPU), quality "low".</sub>
 
 ## Gameplay
 
 ```
-Gate apron (empty) -> container yard -> relay court: STINGER-7, hold the tower
-           -> the Gunslinger Crab Mech drops onto the quay -> wear down its single HP pool -> victory
+Gate apron -> gate -> container yard -> warehouse (roller door, mezzanine, back door) -> relay court:
+STINGER-7, hold the tower -> gate -> the Gunslinger Crab Mech drops onto the quay -> victory
 ```
 
 - **Countdown** 8 minutes; zero is a failure. **Tower**: hold `E` for 5 s within range. Death respawns at the last checkpoint; the countdown keeps running.
-- **Robots** (roster of 22, streamed in as you walk, 10 alive at most): 5 Medium Mech Strikers (3-round bursts, an AOE rocket every 6 to 9 s), 4 Biped robots (leap and claw; double jump dodges the leap), 6 Spot dogs, 4 Bomber Ducks (3-2-1 explosion), 3 cyber samurai (300 HP elites: cleave, spinning naginata, lightning dashes).
+- **Robots** (roster of 22 on foot plus 4 flying drones, streamed in as you walk, 10 alive at most; drones also come in through the windows if you camp on the mezzanine): 5 Medium Mech Strikers (3-round bursts, an AOE rocket every 6 to 9 s), 4 Biped robots (leap and claw; double jump dodges the leap), 6 Spot dogs, 4 Bomber Ducks (3-2-1 explosion), 3 cyber samurai (300 HP elites: cleave, spinning naginata, lightning dashes).
 - **STINGER-7** (1300 HP): charge, venom shot, tail slam; raises a hexagon shield under sustained fire.
 - **Gunslinger Crab Mech** (5800 HP): carpet bombs (AOE), dragonfly drones, a 360 degree spin up close, a slow four-way laser that rotates 180 degrees.
-- **Supplies**: 11 ammo crates, 3 medkits; five safe containers heal 12 HP/s and robots cannot enter.
-- Numbers are starting values and **not** balanced by play-testing.
+- **Supplies**: 12 ammo crates, 3 medkits; five safe containers heal 12 HP/s and robots cannot enter.
+- Fences: touch a gate to open it; it closes about 5 s after everyone has left. Numbers are starting values and **not** balanced by play-testing.
 
 | Action | Input |
 |---|---|
@@ -97,7 +105,7 @@ npm run dev          # http://localhost:5173/
 
 Verify with `npm run typecheck && npm test && npm run build` (also run by CI). Other scripts: `npm run preview`, `smoke`, `offline`, `leakcheck`, `bench` (see `package.json`).
 
-**URL parameters** (dev and testing only): `?autostart` skips the menu, `?sandbox` small test scene (`&enemies=army,spot,duck,biped` or `none`), `?debug` overlay, `?colliders`, `?countdown=SECONDS`, `?boss` / `?bossphase=core`, `?viewmodel=procedural`, `?bench=SECONDS`.
+**URL parameters** (dev and testing only): `?autostart` skips the menu, `?sandbox` small test scene (`&enemies=army,spot,duck,biped,drone` or `none`), `?debug` overlay, `?colliders`, `?countdown=SECONDS`, `?boss` / `?bossphase=core`, `?viewmodel=procedural`, `?bench=SECONDS`.
 
 **GitHub Pages**: `.github/workflows/pages.yml` runs typecheck, unit tests and build on every push and PR and deploys `main` to the [live demo](https://nhhthong.github.io/nuclear-harbor/) (Settings, Pages, Source: GitHub Actions). **Offline**: a service worker precaches the build; open once online, then it works offline ([`docs/OFFLINE.md`](docs/OFFLINE.md)).
 
@@ -105,14 +113,14 @@ Verify with `npm run typecheck && npm test && npm run build` (also run by CI). O
 
 `src/` modules are registered in `src/modules.ts` (init order = update order) and talk through a typed event bus; every gameplay number lives in `src/config/tunables.ts` or a module `tunables.ts`.
 
-`core` (loop, renderer, input, events) · `config` · `physics` (Rapier) · `world` · `structures` (crane, props, vehicles) · `shelters` · `player` · `weapon` · `combat` · `scorpion` · `enemies` (Striker, Biped, Spot, Duck, samurai, streaming) · `boss` (crab, drones) · `objectives` · `pickups` · `flow` · `vfx` · `audio` · `ui` · `debug` · `offline`
+`core` (loop, renderer, input, events) · `config` · `physics` (Rapier) · `world` · `structures` (crane, warehouse, props, vehicles, fences and gates) · `shelters` · `player` · `weapon` · `combat` · `scorpion` · `enemies` (Striker, Biped, Spot, Duck, samurai, drone, streaming) · `boss` (crab, drones) · `objectives` · `pickups` · `flow` · `vfx` · `audio` · `ui` · `debug` · `offline`
 
-Budgets: 60 FPS desktop target, at most 350 draw calls (about 100 to 180 measured on software GL), about 5.3 MB of code plus about 14 MB of models. Details: [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md).
+Budgets: 60 FPS desktop target, at most 350 draw calls (about 55 to 150 measured on software GL), about 5.3 MB of code plus about 21 MB of models and 0.9 MB of ground and floor textures. Details: [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md).
 
 ## Status and limitations
 
-- Verified: `tsc`, **513 unit tests**, build, CI. Not verified: a full run, balance, frame rate on a real GPU. `tests/e2e/` scripts are stale and `smoke` was not re-run after the reworks.
-- The Bomber Duck is primitive-built and reads as low-poly (the scorpion is an authored model with a procedural fallback; its legs swing rigidly about the hips, so feet slide a little); the crab can show a pale orange wash while a skill telegraphs; the in-game Restart reloads the page.
+- Verified: `tsc`, **612 unit tests**, build, CI, scripted browser checks on the low preset. Not verified: a full run, balance, frame rate on a real GPU. `tests/e2e/` scripts are stale and `smoke` was not re-run after the reworks.
+- A drone charging a shot right next to the camera shows a large pale glow; the Bomber Duck is primitive-built and reads as low-poly (the scorpion is an authored model with a procedural fallback; its legs swing rigidly about the hips, so feet slide a little); the crab can show a pale orange wash while a skill telegraphs; the in-game Restart reloads the page.
 - Differences from the original design: [`docs/DEVIATIONS.md`](docs/DEVIATIONS.md). Architecture and conventions: [`docs/PLAN.md`](docs/PLAN.md). Assets: [`docs/ASSETS.md`](docs/ASSETS.md). AI session rules: [`CLAUDE.md`](CLAUDE.md).
 
 ## Contributing

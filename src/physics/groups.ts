@@ -14,6 +14,8 @@ const Layer = {
   SENSOR: 1 << 4,
   /** Dynamic debris / props. */
   PROP: 1 << 5,
+  /** Swing gates (spec 30): stop walkers only; bullets, sight lines and the nav bake pass through. */
+  GATE: 1 << 6,
 } as const;
 
 const ALL_LAYERS = 0xffff;
@@ -26,10 +28,11 @@ function interactionGroups(membership: number, filter: number): number {
 export const Groups = {
   world: interactionGroups(Layer.WORLD, ALL_LAYERS),
   worldGrappleable: interactionGroups(Layer.WORLD | Layer.GRAPPLE, ALL_LAYERS),
-  player: interactionGroups(Layer.PLAYER, Layer.WORLD | Layer.ENEMY | Layer.SENSOR | Layer.PROP),
-  enemy: interactionGroups(Layer.ENEMY, Layer.WORLD | Layer.PLAYER | Layer.ENEMY | Layer.PROP),
+  player: interactionGroups(Layer.PLAYER, Layer.WORLD | Layer.ENEMY | Layer.SENSOR | Layer.PROP | Layer.GATE),
+  enemy: interactionGroups(Layer.ENEMY, Layer.WORLD | Layer.PLAYER | Layer.ENEMY | Layer.PROP | Layer.GATE),
   sensor: interactionGroups(Layer.SENSOR, Layer.PLAYER),
   prop: interactionGroups(Layer.PROP, Layer.WORLD | Layer.PLAYER | Layer.ENEMY | Layer.PROP),
+  gate: interactionGroups(Layer.GATE, Layer.PLAYER | Layer.ENEMY),
 } as const;
 
 /**
@@ -46,7 +49,7 @@ export const QueryGroups = {
   /** Grapple ray: all static world (so walls occlude); validity = hit collider meta.grappleable. */
   grapple: interactionGroups(ALL_LAYERS, Layer.WORLD),
   /** Player character controller movement. */
-  playerMove: interactionGroups(Layer.PLAYER, Layer.WORLD | Layer.ENEMY | Layer.PROP),
+  playerMove: interactionGroups(Layer.PLAYER, Layer.WORLD | Layer.ENEMY | Layer.PROP | Layer.GATE),
   /** Enemy character movement. */
-  enemyMove: interactionGroups(Layer.ENEMY, Layer.WORLD | Layer.PROP),
+  enemyMove: interactionGroups(Layer.ENEMY, Layer.WORLD | Layer.PROP | Layer.GATE),
 } as const;

@@ -27,6 +27,8 @@ export interface GameEvents {
   'game:stateChanged': { from: GameStateId; to: GameStateId };
   /** Emitted once after every module finished init: static world colliders exist (nav may bake). */
   'world:ready': Record<string, never>;
+  /** A swing gate started opening (`open`) or finished closing (spec 30). */
+  'world:gateMoved': { id: string; position: Vector3; open: boolean };
   'game:over': { reason: GameOverReason };
   'game:victory': { timeRemaining: number };
   /** A checkpoint was stored (REVIEW #7: each activated tower + boss start). */
