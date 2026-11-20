@@ -33,7 +33,7 @@ export class AudioEngine {
   private readonly voices = new Map<number, ActiveVoice>();
   private bank: SampleBank | null = null;
   private readonly lastFile = new Map<SoundId, string>();
-  private readonly loops = new Map<LoopId, { src: AudioBufferSourceNode; gain: GainNode }>();
+  private readonly loops = new Map<LoopId, { src: AudioBufferSourceNode; gain: GainNode; level: number; rate: number }>();
   private readonly loopTargets = new Map<LoopId, { level: number; rate: number }>();
   private sampledPlays = 0;
   private readonly allocator = new VoiceAllocator<SoundId>(AUDIO.voiceCap, (id) => soundDef(id));
@@ -241,9 +241,15 @@ export class AudioEngine {
       src.connect(gain);
       gain.connect(this.buses.sfx);
       src.start();
-      loop = { src, gain };
+      loop = { src, gain, level: -1, rate: -1 };
       this.loops.set(id, loop);
     }
+    // only touch the params on a real change (this runs every frame)
+    if (Math.abs(loop.level - level) < 0.01 && Math.abs(loop.rate - rate) < 0.01) return true;
+    loop.level = level;
+    loop.rate = rate;
+    loop.gain.gain.cancelScheduledValues(ctx.currentTime);
+    loop.src.playbackRate.cancelScheduledValues(ctx.currentTime);
     loop.gain.gain.setTargetAtTime(Math.max(0.0001, level * LOOPS[id].gain), ctx.currentTime, AUDIO.samples.loopFade / 3);
     loop.src.playbackRate.setTargetAtTime(rate, ctx.currentTime, 0.2);
     return true;

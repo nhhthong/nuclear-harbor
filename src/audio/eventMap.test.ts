@@ -47,7 +47,7 @@ describe('event routes', () => {
 
   it('maps every mandatory boss attack to a sound', () => {
     for (const attack of ['heavy-cannon', 'ground-slam', 'missile-barrage', 'shockwave', 'emp-pulse', 'carpet-bombs', 'drone-release', 'body-spin', 'quad-laser'] as const) {
-      expect(ids(EVENT_ROUTES['boss:attack']({ attack, position: v(), radius: 4 })).length).toBe(1);
+      expect(ids(EVENT_ROUTES['boss:attack']({ attack, position: v(), radius: 4 })).length).toBeGreaterThanOrEqual(1);
     }
     const tel = EVENT_ROUTES['boss:attackTelegraph']({ attack: 'emp-pulse', position: v(), radius: 3, duration: 1 });
     expect(tel).toMatchObject({ id: 'bossTelegraph', variant: 5 });

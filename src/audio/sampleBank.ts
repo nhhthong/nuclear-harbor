@@ -20,7 +20,7 @@ export class SampleBank {
     private readonly ctx: BaseAudioContext,
     files: readonly string[],
     private readonly baseUrl: string = SAMPLE_BASE_URL,
-    private readonly fetchFn: typeof fetch | undefined = typeof fetch === 'undefined' ? undefined : fetch.bind(globalThis),
+    private readonly fetchFn: typeof fetch | null = typeof fetch === 'undefined' ? null : fetch.bind(globalThis),
   ) {
     for (const f of files) void this.load(f);
   }

@@ -39,6 +39,8 @@ export const AUDIO = {
   },
   /** Delay of the shell casing after a shot and of the reload parts (s; bolt/mag-in measured from the end). */
   casingDelay: 0.38,
+  /** Random creaks of the warehouse steel while the player is inside (s between two). */
+  creak: { minInterval: 9, maxInterval: 22 },
   reload: { magOutAt: 0.12, magInBeforeEnd: 0.75, boltBeforeEnd: 0.3 },
   /** Gesture events that unlock the context. */
   gestureEvents: ['pointerdown', 'keydown'] as const,

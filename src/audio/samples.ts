@@ -43,13 +43,14 @@ const s = (files: string | readonly string[], gain = 1, pitchJitter = 0.04, gain
 
 export const SAMPLE_MANIFEST: Partial<Record<SoundId, SampleDef>> = {
   // weapon
-  rifleShot: s(v('rifle_shot', 4), 0.85, 0.035, 0.08),
+  rifleShot: s(v('rifle_shot', 2), 0.85, 0.05, 0.08),
   dryClick: s('dry_click.ogg', 0.7, 0.03),
   reloadMagOut: s('reload_mag_out.ogg', 0.8, 0.03),
   reloadMagIn: s('reload_mag_in.ogg', 0.85, 0.03),
   reloadBolt: s('reload_bolt.ogg', 0.85, 0.03),
-  shellCasing: s(v('shell_casing', 3), 0.35, 0.08, 0.2),
+  shellCasing: s(v('shell_casing', 3), 0.3, 0.08, 0.2),
   // impacts
+  impact: s(v('impact_metal', 4), 0.55, 0.08, 0.15),
   impactMetal: s(v('impact_metal', 4), 0.55, 0.08, 0.15),
   impactConcrete: s(v('impact_concrete', 3), 0.7, 0.08, 0.15),
   hitArmor: s(v('hit_armor', 3), 0.6, 0.06, 0.12),
@@ -57,18 +58,36 @@ export const SAMPLE_MANIFEST: Partial<Record<SoundId, SampleDef>> = {
   footstepWalk: s(v('step_concrete', 6), 0.45, 0.06, 0.15),
   footstepSprint: s(v('step_concrete', 6), 0.6, 0.06, 0.15),
   footstepMetal: s(v('step_metal', 6), 0.5, 0.06, 0.15),
+  jump: s('jump.ogg', 0.5, 0.05),
+  airJump: s('jump.ogg', 0.45, 0.05),
+  land: s('land.ogg', 0.6, 0.05),
+  hurt: s(v('hurt', 3), 0.7, 0.04, 0.1),
+  death: s('death.ogg', 0.9, 0.02, 0.05),
   pickupAmmo: s('pickup_ammo.ogg', 0.8, 0.03),
   pickupMedkit: s('pickup_medkit.ogg', 0.7, 0.02),
   hitMarker: s('hit_marker.ogg', 0.6, 0.05),
-  // enemies and boss
+  // enemies
+  enemyAlert: s(['enemy_alert_1.ogg', 'enemy_alert_2.ogg', 'robot_beep.ogg'], 0.6, 0.06, 0.1),
   enemyShot: s(v('enemy_laser', 3), 0.55, 0.06, 0.1),
+  enemyMelee: s(['servo.ogg', 'sword_cut.ogg'], 0.6, 0.08, 0.1),
   enemyDestroyed: s(v('explosion_robot', 3), 0.9, 0.06, 0.1),
   duckHit: s(v('explosion_bang', 3), 1, 0.05, 0.1),
+  swordSwing: s(['sword_swing.ogg', 'sword_cut.ogg'], 0.75, 0.06, 0.1),
+  energyWave: s(v('energy_wave', 2), 0.8, 0.06, 0.1),
+  droneBuzz: s('drone_buzz.ogg', 0.5, 0.06, 0.1),
+  steamHiss: s('steam_hiss.ogg', 0.6, 0.05, 0.1),
+  // boss
   bossMissile: s(v('explosion_bang', 3), 0.9, 0.08, 0.1),
   bossCannon: s(v('boss_cannon', 2), 1, 0.04, 0.08),
   bossSlam: s('boss_stomp.ogg', 1, 0.05, 0.1),
-  bossEmp: s('boss_laser.ogg', 0.8, 0.05, 0.1),
+  bossEmp: s(['boss_laser.ogg', 'electric_strike.ogg'], 0.8, 0.05, 0.1),
+  laserCharge: s('laser_charge.ogg', 0.6, 0.03, 0.05),
   bossDefeat: s('boss_defeat.ogg', 1, 0.02, 0.05),
+  // world, objectives, UI
+  alarm: s('alarm.ogg', 0.45, 0.01, 0.05),
+  beep: s('beep.ogg', 0.6, 0.01, 0.05),
+  gate: s('gate.ogg', 0.7, 0.06, 0.1),
+  metalCreak: s(v('metal_creak', 2), 0.5, 0.08, 0.2),
 };
 
 export const LOOPS = {
