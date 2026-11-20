@@ -8,6 +8,8 @@ import {
   MeshStandardMaterial,
   PlaneGeometry,
   ShaderMaterial,
+  Shape,
+  ShapeGeometry,
   Vector3,
 } from 'three';
 import type { DamageInfo, DamageResult } from '@/core/types';
@@ -16,12 +18,93 @@ import { createVertexColorMaterial } from '../duck/modelKit';
 import { forgetTarget, markAware, type Perception } from '../perception';
 import type { SharedAssets } from '../SharedAssets';
 import { approach, createGaitPose, gaitPose, strideLength } from '../gait';
-import { coneHit, dashUsesDue, deflectedDamage, distanceToSegment, pickDashPoint } from './logic';
+import { coneHit, crescentHit, dashUsesDue, deflectedDamage, distanceToSegment, pickDashPoint } from './logic';
+import { QueryGroups } from '@/physics/groups';
 import { buildSamuraiModel, type SamuraiModel } from './model';
 import { samuraiSkin } from './skin';
 import { SAMURAI } from './tunables';
 
-export type SamuraiState = 'patrol' | 'chase' | 'cutWindup' | 'cutRecover' | 'leapTelegraph' | 'leap' | 'leapRecover' | 'spin' | 'dashCharge' | 'dash' | 'dashRecover' | 'destroyed';
+/** The spinning fan sits this far in front of the grip (m), so the disc clears the torso. */
+const SPIN_FORWARD = 0.55;
+const waveOrigin = new Vector3();
+
+interface CrescentWave {
+  readonly group: Group;
+  readonly mat: MeshBasicMaterial;
+  readonly haloMat: MeshBasicMaterial;
+  readonly pos: Vector3;
+  readonly dir: Vector3;
+  active: boolean;
+  travelled: number;
+}
+
+/**
+ * Upright crescent in its local XY plane (x = sideways bulge, y = up, from the ground), facing +z: built as
+ * the area between two arcs, horns at the top and bottom. Shared geometry per bulge/height.
+ */
+export function crescentShape(height: number, bulge: number, thickness: number): Shape {
+  const h = height / 2;
+  const outer = (h * h + bulge * bulge) / (2 * bulge); // circle through both horns and the bulge tip
+  const innerBulge = Math.max(0.05, bulge - thickness);
+  const inner = (h * h + innerBulge * innerBulge) / (2 * innerBulge);
+  const shape = new Shape();
+  const n = 24;
+  for (let i = 0; i <= n; i++) {
+    const y = -h + (2 * h * i) / n;
+    const x = Math.sqrt(Math.max(0, outer * outer - y * y)) - (outer - bulge);
+    if (i === 0) shape.moveTo(x, y + h);
+    else shape.lineTo(x, y + h);
+  }
+  for (let i = n; i >= 0; i--) {
+    const y = -h + (2 * h * i) / n;
+    const x = Math.sqrt(Math.max(0, inner * inner - y * y)) - (inner - innerBulge);
+    shape.lineTo(x, y + h);
+  }
+  return shape;
+}
+
+function createCrescent(shared: SharedAssets): CrescentWave {
+  const w = SAMURAI.wave;
+  const core = shared.get('samurai:wave-geo', () => new ShapeGeometry(crescentShape(w.height, w.bulge, 0.34), 1));
+  const halo = shared.get('samurai:wave-halo-geo', () => new ShapeGeometry(crescentShape(w.height + 0.5, w.bulge + 0.25, 0.85), 1));
+  const mat = new MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.95, depthWrite: false, blending: AdditiveBlending, side: DoubleSide, fog: false });
+  mat.color.setRGB(4.2, 1.1, 0.75); // white-hot red core (HDR: blooms on medium/high)
+  const haloMat = new MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.32, depthWrite: false, blending: AdditiveBlending, side: DoubleSide, fog: false });
+  haloMat.color.setRGB(1.6, 0.18, 0.1);
+  const group = new Group();
+  const coreMesh = new Mesh(core, mat);
+  const haloMesh = new Mesh(halo, haloMat);
+  haloMesh.position.y = -0.25;
+  // a second core turned edge-on gives the blade some depth seen from the side
+  const side = new Mesh(core, haloMat);
+  side.rotation.y = Math.PI / 2;
+  side.scale.set(0.45, 1, 1);
+  group.add(haloMesh, coreMesh, side);
+  group.visible = false;
+  group.userData.noReflect = true;
+  for (const m of [coreMesh, haloMesh, side]) {
+    m.frustumCulled = false;
+    m.userData.noReflect = true;
+  }
+  return { group, mat, haloMat, pos: new Vector3(), dir: new Vector3(0, 0, -1), active: false, travelled: 0 };
+}
+
+export type SamuraiState =
+  | 'patrol'
+  | 'chase'
+  | 'cutWindup'
+  | 'cutRecover'
+  | 'leapTelegraph'
+  | 'leap'
+  | 'leapRecover'
+  | 'spin'
+  | 'dashCharge'
+  | 'dash'
+  | 'dashRecover'
+  | 'waveCharge'
+  | 'waveSlash'
+  | 'waveRecover'
+  | 'destroyed';
 
 const models = new WeakMap<SharedAssets, SamuraiModel>();
 function modelFor(shared: SharedAssets): SamuraiModel {
@@ -87,6 +170,9 @@ export class Samurai extends BaseEnemy {
   private cutCooldown = 0;
   private leapCooldown = 0;
   private spinCooldown = 0;
+  private waveCooldown = 0;
+  private waveReleased = false;
+  private readonly wave: CrescentWave;
   private recentDamage = 0;
   private dashUsed = 0;
   private dashLeft = 0;
@@ -131,6 +217,7 @@ export class Samurai extends BaseEnemy {
   private readonly trails: Trail[] = [];
   private trailNext = 0;
   private readonly restAngle: number;
+  private readonly gripZ: number;
 
   constructor(deps: EnemyDeps, spawn: EnemySpawn) {
     super(
@@ -189,6 +276,7 @@ export class Samurai extends BaseEnemy {
     edge.castShadow = true;
     this.weapon.add(blade, edge, new Mesh(geo('weaponGlow', m.weaponGlow), this.glow));
     this.weapon.position.copy(m.grip);
+    this.gripZ = m.grip.z;
     if (!this.skinned) this.weapon.rotation.z = m.restAngle;
     this.upper.add(this.weapon);
     this.cloth = new Mesh(geo('cloth', m.cloth), clothMat);
@@ -202,8 +290,8 @@ export class Samurai extends BaseEnemy {
     this.fan = new Mesh(shared.get('samurai:fan-geo', () => new CircleGeometry(3.25, 40)), this.fanMat);
     this.fan.position.copy(m.grip);
     this.fan.visible = false;
-    // the skin spins its forward-pointing naginata like a propeller beside the body (sagittal plane)
-    if (this.skinned) this.fan.rotation.y = Math.PI / 2;
+    // the fan spins in the frontal plane, in front of the body: it faces the player it deflects
+    if (this.skinned) this.fan.position.z -= SPIN_FORWARD;
     this.fan.userData.noReflect = true;
     this.upper.add(this.fan);
     this.root.add(this.model);
@@ -228,6 +316,10 @@ export class Samurai extends BaseEnemy {
       ctx.scene.add(mesh);
       this.trails.push({ mesh, mat, life: 0 });
     }
+
+    // crescent of sword energy (skill 4): one per samurai, lives in the scene while it flies
+    this.wave = createCrescent(shared);
+    ctx.scene.add(this.wave.group);
 
     const { ColliderDesc } = ctx.physics.rapier;
     const ch = SAMURAI.centerHeight;
@@ -307,6 +399,11 @@ export class Samurai extends BaseEnemy {
       }
       if (d <= SAMURAI.cut.range && this.cutCooldown <= 0) {
         this.transition('cutWindup');
+        return;
+      }
+      // crescent wave: from beyond leap range, or while the leap recharges
+      if (d >= SAMURAI.wave.min && d <= SAMURAI.wave.max && this.waveCooldown <= 0 && (d > SAMURAI.leap.max || this.leapCooldown > 0)) {
+        this.transition('waveCharge');
         return;
       }
       if (d >= SAMURAI.leap.min && d <= SAMURAI.leap.max && this.leapCooldown <= 0) {
@@ -396,6 +493,14 @@ export class Samurai extends BaseEnemy {
         this.dashCentre.set(pl.x, 0, pl.z);
         ctx.events.emit('vfx:spawn', { kind: 'telegraph-ring', position: fxPos.set(pl.x, 0.1, pl.z), scale: SAMURAI.dash.radius, duration: SAMURAI.dash.charge });
         break;
+      case 'waveCharge':
+        stop();
+        this.fx('armor-spark', 0, 0.4, 0, 1.4);
+        break;
+      case 'waveSlash':
+        this.face(pl.x, pl.z);
+        this.waveReleased = false;
+        break;
       case 'dash':
         this.dashLeft = SAMURAI.dash.count;
         this.dashPause = 0;
@@ -414,6 +519,7 @@ export class Samurai extends BaseEnemy {
     this.cutCooldown = Math.max(0, this.cutCooldown - dt);
     this.leapCooldown = Math.max(0, this.leapCooldown - dt);
     this.spinCooldown = Math.max(0, this.spinCooldown - dt);
+    this.waveCooldown = Math.max(0, this.waveCooldown - dt);
     this.recentDamage = Math.max(0, this.recentDamage - (SAMURAI.spin.triggerDamage / SAMURAI.spin.window) * 0.5 * dt);
     // ease in and out of a run instead of snapping to full speed (the brain writes the target)
     if (this.moveSpeed !== this.lastSetSpeed) this.speedTarget = this.moveSpeed;
@@ -468,6 +574,20 @@ export class Samurai extends BaseEnemy {
         this.face(pl.position.x, pl.position.z);
         if (t >= SAMURAI.dash.charge) this.transition('dash');
         break;
+      case 'waveCharge':
+        this.face(pl.position.x, pl.position.z);
+        if (t >= SAMURAI.wave.charge) this.transition('waveSlash');
+        break;
+      case 'waveSlash':
+        if (!this.waveReleased && t >= SAMURAI.wave.slash * SAMURAI.wave.release) {
+          this.waveReleased = true;
+          this.releaseWave();
+        }
+        if (t >= SAMURAI.wave.slash) this.transition('waveRecover');
+        break;
+      case 'waveRecover':
+        if (t >= SAMURAI.wave.recover) this.transition('chase');
+        break;
       case 'dash':
         this.dashStep(dt);
         break;
@@ -477,7 +597,77 @@ export class Samurai extends BaseEnemy {
       default:
         break;
     }
+    this.stepWave(dt);
     super.step(dt);
+  }
+
+  /** Launches the crescent from in front of the samurai towards where the player stands now. */
+  private releaseWave(): void {
+    const { ctx } = this.deps;
+    const pl = ctx.player.position;
+    const fx = -Math.sin(this.yaw);
+    const fz = -Math.cos(this.yaw);
+    let dx = pl.x - this.position.x;
+    let dz = pl.z - this.position.z;
+    const d = Math.hypot(dx, dz) || 1;
+    dx /= d;
+    dz /= d;
+    // aim at the player but never more than ~35 degrees off the facing (it is a forward cut)
+    if (dx * fx + dz * fz < 0.82) {
+      dx = fx;
+      dz = fz;
+    }
+    const w = this.wave;
+    w.active = true;
+    w.travelled = 0;
+    w.dir.set(dx, 0, dz);
+    w.pos.set(this.position.x + dx * 1.2, 0, this.position.z + dz * 1.2);
+    w.group.visible = true;
+    w.group.position.copy(w.pos);
+    w.group.rotation.set(0, Math.atan2(dx, dz), 0);
+    this.waveCooldown = SAMURAI.wave.cooldown;
+    this.swing = 1;
+    ctx.events.emit('enemy:attacked', { id: this.id, type: this.type, position: this.position });
+    this.fx('spark', dx * 1.4, 0.2, dz * 1.4, 2.2);
+  }
+
+  /** Moves the crescent, hits the player once, dissolves on walls or at the end of its range. */
+  private stepWave(dt: number): void {
+    const w = this.wave;
+    if (!w.active) return;
+    const { ctx } = this.deps;
+    const step = SAMURAI.wave.speed * dt;
+    const ax = w.pos.x;
+    const az = w.pos.z;
+    // walls stop it: probe the static world at chest height over this step (plus its half depth)
+    waveOrigin.set(ax, 1.2, az);
+    const wall = ctx.physics.raycast(waveOrigin, w.dir, step + SAMURAI.wave.hitHalfDepth, { groups: QueryGroups.worldOnly });
+    const bx = ax + w.dir.x * step;
+    const bz = az + w.dir.z * step;
+    const pl = ctx.player;
+    if (pl.alive && crescentHit(ax, az, bx, bz, w.dir.x, w.dir.z, pl.position.x, pl.position.z, pl.position.y)) {
+      hitDir.copy(w.dir);
+      pl.applyDamage({ amount: SAMURAI.wave.damage, zone: 'body', source: 'enemy', point: w.pos, direction: hitDir });
+      impulse.copy(hitDir).multiplyScalar(SAMURAI.wave.knockback).setY(2.5);
+      pl.addImpulse(impulse);
+      this.endWave(pl.position.x, pl.position.z);
+      return;
+    }
+    if (wall) {
+      this.endWave(wall.point.x, wall.point.z);
+      return;
+    }
+    w.pos.set(bx, 0, bz);
+    w.travelled += step;
+    w.group.position.copy(w.pos);
+    if (w.travelled >= SAMURAI.wave.range) this.endWave(bx, bz);
+  }
+
+  private endWave(x: number, z: number): void {
+    const w = this.wave;
+    w.active = false;
+    w.group.visible = false;
+    this.deps.ctx.events.emit('vfx:spawn', { kind: 'spark', position: fxPos.set(x, 1.3, z), scale: 2.6 });
   }
 
   /** Cone attack in front of the samurai. */
@@ -604,6 +794,10 @@ export class Samurai extends BaseEnemy {
   }
 
   private removeTrails(): void {
+    this.wave.group.removeFromParent();
+    this.wave.mat.dispose();
+    this.wave.haloMat.dispose();
+    this.wave.active = false;
     for (const t of this.trails) {
       t.mesh.removeFromParent();
       t.mat.dispose();
@@ -637,6 +831,7 @@ export class Samurai extends BaseEnemy {
     let weaponZ = this.restAngle + Math.sin(time * 1.4 + this.seed * 6) * 0.03 + pose.twist * 0.4;
     let weaponX = 0;
     let glow = 2.4;
+    let redCharge = 0;
     this.swing = Math.max(0, this.swing - dt * 4);
     /** Both knees bent by `k` (0..1): thighs forward, shins back, pelvis lowered to keep the feet down. */
     const squat = (k: number): void => {
@@ -706,6 +901,36 @@ export class Samurai extends BaseEnemy {
         glow = 2.4 + 7 * k * (0.75 + 0.25 * Math.sin(time * 40));
         break;
       }
+      case 'waveCharge': {
+        // gathers itself: blade raised overhead, armour burning red
+        const k = Math.min(1, t / SAMURAI.wave.charge);
+        squat(k * 0.5);
+        weaponZ = this.restAngle + 1.7 * k;
+        lean = -0.12 * k;
+        glow = 2.4 + 8 * k * (0.8 + 0.2 * Math.sin(time * 30));
+        redCharge = k;
+        break;
+      }
+      case 'waveSlash': {
+        // straight down through the vertical: the crescent leaves half way
+        const k = Math.min(1, t / SAMURAI.wave.slash);
+        weaponZ = this.restAngle + 1.7 - 3.1 * k;
+        lean = 0.45 * k;
+        hipL += 0.4 * k;
+        kneeL -= 0.5 * k;
+        hipR -= 0.35 * k;
+        crouch = 0.1 * k;
+        glow = 10 - 5 * k;
+        redCharge = 1 - k;
+        break;
+      }
+      case 'waveRecover': {
+        const k = Math.max(0, 1 - t / SAMURAI.wave.recover);
+        weaponZ = this.restAngle - 1.4 * k;
+        lean = 0.45 * k;
+        squat(0.4 * k);
+        break;
+      }
       case 'dash':
         hipL = 0.9;
         kneeL = -0.7;
@@ -720,7 +945,7 @@ export class Samurai extends BaseEnemy {
         break;
     }
     // follow-through of a cut / cleave
-    if (this.swing > 0 && state !== 'spin') {
+    if (this.swing > 0 && state !== 'spin' && state !== 'waveSlash' && state !== 'waveRecover') {
       weaponZ = this.restAngle - 1.5 * this.swing;
       weaponX = 0.5 * this.swing;
     }
@@ -733,15 +958,33 @@ export class Samurai extends BaseEnemy {
     this.upper.rotation.set(-lean, pose.twist, pose.sway);
     this.model.rotation.x = 0;
     if (this.skinned) {
-      // forward-pointing naginata: raise / lower it about X, turn it aside about Y
-      this.weapon.rotation.set(weaponZ - this.restAngle, weaponX, 0);
+      if (state === 'spin') {
+        // stand the forward-pointing naginata up (pitch +90 deg), then roll it about the facing axis:
+        // a propeller disc in the frontal plane, held a little out in front of the body
+        this.weapon.rotation.order = 'ZYX';
+        this.weapon.rotation.set(Math.PI / 2, 0, this.spinAngle);
+        this.weapon.position.z = this.gripZ - SPIN_FORWARD;
+      } else {
+        // forward-pointing naginata: raise / lower it about X, turn it aside about Y
+        this.weapon.rotation.order = 'XYZ';
+        this.weapon.rotation.set(weaponZ - this.restAngle, weaponX, 0);
+        this.weapon.position.z = this.gripZ;
+      }
     } else {
       this.weapon.rotation.z = weaponZ;
       this.weapon.rotation.x = weaponX;
     }
     this.cloth.rotation.x = 0.25 * f * this.walkAmount + Math.abs(pose.left.hip) * 0.2 + Math.sin(time * 3 + this.seed * 9) * 0.06 + (state === 'leap' || state === 'dash' ? 0.6 : 0);
     this.glow.emissiveIntensity = glow;
-    if (this.skinMat) this.skinMat.emissiveIntensity = Math.max(0, glow - 2.4) * SAMURAI.skinGlowTint;
+    if (this.skinMat) this.skinMat.emissiveIntensity = Math.max(Math.max(0, glow - 2.4) * SAMURAI.skinGlowTint, redCharge * SAMURAI.wave.chargeGlow * (0.85 + 0.15 * Math.sin(time * 24)));
+    if (this.wave.active) {
+      // flicker and a slow breathing of the crescent
+      const pulse = 0.85 + 0.15 * Math.sin(time * 38);
+      this.wave.mat.opacity = 0.95 * pulse;
+      this.wave.haloMat.opacity = 0.32 * pulse;
+      const s = 1 + 0.06 * Math.sin(time * 17);
+      this.wave.group.scale.set(s, 1, 1);
+    }
     if (this.fan.visible) {
       const k = Math.min(1, t * 6) * Math.min(1, (SAMURAI.spin.seconds - t) * 6);
       this.fanMat.opacity = Math.max(0, 0.11 * k) * (0.8 + 0.2 * Math.sin(time * 50));
