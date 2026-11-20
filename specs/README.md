@@ -30,6 +30,20 @@
 | T-21-dinosaur | dinosaur semi-boss | REPLACED by the mecha scorpion STINGER-7 (`src/scorpion`) |
 | T-22-final-boss | spherical boss, cinematic | landing cinematic kept for the crab; boss body replaced (`27-crab-boss`) |
 
-Folders numbered 24 and above are current and describe the game as built: `24-ads-autoreload-gravity`, `25-world-dressing-and-mood`, `26-enemy-models-and-biped` (Biped, Striker, Spot model; roster 22) `27-crab-boss` (Gunslinger Crab Mech, dragonfly drones; ammo budget 348 hits) and `28-scorpion-model`, `29-warehouse-l-map`, `30-fences-and-gates`, `31-samurai-crescent-wave`, `32-recorded-audio` (STINGER-7 look and animation from an authored GLB; gameplay unchanged). Each has `spec.md`, `checklists/requirements.md`, `plan.md` and a fully ticked `tasks.md`.
+Folders numbered 24 and above are current and describe the game as built (rewritten against the code on 2026-11-20, see `ANALYSIS-2026-11.md`; PRs are the squashed or merge PRs into `main`):
+
+| Folder | What it is | PR |
+|---|---|---|
+| `24-ads-autoreload-gravity` | aim down sights, auto reload, gravity (now a natural jump 0.95 m) | #11 |
+| `25-world-dressing-and-mood` | 12 vehicles, 51 clutter items, scarce supplies, cold overcast mood | #11, #13 |
+| `26-enemy-models-and-biped` | Biped, Striker, Spot model; roster 22 | #15 |
+| `27-crab-boss` | Gunslinger Crab Mech (5800 HP, 4 skills), dragonfly drones | #15 |
+| `28-scorpion-model` | STINGER-7 look and animation from an authored GLB; gameplay unchanged | #17 |
+| `29-warehouse-l-map` | L map, warehouse, flying drone enemy (4 + call-ins), interior props; ammo budget 356 hits vs supply 570 | #18, #19, #20 |
+| `30-fences-and-gates` | two fences, five swing gates, `GATE` layer | #20 |
+| `31-samurai-crescent-wave` | frontal spin, red-charge crescent wave (32 damage, 12 m/s) | #21 |
+| `32-recorded-audio` | 75 OGG samples (1.27 MB), procedural fallbacks; mix pass open | #21 |
+
+Each has `spec.md`, `checklists/requirements.md`, `plan.md` and `tasks.md`. Every requirement carries a check tag (unit test, browser check, or not verified) and every task is ticked or marked "skipped: reason"; open items are the skipped ones (spec 24 T012, 25 T011, 26 T013, 27 T013, 28 T010, 29 T043/T045, 30 T009, 31 T010/T011, 32 T014/T019/T020). Next free number: **33** (highest folder plus 1; 23 was never used).
 
 New work: follow `docs/SPECKIT.md` (new features use Spec Kit; small fixes and tuning do not).
