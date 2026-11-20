@@ -17,6 +17,8 @@ export interface SoundRequest {
   /** Seconds; sounds that follow a telegraph (duck wind-up, reload) use it. */
   duration?: number;
   variant?: number;
+  /** Seconds after now (reload parts, shell casing). */
+  delay?: number;
 }
 
 type Route<K extends keyof GameEvents> = (e: GameEvents[K]) => SoundRequest | SoundRequest[] | null;
