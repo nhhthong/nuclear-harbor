@@ -115,7 +115,7 @@ Verify with `npm run typecheck && npm test && npm run build` (also run by CI). O
 
 `core` (loop, renderer, input, events) · `config` · `physics` (Rapier) · `world` · `structures` (crane, warehouse, props, vehicles, fences and gates) · `shelters` · `player` · `weapon` · `combat` · `scorpion` · `enemies` (Striker, Biped, Spot, Duck, samurai, drone, streaming) · `boss` (crab, drones) · `objectives` · `pickups` · `flow` · `vfx` · `audio` · `ui` · `debug` · `offline`
 
-Budgets: 60 FPS desktop target, at most 350 draw calls (about 55 to 150 measured on software GL), about 5.3 MB of code plus about 16 MB of models and 0.9 MB of ground textures. Details: [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md).
+Budgets: 60 FPS desktop target, at most 350 draw calls (about 55 to 150 measured on software GL), about 5.3 MB of code plus about 21 MB of models and 0.9 MB of ground and floor textures. Details: [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md).
 
 ## Status and limitations
 
