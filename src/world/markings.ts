@@ -121,7 +121,7 @@ export const MARKINGS: readonly Marking[] = [
   { kind: 'text', x: -26.5, z: 23.6, text: 'STAFF PARKING', size: 0.7, paint: 'white' },
   ...bays(-3.9, 3, 3, 14.4, 19.8, 19.8, 5),
   { kind: 'text', x: -15, z: 24.5, text: 'GATE  C', size: 1.3, paint: 'white' },
-  { kind: 'text', x: -15, z: 26.4, text: 'ZONE', size: 0.6, paint: 'white' },
+  { kind: 'text', x: -15, z: 23.0, text: 'ZONE', size: 0.6, paint: 'white' },
   { kind: 'line', a: [LAND.minX + 1, 13.2], b: [-18.5, 13.2], w: 0.35, paint: 'white' },
 
   // ---- relay court: crossing at the back door, relay ring, pickup bay, zone name ----
@@ -129,7 +129,7 @@ export const MARKINGS: readonly Marking[] = [
   { kind: 'ring', x: tower.x, z: tower.z, r: 5.2, w: 0.22, paint: 'yellow', dash: [1.2, 0.8] },
   { kind: 'text', x: tower.x, z: tower.z + 6.6, text: 'RELAY', size: 0.9, paint: 'yellow' },
   ...box(-33.6, -26.4, -40.6, -37.8, 'white'),
-  { kind: 'text', x: -14, z: -30.5, text: 'COURT  B', size: 1.3, paint: 'white' },
+  { kind: 'text', x: -20, z: -27.2, text: 'COURT  B', size: 1.3, paint: 'white' },
 
   // ---- quay: service lane, crossing, truck bay, boss landing ring, zone name ----
   ...cutRange(LAND.minX + 1, LAND.maxX - 1, [[-34, -20]]).map(([x0, x1]): Marking => ({ kind: 'line', a: [x0, QUAY_LANE_Z], b: [x1, QUAY_LANE_Z], w: 0.12, paint: 'white', dash: DASH })),
