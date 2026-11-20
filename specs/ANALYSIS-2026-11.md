@@ -114,7 +114,7 @@ Four cross-cutting findings (X-01 to X-04: the "fully ticked" claim in `specs/RE
 | All | 82 | 100% | 71% (58) | 49% (40) |
 
 ## Constitution issues
-- **VI (spec 32, critical, open):** audio files need maintainer approval. Recommended: constitution 2.1.0 allowing CC0/CC-BY audio built by `tools/asset-pipeline/audio.sh`.
+- **VI (spec 32, was critical): RESOLVED 2026-11-20.** The owner approved and the constitution was amended to 2.1.0: audio files are allowed (CC0/CC-BY, built by `tools/asset-pipeline/audio.sh`, procedural fallback per sound id).
 - **II:** the spec 27 phase-enum change is JUSTIFIED. Specs 30, 31 and 32 added events to the shared `core/events.ts` instead of declaring them by merging; additive, and now declared in their plans.
 - **III:** literals `SPIN_FORWARD` and 35 degrees (spec 31), animation constants (spec 28) and manifest gains (spec 32) are JUSTIFIED in the plans. Only the spec 31 pair is worth moving into tunables.
 
@@ -129,7 +129,7 @@ Four cross-cutting findings (X-01 to X-04: the "fully ticked" claim in `specs/RE
 - `DRESSING` is 51 items in the code now; the "about 70" at spec 25 time was not re-derived.
 
 ## Owner decisions
-1. Amend constitution Principle VI for audio files (2.1.0?).
+1. ~~Amend constitution Principle VI for audio files.~~ Done (2.1.0, 2026-11-20). Still open: 2, 3, 4 below.
 2. Spec 29 contract conflicts: back door 4.5 m vs mezzanine deck 3.4 m, and `win-n1` over the door. Change the contract or accept.
 3. Samurai (1.8 m) and scorpion (1.9 m) dodge clearances sit at or above the double jump (1.8 m): lower them, or raise the jump.
 4. Optional: move `SPIN_FORWARD` and the 35 degree limit into `SAMURAI` tunables (a small tuning commit, no spec needed).

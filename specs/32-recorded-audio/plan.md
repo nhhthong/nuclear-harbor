@@ -19,7 +19,7 @@ TypeScript strict, Web Audio API, Vitest, ffmpeg-based shell pipeline. Files: `s
 | III Tunables | `AUDIO.samples`, `ambienceSamples`, `lowHealth`, `surfaces`, `reload`, `casingDelay`, `creak` in `src/audio/tunables.ts`. Per-sample gains and jitter live in the manifest as sound-design data: JUSTIFIED. |
 | IV Tests | Manifest/files/orphans/budget, fallback recipes, seeded picks, bank with a fake fetch, low-health curve, surfaces, materials, routes unit-tested; a Chromium run proves fetch, decode and event-driven plays. Listening, loop seams, mix, Safari decode, impact sounds in a browser: not done. Smoke/e2e skipped. |
 | V Blast radius | `src/audio`, `public/assets/audio`, the pipeline script, credits and docs, one additive event in `core/events.ts`. DECLARED |
-| VI Offline / procedural | JUSTIFIED, and flagged to the owner: Principle VI says "Audio files remain forbidden without maintainer approval". The owner (maintainer) requested this feature and set the 6 MB budget (recorded as approval in the spec); the constitution text is not amended yet. Same-origin OGG precached by the service worker; every id keeps its procedural recipe; no runtime network. |
+| VI Offline / procedural | PASS since constitution 2.1.0 (2026-11-20): audio files are allowed when CC0/CC-BY, converted offline by `tools/asset-pipeline/audio.sh`, shipped from `public/assets/audio/`, with a procedural fallback per sound id. Before the amendment this row was JUSTIFIED on the owner's request. |
 | VII Simplicity | One manifest, one loader, no streaming, no per-drone loops. PASS |
 
 ## Design decisions

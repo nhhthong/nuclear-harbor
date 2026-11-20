@@ -30,4 +30,4 @@
 - [x] T017 Credits (`credits.ts`, `CREDITS.md` "Sound effects", `docs/ASSETS.md`), DEVIATIONS, SPECKIT, specs/README
 - [x] T018 `npx tsc --noEmit && npm test` (655 tests) `&& npm run build` (101 precached entries) pass; coordinator Chromium run (low preset, preview build): 75 of 75 files decoded, no failed requests, no console errors, shot, reload, jump, land, footstep, gate, crescent wave and drone alert produced 13 recorded plays, low-health level 0.76 at 18 HP and 0 at full; smoke/e2e skipped
 - [ ] T019 skipped: mix pass on a real device (manifest gains, bus and loop levels, loop seams, footstep and casing loudness) and Safari Ogg decode; there is no audio output in the sandbox (open follow-up in `docs/SPECKIT.md`)
-- [ ] T020 skipped: owner decision on amending Principle VI (audio files) in the constitution; spec records the approval, the text is unchanged
+- [x] T020 Principle VI amended (constitution 2.1.0, 2026-11-20): audio files allowed under the same rules as models; the owner approved it

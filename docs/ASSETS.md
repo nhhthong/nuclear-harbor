@@ -17,7 +17,7 @@
 - Credit to keep in the game credits: G36C view model by funnky, used with the author's permission as stated by the project owner.
 
 ## Props: vehicles and industrial clutter (owner-approved free models)
-The constitution asks for procedural content; the owner approved free CC0 and CC-BY models for vehicles and clutter. Raw downloads are NOT in git (they were fetched into a scratch directory); each build script lists the exact source files. Shipped files are in `public/assets/props/`.
+The constitution (2.1.0) makes procedural content the default and allows CC0/CC-BY models, textures and sound recordings built or converted offline with a procedural fallback where one exists. Raw downloads are NOT in git (they were fetched into a scratch directory); each build script lists the exact source files. Shipped files are in `public/assets/{props,enemies,textures,audio,weapons}/`.
 
 | File | Source | Licence | Script | Size |
 |---|---|---|---|---|

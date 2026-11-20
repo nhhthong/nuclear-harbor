@@ -34,7 +34,7 @@ npx tsc --noEmit && npm test && npm run build
 - Never mark a task done that was not run; write "skipped" with the reason.
 
 ## Rules
-- Constitution: `.specify/memory/constitution.md` (v2.0.1). Read it before planning; the plan's Constitution Check has one row per principle (PASS or JUSTIFIED with the reason). Amend it only deliberately, with a version bump and a dated note, when reality and a principle disagree (as in 2.0.0).
+- Constitution: `.specify/memory/constitution.md` (v2.1.0). Read it before planning; the plan's Constitution Check has one row per principle (PASS or JUSTIFIED with the reason). Amend it only deliberately, with a version bump and a dated note, when reality and a principle disagree (as in 2.0.0).
 - Do not edit `.specify/templates`, `.specify/scripts` or `.claude/skills` as part of a feature.
 - Spec Kit scripts do not create git branches here; use your own feature branch.
 - Never commit `node_modules` or raw third-party archives (`tools/asset-pipeline/input/`).

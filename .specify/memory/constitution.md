@@ -89,7 +89,10 @@ ownership, which stopped matching how features are built.)
   Audio synthesis. Binary assets (GLB models) are allowed when built offline by a script in
   `tools/asset-pipeline/` from CC0 or CC-BY sources, shipped from `public/assets/`, loaded from
   the same origin, with a procedural fallback where one exists (new models should have one).
-  Audio files remain forbidden without maintainer approval.
+- Audio files are allowed under the same rules: CC0 or CC-BY recordings converted offline by
+  `tools/asset-pipeline/audio.sh` (mono OGG, small), shipped from `public/assets/audio/`, loaded
+  from the same origin, each sound id keeping its procedural Web Audio recipe as the fallback so a
+  missing or undecodable file never means silence. Total audio stays small (about 6 MB owner cap).
 - Every third-party asset MUST be recorded in `docs/ASSETS.md` (source, author, licence, script)
   and credited in `src/ui/credits.ts` and `CREDITS.md`. Assets of unverified licence
   MUST NOT be committed; raw downloads and archives stay out of git (`tools/asset-pipeline/input/`).
@@ -97,7 +100,7 @@ ownership, which stopped matching how features are built.)
   approval.
 
 Rationale: GDD section 14 requires offline play; the project must stay legally clean and
-reproducible from its asset scripts. (Amendment 2.0.0: owner approved free CC0/CC-BY models.)
+reproducible from its asset scripts. (Amendment 2.0.0: owner approved free CC0/CC-BY models. Amendment 2.1.0: owner approved CC0/CC-BY sound recordings.)
 
 ### VII. Simplicity and Scope Discipline
 
@@ -155,7 +158,7 @@ Rationale: a small, working vertical slice that is fun beats a broad, half-finis
 - Runtime guidance for developers lives in `docs/PLAN.md` ("Current state"), `docs/DEVIATIONS.md`
   and `docs/SPECKIT.md`.
 
-**Version**: 2.0.1 | **Ratified**: 2026-11-12 | **Last Amended**: 2026-11-19
+**Version**: 2.1.0 | **Ratified**: 2026-11-12 | **Last Amended**: 2026-11-20
 
 Amendment 2.0.0 (2026-11-19, MAJOR: principles V and VI redefined, IV and VII corrected): audited
 against the repo after specs 24 to 28. Per-ticket file ownership became declared blast radius (V);
@@ -165,3 +168,5 @@ Principle II got a justified-exception clause (spec 27 precedent). Principles I 
 against the code (no cross-module imports, no `any`, pools, `ResourceTracker`, tunables) and are unchanged.
 
 Amendment 2.0.1 (2026-11-19, PATCH): the credits table moved from README.md to CREDITS.md; Principle VI now names that file.
+
+Amendment 2.1.0 (2026-11-20, MINOR): Principle VI now allows audio files (CC0/CC-BY, offline-converted, procedural fallback per sound id). The owner (maintainer) requested recorded sound effects and approved them on 2026-11-20 (spec 32).
