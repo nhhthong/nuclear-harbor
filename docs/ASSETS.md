@@ -46,3 +46,10 @@ Notes:
 - The vehicles were fetched through the Sketchfab download API (licence checked per uid on `api.sketchfab.com/v3/models/<uid>`). They replace the earlier Rgsdev CC0 pack and the luke1985 forklift (`tools/asset-pipeline/props.py`, kept for history, no longer used).
 - Candidates that were checked and rejected: GameBanana weapon models (CC BY-NC-ND, mostly ports of commercial games), Kenney (blocks bots), CGTrader and RenderHub cranes (paid).
 
+
+## Sound effects: recorded samples (spec 32)
+
+- Script: `tools/asset-pipeline/audio.sh <raw-dir>` (its header lists every source file, page URL, author and licence). Output `public/assets/audio/*.ogg` (75 files, about 1.27 MB): mono Ogg Vorbis q5 at 44.1 kHz, silence trimmed, one-shots peak-normalised to about -1 to -4 dBFS, loops (wind, sea, breathing) cut with an equal-power crossfade and normalised to -4/-6 dBFS; the heartbeat loop is one recorded beat (BigSoundBank #0243) played whole.
+- Manifest: `src/audio/samples.ts` (sound id -> variants, gain, pitch/gain jitter; loops). Loader `src/audio/sampleBank.ts` fetches same-origin relative URLs (`assets/audio/...`), so the service worker precaches them with the rest of `dist/`. While a file loads or if it fails, the procedural recipe plays.
+- Sources: BigSoundBank (Joseph SARDIN, CC0) for everything it could supply; OpenGameArt (Kenney CC0, rubberduck CC0, hc CC0, celestialghost8 CC0, congusbongus/Eelke CC-BY 3.0) for the rest. Full table in `CREDITS.md` ("Sound effects"). Raw downloads stayed outside git.
+- Rejected or unused: Freesound (API answered 403 from the sandbox); "Gunshot Sounds" by Tabasco (page says CC0, its archive says CC-BY 3.0; not needed once BigSoundBank rifle shots were used); Jack Menhorn FPS placeholders (replaced by BigSoundBank); "Metal footsteps on concrete" (7z only). BigSoundBank had no metal-stair steps, bullet-on-concrete hits, sci-fi lasers, cannon or rocket pages in its sitemap, hence the OpenGameArt picks.

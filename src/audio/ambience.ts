@@ -1,3 +1,5 @@
+import { AUDIO } from './tunables';
+
 /**
  * Looping ambience beds built from filtered noise and slow LFOs (GDD 11 environment/machinery):
  * sea wash, wind, distant harbor hum. A fixed set of nodes, independent of the voice cap.
@@ -6,18 +8,24 @@ export class Ambience {
   private readonly nodes: AudioNode[] = [];
   private readonly sources: AudioScheduledSourceNode[] = [];
   private readonly level: GainNode;
+  /** Sea and wind noise layers go through this so recorded loops can take over (spec 32). */
+  private readonly natural: GainNode;
+  private readonly loops = new Set<string>();
 
   constructor(ctx: BaseAudioContext, noise: AudioBuffer, destination: AudioNode, initialLevel: number) {
     this.level = ctx.createGain();
     this.level.gain.value = initialLevel;
     this.level.connect(destination);
     this.nodes.push(this.level);
+    this.natural = ctx.createGain();
+    this.natural.connect(this.level);
+    this.nodes.push(this.natural);
 
     // sea wash: low-passed noise whose level swells slowly
-    const sea = this.noiseLayer(ctx, noise, 'lowpass', 520, 0.5, 0.5);
+    const sea = this.noiseLayer(ctx, noise, 'lowpass', 520, 0.5, 0.5, this.natural);
     this.lfo(ctx, 0.11, 0.25, sea.gain);
     // wind: band-passed noise, drifting in level and centre frequency
-    const wind = this.noiseLayer(ctx, noise, 'bandpass', 650, 0.6, 0.22);
+    const wind = this.noiseLayer(ctx, noise, 'bandpass', 650, 0.6, 0.22, this.natural);
     this.lfo(ctx, 0.07, 0.12, wind.gain);
     this.lfo(ctx, 0.05, 200, wind.filter.frequency);
     // harbor hum: mains-like pair plus a dark noise floor
@@ -35,6 +43,27 @@ export class Ambience {
     }
     const floor = this.noiseLayer(ctx, noise, 'lowpass', 140, 0.7, 0.18);
     this.lfo(ctx, 0.03, 0.06, floor.gain);
+  }
+
+  /**
+   * Layer a recorded loop (wind, sea) on the bed; the procedural sea/wind then drop to a share of
+   * their level. Idempotent per buffer.
+   */
+  addLoop(ctx: BaseAudioContext, buffer: AudioBuffer, gainValue: number): void {
+    const key = `${buffer.length}:${buffer.duration}:${gainValue}`;
+    if (this.loops.has(key) || this.nodes.length === 0) return;
+    this.loops.add(key);
+    const src = ctx.createBufferSource();
+    src.buffer = buffer;
+    src.loop = true;
+    const gain = ctx.createGain();
+    gain.gain.value = gainValue;
+    src.connect(gain);
+    gain.connect(this.level);
+    src.start(0, Math.random() * buffer.duration);
+    this.sources.push(src);
+    this.nodes.push(gain);
+    this.natural.gain.setTargetAtTime(AUDIO.ambienceSamples.proceduralShare, ctx.currentTime, 1);
   }
 
   /** Smoothly move the bed to `level` (time constant in seconds). */
@@ -68,6 +97,7 @@ export class Ambience {
     freq: number,
     q: number,
     gainValue: number,
+    destination: AudioNode = this.level,
   ): { gain: AudioParam; filter: BiquadFilterNode } {
     const src = ctx.createBufferSource();
     src.buffer = noise;
@@ -80,7 +110,7 @@ export class Ambience {
     gain.gain.value = gainValue;
     src.connect(filter);
     filter.connect(gain);
-    gain.connect(this.level);
+    gain.connect(destination);
     src.start(0, Math.random() * noise.duration);
     this.sources.push(src);
     this.nodes.push(filter, gain);

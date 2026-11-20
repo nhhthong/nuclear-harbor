@@ -760,6 +760,7 @@ export class Samurai extends BaseEnemy {
     this.swing = 1;
     ctx.events.emit('enemy:attacked', { id: this.id, type: this.type, position: this.position });
     this.fx('spark', dx * 1.4, 0.2, dz * 1.4, 2.2);
+    ctx.events.emit('enemy:waveReleased', { id: this.id, position: this.position });
   }
 
   /** Moves the crescent, hits the player once, dissolves on walls or at the end of its range. */

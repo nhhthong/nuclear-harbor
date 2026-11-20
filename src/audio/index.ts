@@ -4,8 +4,10 @@ import type { GameEvents } from '@/core/events';
 import { Vector3 } from 'three';
 import { AudioEngine } from './AudioEngine';
 import { SOUND_IDS, type SoundId } from './catalogue';
-import { EVENT_ROUTES, ROUTED_EVENTS, type RoutedEvent, type SoundRequest } from './eventMap';
+import { EVENT_ROUTES, ROUTED_EVENTS, type RouteEnv, type RoutedEvent, type SoundRequest } from './eventMap';
 import { beaconInterval } from './math';
+import { heartbeatRate, lowHealthLevel } from './rules';
+import { WAREHOUSE } from '@/config/warehouse';
 import { AUDIO } from './tunables';
 
 const MODULE_ID = 'audio';
@@ -32,6 +34,11 @@ export function createAudioModule(): GameModule {
   const towers = new Map<number, Tower>();
   let beaconTimer = 0;
   let panel: HTMLElement | null = null;
+  const env: RouteEnv = {};
+  // spec 32: low-health layer (heartbeat + breathing), smoothed level; procedural heartbeat fallback timer
+  let lowHealth = 0;
+  let heartbeatTimer = 0;
+  let creakTimer: number = AUDIO.creak.minInterval;
 
   const dispatch = (out: SoundRequest | SoundRequest[] | null): void => {
     if (!out || !ctx || ctx.state.is('paused')) return;
@@ -59,8 +66,11 @@ export function createAudioModule(): GameModule {
   };
 
   const bind = <K extends RoutedEvent>(name: K): void => {
-    const route = EVENT_ROUTES[name] as (e: GameEvents[K]) => SoundRequest | SoundRequest[] | null;
-    offs.push(ctx!.events.on(name, (e) => dispatch(route(e))));
+    const route = EVENT_ROUTES[name] as (e: GameEvents[K], env?: RouteEnv) => SoundRequest | SoundRequest[] | null;
+    offs.push(ctx!.events.on(name, (e) => {
+      env.player = ctx?.player.position;
+      dispatch(route(e, env));
+    }));
   };
 
   const cleanup = (): void => {
@@ -117,6 +127,16 @@ export function createAudioModule(): GameModule {
         masterVolume: (): number => engine.masterVolume,
         ambienceLevel: (): number => engine.ambienceLevel,
         voiceCap: AUDIO.voiceCap,
+        // spec 32
+        play: (id: string): boolean => {
+          engine.unlock();
+          const p = context.player.position;
+          return SOUND_IDS.includes(id as SoundId) && engine.play(id as SoundId, { position: { x: p.x + 3, y: p.y + 1, z: p.z } });
+        },
+        samplePlays: (): number => engine.samplePlays,
+        samples: () => engine.sampleSummary(),
+        sampleReady: (file: string): boolean => engine.sampleReady(file),
+        lowHealthLevel: (): number => lowHealth,
       };
 
       if (context.flags.params.has('audiotest')) panel = buildPanel(context, engine);
@@ -125,6 +145,8 @@ export function createAudioModule(): GameModule {
     update(dt) {
       const c = ctx;
       if (!c) return;
+      updateLowHealth(c, dt);
+      updateCreaks(c, dt);
       c.camera.getWorldPosition(scratchPos);
       c.camera.getWorldDirection(scratchFwd);
       scratchUp.set(0, 1, 0).applyQuaternion(c.camera.quaternion);
@@ -160,6 +182,41 @@ export function createAudioModule(): GameModule {
       cleanup();
     },
   };
+
+  /** Heartbeat and breathing loops follow HP below 35 % (spec 32); procedural beats when not decoded. */
+  function updateLowHealth(c: GameContext, dt: number): void {
+    const playing = c.state.is('playing') && c.player.alive;
+    const target = playing ? lowHealthLevel(c.player.hp, c.player.maxHp) : 0;
+    const k = Math.min(1, dt / AUDIO.lowHealth.smoothing);
+    lowHealth += (target - lowHealth) * k;
+    if (lowHealth < 0.002) lowHealth = target === 0 ? 0 : lowHealth;
+    const rate = heartbeatRate(lowHealth);
+    const looped = engine.setLoop('heartbeat', lowHealth, rate);
+    engine.setLoop('breath', lowHealth * AUDIO.lowHealth.breathShare, 1);
+    if (looped || lowHealth <= 0.01) {
+      heartbeatTimer = 0;
+      return;
+    }
+    heartbeatTimer -= dt;
+    if (heartbeatTimer <= 0) {
+      engine.play('heartbeat', { intensity: lowHealth });
+      heartbeatTimer = AUDIO.lowHealth.fallbackPeriod / rate;
+    }
+  }
+
+  /** Occasional metal creaks from the warehouse structure while the player is inside it. */
+  function updateCreaks(c: GameContext, dt: number): void {
+    const p = c.player.position;
+    const f = WAREHOUSE.footprint;
+    if (!c.state.is('playing') || p.x < f.minX || p.x > f.maxX || p.z < f.minZ || p.z > f.maxZ) return;
+    creakTimer -= dt;
+    if (creakTimer > 0) return;
+    const { minInterval, maxInterval } = AUDIO.creak;
+    creakTimer = minInterval + Math.random() * (maxInterval - minInterval);
+    const x = f.minX + Math.random() * (f.maxX - f.minX);
+    const z = f.minZ + Math.random() * (f.maxZ - f.minZ);
+    engine.play('metalCreak', { position: { x, y: WAREHOUSE.eaveHeight - 1, z } });
+  }
 }
 
 /** `?audiotest`: one button per sound id plus a cycle button. */

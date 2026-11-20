@@ -24,6 +24,24 @@ export const AUDIO = {
   finalBeepSeconds: 10,
   /** Tower hum frequency range over activation progress 0..1. */
   hum: { baseHz: 60, topHz: 200, gain: 0.25 },
+  /** Spec 32: recorded samples. Loader timeout per file (ms) and fade of sample loops (s). */
+  samples: { fetchTimeoutMs: 15000, loopFade: 0.6 },
+  /** Recorded ambience loops layered on the procedural bed; the procedural sea/wind drop to this share. */
+  ambienceSamples: { proceduralShare: 0.35 },
+  /** Low-health heartbeat/breathing: level 0 at `start` of max HP, 1 at `full`; heartbeat rate range. */
+  lowHealth: { start: 0.35, full: 0.1, rateMin: 1, rateMax: 1.55, breathShare: 0.8, fallbackPeriod: 0.9, smoothing: 0.25 },
+  /** Surface choice for footsteps and bullet impacts (metres, world units; level layout in src/config). */
+  surfaces: {
+    metalAboveY: 0.5,
+    floorNormalY: 0.7,
+    groundY: 0.25,
+    perimeter: { minX: -35.4, maxX: 35.4, maxZ: 33.4 },
+  },
+  /** Delay of the shell casing after a shot and of the reload parts (s; bolt/mag-in measured from the end). */
+  casingDelay: 0.38,
+  /** Random creaks of the warehouse steel while the player is inside (s between two). */
+  creak: { minInterval: 9, maxInterval: 22 },
+  reload: { magOutAt: 0.12, magInBeforeEnd: 0.75, boltBeforeEnd: 0.3 },
   /** Gesture events that unlock the context. */
   gestureEvents: ['pointerdown', 'keydown'] as const,
 } as const;
