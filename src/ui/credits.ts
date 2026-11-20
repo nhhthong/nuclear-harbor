@@ -89,6 +89,21 @@ export const CREDITS: readonly CreditEntry[] = [
   },
   { name: 'Poly Haven', role: 'Cabinets, barrier, barrels, tyre, generator, work light; warehouse crates, boxes, tools, office furniture, lamps, concrete floor and asphalt textures', note: 'CC0, polyhaven.com' },
   { name: '3DModelsCC0', role: 'Water tower, dumpster and other yard clutter', note: 'CC0, 3dmodelscc0.itch.io' },
+  {
+    name: 'Joseph SARDIN - BigSoundBank.com',
+    role: 'Sound effects: rifle, reload, casings, footsteps, impacts, voice, heartbeat, breathing, robots, drone, sword, alarms, gate, wind and sea',
+    note: 'CC0, bigsoundbank.com (ids in CREDITS.md)',
+  },
+  {
+    name: 'congusbongus',
+    role: 'Sound: metal footsteps ("Footsteps on different surfaces")',
+    note: 'CC-BY 3.0, opengameart.org/content/footsteps-on-different-surfaces (derived from "fboots on aluminum ladder 01" by Eelke, CC-BY 3.0, freesound.org/people/Eelke/sounds/462598)',
+  },
+  { name: 'Eelke', role: 'Sound: boots on an aluminium ladder (source of the metal footsteps)', note: 'CC-BY 3.0, freesound.org/people/Eelke/sounds/462598' },
+  { name: 'Kenney', role: 'Sound: enemy lasers, robot explosions, boss defeat, medkit and hit-marker UI', note: 'CC0, opengameart.org/content/sci-fi-sounds, /content/interface-sounds' },
+  { name: 'rubberduck', role: 'Sound: armour and concrete hits, boss cannon', note: 'CC0, opengameart.org (75 breaking/falling/hit sfx, 25 bang/firework sfx)' },
+  { name: 'hc', role: 'Sound: boss stomp ("Mech Stomp / Step Sound")', note: 'CC0, opengameart.org/content/mech-stomp-step-sound' },
+  { name: 'celestialghost8', role: 'Sound: boss laser ("Laser weapon burst fire")', note: 'CC0, opengameart.org/content/laser-weapon-burst-fire' },
   { name: 'Three.js', role: '3D rendering', note: 'MIT licence, threejs.org' },
   { name: 'Rapier', role: 'Physics engine (@dimforge/rapier3d-compat)', note: 'Apache-2.0, rapier.rs' },
 ];
