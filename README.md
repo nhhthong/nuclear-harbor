@@ -29,7 +29,7 @@ Fight through the yard, bring down STINGER-7, the mecha scorpion that guards the
 
 You are the only survivor of a container quay whose defence robots have been hijacked. The nuclear control system counts down from **08:00**. Fight through the container yard and a steel warehouse to the relay tower, where the mecha scorpion **STINGER-7** rises, hold **E** to activate the tower, then bring down the **Gunslinger Crab Mech**, a 10 m armoured boss with one huge health bar and four skills.
 
-**Three.js + TypeScript + Vite + Rapier**: fixed 60 Hz simulation, procedural audio, no backend, no network at runtime. One small L-shaped level (72 x 122 m, closed by a 7 m wall) with modelled containers, a two-storey warehouse, chain-link fences with swing gates, wet asphalt and concrete (CC0 scans) with painted road markings and a planar reflection, a pale sun with one shadow map, an overcast sky, bloom and a cold film grade. Robots, vehicles and clutter are free CC0 or CC-BY models ([credits](CREDITS.md)). It is a **prototype**: nobody has play-tested a full run yet, so balance and real-GPU frame rate are unverified.
+**Three.js + TypeScript + Vite + Rapier**: fixed 60 Hz simulation, recorded sound effects (75 small OGG files, each with a procedural Web Audio fallback), no backend, no network at runtime. One small L-shaped level (72 x 122 m, closed by a 7 m wall) with modelled containers, a two-storey warehouse, chain-link fences with swing gates, wet asphalt and concrete (CC0 scans) with painted road markings and a planar reflection, a pale sun with one shadow map, an overcast sky, bloom and a cold film grade. Robots, vehicles and clutter are free CC0 or CC-BY models ([credits](CREDITS.md)). It is a **prototype**: nobody has play-tested a full run yet, so balance and real-GPU frame rate are unverified.
 
 ## Screenshots
 
@@ -119,7 +119,7 @@ Budgets: 60 FPS desktop target, at most 350 draw calls (about 55 to 150 measured
 
 ## Status and limitations
 
-- Verified: `tsc`, **612 unit tests**, build, CI, scripted browser checks on the low preset. Not verified: a full run, balance, frame rate on a real GPU. `tests/e2e/` scripts are stale and `smoke` was not re-run after the reworks.
+- Verified: `tsc`, **655 unit tests**, build, CI, scripted browser checks on the low preset. Not verified: a full run, balance, frame rate on a real GPU. `tests/e2e/` scripts are stale and `smoke` was not re-run after the reworks.
 - A drone charging a shot right next to the camera shows a large pale glow; the Bomber Duck is primitive-built and reads as low-poly (the scorpion is an authored model with a procedural fallback; its legs swing rigidly about the hips, so feet slide a little); the crab can show a pale orange wash while a skill telegraphs; the in-game Restart reloads the page.
 - Differences from the original design: [`docs/DEVIATIONS.md`](docs/DEVIATIONS.md). Architecture and conventions: [`docs/PLAN.md`](docs/PLAN.md). Assets: [`docs/ASSETS.md`](docs/ASSETS.md). AI session rules: [`CLAUDE.md`](CLAUDE.md).
 

@@ -18,36 +18,38 @@ Inputs: [`docs/GDD.md`](GDD.md) (design spec), [`docs/REVIEW.md`](REVIEW.md) (ac
 > Stale in the original text: grapple (A4, A8, A12, 4.1, 4.4, 4.5, ticket T-12), four towers, 240 x 220 m map and per-zone robot counts (4.6),
 > 30 robots, dinosaur, `anchors` / `viewmodel=glb` params (4.7), the smoke/e2e requirement and wave tables (6 to 9), "no streaming" (A11).
 
-## Current state (authoritative, matches the code)
+## Current state (authoritative, matches the code; updated 2026-11-20)
 
-**Game:** one 72 x 122 m quay under a cold overcast (no rain), a pale sun is the only real light. Objective: activate 1 tower (guarded by the mecha scorpion STINGER-7), survive the nuclear countdown, defeat the final boss, the Gunslinger Crab Mech (`src/boss`, one 5800 HP pool, no weak points). No grapple.
+**Game:** an L-shaped play area inside a 72 x 122 m quay under a cold overcast (no rain), closed by a 7 m perimeter wall; a pale sun is the only real light. The west leg is the gate apron (spawn) and the container yard, the north leg the relay court and the quay (crane, boss arena); the south-east block is a closed loading dock outside the play area. The only way from the yard to the court is through a steel warehouse (`src/structures/warehouse.ts`, contract `src/config/warehouse.ts`: roller door, stair, mezzanine, glazed office, back door). Objective: activate 1 tower (guarded by the mecha scorpion STINGER-7), survive the 8 minute nuclear countdown, defeat the Gunslinger Crab Mech (5800 HP, one health bar, four skills: carpet bombs, dragonfly drones, 360 degree spin, four-way laser; `src/boss`).
 
 **Modules** (registration order in `src/modules.ts`): sandbox, world, structures, player, weapon, enemies, boss, scorpion, objectives, pickups, shelters, vfx, audio, ui, flow, debug. `GameContext` still has `grappleAnchors` (legacy, unused).
 
-**Level contract** (`src/config/level.ts`: `ZONES`, `LAND`, `fromLegacyZ`, `SPAWN_SAFE_RADIUS` = 32 m):
-zones by z: A [-28, 16], B [-40, -28], C [16, 34], D [-88, -40]. Spawn (0, 0, 29), tower (0, -34), boss arena center (-10, -66) r 17, crane (25, -75), ship (-34, -2, -148).
-Container yard: seeded generator `src/world/containerLayout.ts`. Five safe containers heal the player (`src/world/shelters.ts`, `src/shelters`).
+**Level contract** (`src/config/level.ts`: `ZONES`, `LAND`, `PLAY_AREA`, `isInPlayArea`, `fromLegacyZ`, `SPAWN_SAFE_RADIUS` = 32 m):
+zones by z: A [-28, 16] (yard and warehouse), B [-40, -28], C [16, 34], D [-88, -40]; the zone rectangles span the full land width, `zoneAt` answers null in the closed dock. Spawn `SPAWN_L` (-15, 0, 29), tower (0, -34), boss arena centre (-10, -66) r 17, crane (25, -75), ship (-34, -2, -148).
+Container yard: seeded generator `src/world/containerLayout.ts` (west leg only, N-S lanes at x -15 and 2, an E-W aisle at z -4 ending at the roller door, a two-high container wall at z -24). Five safe containers heal the player (`src/world/shelters.ts`, `src/shelters`). Chain-link fences with swing gates (`src/structures/gates.ts`, spec 30). The ground shader (`src/world/ground.ts`) samples CC0 asphalt and concrete maps and the painted road markings of `src/world/markings.ts`.
 
-**Enemies:** roster of 22 = army (Medium Mech Striker) 5, spot 6, biped 4, duck 4 + 3 cyber samurai elites (`src/enemies/samurai`); authored GLBs with procedural fallbacks (`src/enemies/authored.ts`). Per-zone distribution: see `ENEMY_DISTRIBUTION` in `src/config/tunables.ts` and `docs/DEVIATIONS.md` (last sections), not this text. The spawn area is empty. Robots are streamed by area (`src/enemies/areaSpawner.ts`, 10 alive at most). All robots walk with stepping legs paced by distance (`src/enemies/gait.ts`).
-Scorpion (`src/scorpion`): charge, venom, tail slam, hex shield blocks 80% of frontal damage. Samurai: leap cleave, spinning polearm deflect, two lightning dashes.
+**Enemies:** roster of 22 on foot = army (Medium Mech Striker) 5, spot 6, biped 4, duck 4 + 3 cyber samurai elites (`src/enemies/samurai`), plus 4 flying dragonfly `drone`s (`ENEMY_COUNTS.drone`, `src/enemies/drone`, not in `total`) and anti-camping call-in drones on the mezzanine; authored GLBs with procedural fallbacks (`src/enemies/authored.ts`). Per-zone distribution: see `ENEMY_DISTRIBUTION` in `src/config/level.ts`. The spawn area is empty. Robots are streamed by area (`src/enemies/areaSpawner.ts`, 10 alive at most). Walkers use stepping legs paced by distance (`src/enemies/gait.ts`).
+Scorpion (`src/scorpion`, authored Sketchfab model with a procedural fallback): charge, venom, tail slam, hex shield blocks 80% of frontal damage. Samurai: cut, leap cleave, spinning naginata deflect (frontal plane), two lightning dashes, red-charged crescent wave (spec 31).
 
-**Economy:** crates 7 + 4, medkits 2 + 1, enemy ammo drop 10% (see `ECONOMY`). Ammo budget (test): 348 hits needed (roster 116 + boss 232), 540 rounds supplied, assumed accuracy 65%.
+**Economy:** crates 8 + 4, medkits 2 + 1, enemy ammo drop 10% (see `ECONOMY`). Ammo budget (test): 356 hits needed (ground roster 116 + roster drones 8 + boss 232), 570 rounds supplied, assumed accuracy 65%. All supplies lie on the ground.
 
-**Dressing:** `structures/layout.ts` holds `VEHICLES` and `DRESSING` (pure data + colliders + tests); `vehicles.ts` and `dressing.ts` draw them as instanced GLB meshes (`public/assets/props/{vehicles,industrial,terminal}.glb`, built by `tools/asset-pipeline/{props,industrial,terminal}.py`). Mood: cold overcast (`WORLD_LOCAL.sky/sun/hemi`, `PERFORMANCE.grade`).
+**Assets and credits:** every third-party model, texture and sound is CC0 or CC-BY, built or converted offline by `tools/asset-pipeline/*`, shipped from `public/assets/**`, listed in `docs/ASSETS.md` and `CREDITS.md` and credited in `src/ui/credits.ts`. Audio: 75 mono OGG samples (1.3 MB, `src/audio/samples.ts`), each sound id keeps a procedural recipe as fallback (spec 32).
 
-**Player:** `PLAYER.gravity` -30 (own gravity; jump 15.3 m/s and air jump 14.1 m/s keep the 3.9 m / 3.3 m heights). Hold right mouse to aim down sights (`ADS` tunables, `PlayerState.aimAmount`, `src/core/ads.ts`: FOV 55, slower walk, no sprint, half spread and recoil). `R` reloads; Settings `autoReload` (default on) reloads when the magazine empties. Fixed 60 Hz sim.
+**Dressing:** `structures/layout.ts` holds `VEHICLES` and `DRESSING` (pure data + colliders + tests); `vehicles.ts` and `dressing.ts` draw them as instanced GLB meshes (`public/assets/props/{vehicles,industrial,terminal,warehouse}.glb`). Mood: cold overcast (`WORLD_LOCAL.sky/sun/hemi`, `PERFORMANCE.grade`).
 
-**Tunables sections** (`src/config/tunables.ts`): SIM, PLAYER, WEAPON, ECONOMY, ENEMY_COUNTS, ENEMY_DISTRIBUTION, ARMY_ROBOT, AI_SCHEDULING, OBJECTIVES, BOSS, PERFORMANCE, WORLD, CAMERA (GRAPPLE section may remain as dead data). Feature-local numbers stay in `src/<feature>/tunables.ts`.
+**Player:** `PLAYER.gravity` -30; jump 7.55 m/s and air jump 7.15 m/s give a 0.95 m single jump and a 1.8 m double jump (`PLAYER` tunables; the enemy dodge thresholds were lowered to match, but the samurai 1.8 m and the scorpion 1.9 m clearances are still at or above the double jump). Hold right mouse to aim down sights (`ADS` tunables, `PlayerState.aimAmount`, `src/core/ads.ts`: FOV 55, slower walk, no sprint, half spread and recoil). `R` reloads; Settings `autoReload` (default on) reloads when the magazine empties. Fixed 60 Hz sim.
 
-**Events:** catalogue in `src/core/events.ts` plus per-feature `events.ts` (declaration merging). Newer additions: `player:jumped`, `scorpion:*`. Grapple events are legacy.
+**Tunables sections** (`src/config/tunables.ts`): SIM, PLAYER, WEAPON, ECONOMY, ENEMY_COUNTS, ARMY_ROBOT, AI_SCHEDULING, OBJECTIVES, BOSS, PERFORMANCE, WORLD, CAMERA (GRAPPLE section may remain as dead data); `ENEMY_DISTRIBUTION` lives in `src/config/level.ts`, the warehouse numbers in `src/config/warehouse.ts`. Feature-local numbers stay in `src/<feature>/tunables.ts`.
 
-**Query params:** `autostart`, `sandbox`, `debug`, `colliders`, `enemies=army,spot,duck|none` (sandbox), `countdown`, `towers`, `boss`, `bossphase`, `scorpion` (sandbox), `viewmodel=procedural`, `bench`, `seed`, `vfxtest`, `audiotest`.
+**Events:** catalogue in `src/core/events.ts` plus per-feature `events.ts` (declaration merging). Newer additions: `player:jumped`, `scorpion:*`, `world:gateMoved`, `enemy:waveReleased`. Grapple events are legacy.
 
-**Verification policy (owner):** run `npx tsc --noEmit`, unit tests (468 in 74 files) and `npm run build`. Do NOT run `npm run smoke` / `npm run e2e` unless the owner asks. All `tests/e2e/*.mjs` are stale (old coordinates, four towers, grapple); rewrite before use. CI (`.github/workflows/pages.yml`) runs typecheck + unit tests + build only; deploys to GitHub Pages on `main`.
+**Query params:** `autostart`, `sandbox`, `debug`, `colliders`, `enemies=army,spot,duck,biped,drone|none` (sandbox), `countdown`, `towers`, `boss`, `bossphase`, `scorpion` (sandbox), `procedural`, `procedural-samurai`, `procedural-scorpion`, `procedural-boss` (force the fallback looks), `viewmodel=procedural`, `bench`, `seed`, `vfxtest`, `audiotest`.
 
-**Process:** Spec Kit was used for T-01..T-22 only (`specs/README.md`). Later reworks were done without it. Rules: `docs/SPECKIT.md`.
+**Verification policy (owner):** run `npx tsc --noEmit`, unit tests (655 in 92 files at 2026-11-20) and `npm run build`. Do NOT run `npm run smoke` / `npm run e2e` unless the owner asks. All `tests/e2e/*.mjs` are stale (old coordinates, four towers, grapple); rewrite before use. CI (`.github/workflows/pages.yml`) runs typecheck + unit tests + build only; deploys to GitHub Pages on `main`. Browser checks are done by the coordinator with Playwright on the low preset (software GL) and the stepped simulation (`ctx.testHooks`).
 
-**Not verified:** a full run, balance, the scorpion fight beyond forced skills, frame rate on a real GPU.
+**Process:** Spec Kit: T-01..T-22 were done per ticket, specs 24 to 32 follow the flow and were written or rewritten against the built result (`specs/ANALYSIS-2026-11.md`). Rules: `docs/SPECKIT.md`.
+
+**Not verified:** a full run, balance, the scorpion and crab fights beyond forced skills, frame rate on a real GPU, medium and high presets, how the audio sounds.
 
 ---
 

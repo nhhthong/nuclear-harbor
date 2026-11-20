@@ -1,17 +1,29 @@
 # Implementation Plan: samurai crescent wave, frontal spin
 
-**Spec**: [spec.md](spec.md)
+**Spec**: [spec.md](spec.md) | **Branch**: dev branch `claude/wizardly-cori-697x6r`; squashed into `main` as PR #21 (`93f873e`) with spec 32
 
 ## Summary
-All in `src/enemies/samurai/`: `tunables.ts` (`wave`), `logic.ts` (`crescentHit`), `Samurai.ts` (states `waveCharge`, `waveSlash`, `waveRecover`; `crescentShape`, one pooled crescent per samurai in the scene, `releaseWave`, `stepWave`, `endWave`; skinned spin uses Euler order ZYX with the weapon pushed forward).
+Mostly in `src/enemies/samurai/`: `tunables.ts` (`SAMURAI.wave`), `logic.ts` (pure `crescentHit`), `Samurai.ts` (states `waveCharge`, `waveSlash`, `waveRecover`; `crescentShape`, `crescentRibbon`, one pooled crescent per samurai, `releaseWave`, `stepWave`, `endWave`; the skinned spin uses Euler order ZYX with the weapon pushed forward by `SPIN_FORWARD`). One shared edit: `enemy:waveReleased` in `src/core/events.ts`, emitted at release, routed in `src/audio/eventMap.ts` (spec 32).
+
+## Technical Context
+TypeScript strict, Three.js (shader ribbon, additive layers), Vitest. Tests: `src/enemies/samurai/logic.test.ts` (hit volume, speed vs bullet, damage vs cut and leap, `crescentShape`, `crescentRibbon`).
 
 ## Constitution Check
 | Principle | Status |
 |---|---|
-| I Performance | One crescent group (3 small meshes) per samurai, created once, hidden when idle; one ray per fixed step while it flies. PASS |
-| II Typed contracts | No new events; reuses `enemy:attacked`, `vfx:spawn`, player damage API. PASS |
-| III Tunables | `SAMURAI.wave`, `SPIN_FORWARD` constant. PASS |
-| IV Tests | `crescentHit`, `crescentShape`, numbers; browser check by the coordinator. PASS |
-| V Blast radius | samurai module only. PASS |
-| VI Offline / procedural | Procedural geometry. PASS |
+| I Performance | One crescent group (3 small meshes) per samurai, created once, hidden when idle; one ray per fixed step while it flies; embers use the pooled `vfx:spawn`. PASS |
+| II Typed contracts | One new event `enemy:waveReleased`, additive, in the shared `core/events.ts`; otherwise reuses `enemy:attacked`, `vfx:spawn` and the player damage API. PASS |
+| III Tunables | `SAMURAI.wave` holds the skill numbers. `SPIN_FORWARD` (0.55) and the 35 degree aim limit are literals in `Samurai.ts`: JUSTIFIED as visual offset / aim clamp for now; move them into `tunables.ts` when next touched. |
+| IV Tests | `crescentHit`, `crescentShape`, `crescentRibbon`, numbers unit-tested. Spin orientation, skill selection, wall/gate rules and the event have no test. Browser check by the coordinator. Smoke/e2e skipped. |
+| V Blast radius | Samurai module, plus the additive event in `core/events.ts` and its route in `audio/eventMap.ts` (the earlier plan said "samurai module only", which was wrong). DECLARED |
+| VI Offline / procedural | Procedural geometry and shader, no assets. PASS |
 | VII Simplicity | Straight flight, single hit, no homing. PASS |
+
+## Design decisions
+- The crescent stands in the vertical plane of its flight and bulges forward, with a slim strip facing the flight that carries the glow.
+- Aim at the player's position at release, clamped to about 35 degrees off the facing (it is a forward cut).
+- The skinned spin: stand the weapon up (pitch +90), roll about the facing axis, hold 0.55 m in front of the grip; the blur disc shares the plane.
+- Static world ray each step: walls stop it; chain-link (gate layer) does not block the ray.
+
+## Complexity Tracking
+None.
