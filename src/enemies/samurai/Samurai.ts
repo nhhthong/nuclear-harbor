@@ -9,8 +9,9 @@ import {
   PlaneGeometry,
   ShaderMaterial,
   Shape,
-  ShapeGeometry,
   Vector3,
+  BufferGeometry,
+  Float32BufferAttribute,
 } from 'three';
 import type { DamageInfo, DamageResult } from '@/core/types';
 import { BaseEnemy, type EnemyDeps, type EnemySpawn } from '../BaseEnemy';
@@ -30,12 +31,15 @@ const waveOrigin = new Vector3();
 
 interface CrescentWave {
   readonly group: Group;
-  readonly mat: MeshBasicMaterial;
-  readonly haloMat: MeshBasicMaterial;
+  /** Every shader material of the wave (core, halo, after-images): disposed together. */
+  readonly mats: ShaderMaterial[];
+  /** Shared uniforms: time, life (0..1 of its range), seed. */
+  readonly uniforms: { uTime: { value: number }; uLife: { value: number }; uSeed: { value: number } };
   readonly pos: Vector3;
   readonly dir: Vector3;
   active: boolean;
   travelled: number;
+  sparkT: number;
 }
 
 /**
@@ -63,30 +67,144 @@ export function crescentShape(height: number, bulge: number, thickness: number):
   return shape;
 }
 
+/**
+ * The crescent as a ribbon: `segments` slices from the bottom horn (u = 0) to the top horn (u = 1), each
+ * slice from the inner arc (v = 0) to the outer arc, the cutting edge (v = 1). Same frame as `crescentShape`.
+ */
+export function crescentRibbon(height: number, bulge: number, thickness: number, segments = 40): BufferGeometry {
+  const h = height / 2;
+  const outer = (h * h + bulge * bulge) / (2 * bulge);
+  const innerBulge = Math.max(0.05, bulge - thickness);
+  const inner = (h * h + innerBulge * innerBulge) / (2 * innerBulge);
+  const pos: number[] = [];
+  const uv: number[] = [];
+  const idx: number[] = [];
+  for (let i = 0; i <= segments; i++) {
+    const u = i / segments;
+    const y = -h + 2 * h * u;
+    const xo = Math.sqrt(Math.max(0, outer * outer - y * y)) - (outer - bulge);
+    const xi = Math.sqrt(Math.max(0, inner * inner - y * y)) - (inner - innerBulge);
+    pos.push(xi, y + h, 0, xo, y + h, 0);
+    uv.push(u, 0, u, 1);
+    if (i > 0) {
+      const k = i * 2;
+      idx.push(k - 2, k - 1, k + 1, k - 2, k + 1, k);
+    }
+  }
+  const g = new BufferGeometry();
+  g.setAttribute('position', new Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new Float32BufferAttribute(uv, 2));
+  g.setIndex(idx);
+  g.computeBoundingSphere();
+  return g;
+}
+
+const CRESCENT_VERTEX = /* glsl */ `
+varying vec2 vUv;
+void main() {
+  vUv = uv;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}
+`;
+
+/**
+ * Layered energy crescent: tapered horns, a white-hot cutting edge over an orange-to-deep-red body, fibres
+ * of energy streaming along the arc, a ragged edge from scrolling noise, and a dissolve over its range.
+ * `uHalo` = 1 draws the wide soft glow layer instead. Output is HDR (blooms on medium/high).
+ */
+const CRESCENT_FRAGMENT = /* glsl */ `
+uniform float uTime;
+uniform float uLife;
+uniform float uSeed;
+uniform float uAlpha;
+uniform float uHalo;
+varying vec2 vUv;
+float hash(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
+float noise(vec2 p) {
+  vec2 i = floor(p); vec2 f = fract(p); vec2 u = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);
+}
+float fbm(vec2 p) { float v = 0.0; float a = 0.5; for (int i = 0; i < 4; i++) { v += a * noise(p); p = p * 2.03 + 17.1; a *= 0.5; } return v; }
+void main() {
+  float s = vUv.x;          // along the arc, horn to horn
+  float a = vUv.y;          // 0 inner arc .. 1 cutting edge
+  float taper = pow(sin(3.14159 * s), 0.7);
+  // the band narrows towards the horns: its inner border moves out to the edge
+  float innerEdge = 1.0 - taper;
+  float n = fbm(vec2(s * 5.0 - uTime * 3.2 + uSeed, a * 2.2 + uTime * 0.8));
+  float ragged = innerEdge + (n - 0.5) * 0.35;
+  float band = smoothstep(ragged - 0.02, ragged + 0.3, a);
+  float rim = 1.0 - smoothstep(0.9, 1.0, a);
+  float fibres = smoothstep(0.5, 0.95, fbm(vec2(s * 16.0 - uTime * 11.0 + uSeed * 3.0, a * 5.0)));
+  float edge = smoothstep(0.6, 0.93, a) * rim;              // the hot cutting edge
+  // dissolve: holes eat in from the inner side as it reaches the end of its range
+  float dis = smoothstep(uLife * 1.15 - 0.12, uLife * 1.15 + 0.02, n * 0.8 + a * 0.35);
+  if (uHalo > 0.5) {
+    float glow = pow(a, 1.6) * (1.0 - smoothstep(0.82, 1.0, a)) * taper;
+    vec3 col = vec3(1.0, 0.16, 0.05) * (1.2 + 0.6 * n);
+    gl_FragColor = vec4(col, glow * 0.55 * uAlpha * dis);
+    return;
+  }
+  float heat = clamp(edge * 1.15 + fibres * 0.45 * band, 0.0, 1.0);
+  vec3 deep = vec3(0.45, 0.01, 0.02);
+  vec3 mid = vec3(1.0, 0.22, 0.04);
+  vec3 hot = vec3(1.0, 0.72, 0.38);
+  vec3 white = vec3(1.0, 0.97, 0.92);
+  vec3 col = mix(deep, mid, smoothstep(0.0, 0.45, heat));
+  col = mix(col, hot, smoothstep(0.4, 0.8, heat));
+  col = mix(col, white, smoothstep(0.8, 1.0, heat));
+  float alpha = (band * rim * (0.3 + 0.7 * n) + edge) * taper * dis * uAlpha;
+  gl_FragColor = vec4(col * (1.4 + 3.0 * heat), clamp(alpha, 0.0, 1.0));
+}
+`;
+
+/** After-images trail behind the crescent at these distances (m) and strengths. */
+const WAVE_GHOSTS: ReadonlyArray<readonly [number, number]> = [
+  [0.75, 0.42],
+  [1.5, 0.22],
+  [2.25, 0.1],
+];
+
 function createCrescent(shared: SharedAssets): CrescentWave {
   const w = SAMURAI.wave;
-  const core = shared.get('samurai:wave-geo', () => new ShapeGeometry(crescentShape(w.height, w.bulge, 0.34), 1));
-  const halo = shared.get('samurai:wave-halo-geo', () => new ShapeGeometry(crescentShape(w.height + 0.5, w.bulge + 0.25, 0.85), 1));
-  const mat = new MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.95, depthWrite: false, blending: AdditiveBlending, side: DoubleSide, fog: false });
-  mat.color.setRGB(4.2, 1.1, 0.75); // white-hot red core (HDR: blooms on medium/high)
-  const haloMat = new MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.32, depthWrite: false, blending: AdditiveBlending, side: DoubleSide, fog: false });
-  haloMat.color.setRGB(1.6, 0.18, 0.1);
+  const core = shared.get('samurai:wave-ribbon', () => crescentRibbon(w.height, w.bulge, 0.55));
+  const halo = shared.get('samurai:wave-halo-ribbon', () => crescentRibbon(w.height + 0.7, w.bulge + 0.4, 1.25));
+  const uniforms = { uTime: { value: 0 }, uLife: { value: 0 }, uSeed: { value: Math.random() * 10 } };
+  const mats: ShaderMaterial[] = [];
+  const material = (alpha: number, halo: boolean): ShaderMaterial => {
+    const m = new ShaderMaterial({
+      uniforms: { ...uniforms, uAlpha: { value: alpha }, uHalo: { value: halo ? 1 : 0 } },
+      vertexShader: CRESCENT_VERTEX,
+      fragmentShader: CRESCENT_FRAGMENT,
+      transparent: true,
+      depthWrite: false,
+      blending: AdditiveBlending,
+      side: DoubleSide,
+      fog: false,
+    });
+    mats.push(m);
+    return m;
+  };
   const group = new Group();
-  const coreMesh = new Mesh(core, mat);
-  const haloMesh = new Mesh(halo, haloMat);
-  haloMesh.position.y = -0.25;
-  // a second core turned edge-on gives the blade some depth seen from the side
-  const side = new Mesh(core, haloMat);
-  side.rotation.y = Math.PI / 2;
-  side.scale.set(0.45, 1, 1);
-  group.add(haloMesh, coreMesh, side);
+  const haloMesh = new Mesh(halo, material(1, true));
+  // centre the arc on the flight line (the horns sit at x = 0, the bulge at +x): it matches the hit volume
+  haloMesh.position.set(-(w.bulge + 0.4) / 2, -0.35, 0.02);
+  const coreMesh = new Mesh(core, material(1, false));
+  coreMesh.position.x = -w.bulge / 2;
+  group.add(haloMesh, coreMesh);
+  for (const [back, alpha] of WAVE_GHOSTS) {
+    const ghost = new Mesh(core, material(alpha, false));
+    ghost.position.set(-w.bulge / 2, 0, -back); // the group faces its flight along +z
+    ghost.scale.set(1 - back * 0.08, 1 - back * 0.03, 1);
+    group.add(ghost);
+  }
   group.visible = false;
   group.userData.noReflect = true;
-  for (const m of [coreMesh, haloMesh, side]) {
-    m.frustumCulled = false;
-    m.userData.noReflect = true;
-  }
-  return { group, mat, haloMat, pos: new Vector3(), dir: new Vector3(0, 0, -1), active: false, travelled: 0 };
+  group.traverse((o) => {
+    o.frustumCulled = false;
+    o.userData.noReflect = true;
+  });
+  return { group, mats, uniforms, pos: new Vector3(), dir: new Vector3(0, 0, -1), active: false, travelled: 0, sparkT: 0 };
 }
 
 export type SamuraiState =
@@ -620,6 +738,8 @@ export class Samurai extends BaseEnemy {
     const w = this.wave;
     w.active = true;
     w.travelled = 0;
+    w.sparkT = 0;
+    w.uniforms.uLife.value = 0;
     w.dir.set(dx, 0, dz);
     w.pos.set(this.position.x + dx * 1.2, 0, this.position.z + dz * 1.2);
     w.group.visible = true;
@@ -660,6 +780,15 @@ export class Samurai extends BaseEnemy {
     w.pos.set(bx, 0, bz);
     w.travelled += step;
     w.group.position.copy(w.pos);
+    // embers shed from the cutting edge
+    w.sparkT -= dt;
+    if (w.sparkT <= 0) {
+      w.sparkT = 0.07;
+      const up = 0.3 + Math.random() * (SAMURAI.wave.height - 0.6);
+      const side = SAMURAI.wave.bulge * (Math.sin((Math.PI * up) / SAMURAI.wave.height) - 0.5);
+      // local +x of the group (the bulge side) in world space: (dir.z, -dir.x)
+      ctx.events.emit('vfx:spawn', { kind: 'spark', position: fxPos.set(bx + w.dir.z * side, up, bz - w.dir.x * side), scale: 0.7 });
+    }
     if (w.travelled >= SAMURAI.wave.range) this.endWave(bx, bz);
   }
 
@@ -795,8 +924,7 @@ export class Samurai extends BaseEnemy {
 
   private removeTrails(): void {
     this.wave.group.removeFromParent();
-    this.wave.mat.dispose();
-    this.wave.haloMat.dispose();
+    for (const m of this.wave.mats) m.dispose();
     this.wave.active = false;
     for (const t of this.trails) {
       t.mesh.removeFromParent();
@@ -978,11 +1106,10 @@ export class Samurai extends BaseEnemy {
     this.glow.emissiveIntensity = glow;
     if (this.skinMat) this.skinMat.emissiveIntensity = Math.max(Math.max(0, glow - 2.4) * SAMURAI.skinGlowTint, redCharge * SAMURAI.wave.chargeGlow * (0.85 + 0.15 * Math.sin(time * 24)));
     if (this.wave.active) {
-      // flicker and a slow breathing of the crescent
-      const pulse = 0.85 + 0.15 * Math.sin(time * 38);
-      this.wave.mat.opacity = 0.95 * pulse;
-      this.wave.haloMat.opacity = 0.32 * pulse;
-      const s = 1 + 0.06 * Math.sin(time * 17);
+      // the shader scrolls its energy with time; the arc breathes a little and fades over its range
+      this.wave.uniforms.uTime.value = time;
+      this.wave.uniforms.uLife.value = Math.min(1, this.wave.travelled / SAMURAI.wave.range);
+      const s = 1 + 0.05 * Math.sin(time * 17);
       this.wave.group.scale.set(s, 1, 1);
     }
     if (this.fan.visible) {

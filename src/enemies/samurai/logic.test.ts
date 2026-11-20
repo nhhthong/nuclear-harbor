@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { coneHit, dashUsesDue, deflectedDamage, distanceToSegment, pickDashPoint, crescentHit } from './logic';
-import { crescentShape } from './Samurai';
+import { crescentRibbon, crescentShape } from './Samurai';
 import { SAMURAI } from './tunables';
 
 describe('samurai logic', () => {
@@ -83,5 +83,22 @@ describe('crescent shape', () => {
     expect(Math.max(...ys)).toBeCloseTo(2.9, 5);
     expect(Math.max(...xs)).toBeCloseTo(0.75, 2);
     expect(Math.min(...xs)).toBeGreaterThan(-0.01); // horns meet at x = 0
+  });
+});
+
+describe('crescent ribbon', () => {
+  it('runs horn to horn (u 0..1) from the inner arc (v 0) to the cutting edge (v 1)', () => {
+    const g = crescentRibbon(2.9, 0.75, 0.55, 10);
+    const uv = g.getAttribute('uv');
+    const pos = g.getAttribute('position');
+    expect(pos.count).toBe(22);
+    expect(g.getIndex()!.count).toBe(60);
+    for (let i = 0; i < uv.count; i++) {
+      expect(uv.getX(i)).toBeGreaterThanOrEqual(0);
+      expect(uv.getX(i)).toBeLessThanOrEqual(1);
+      // the edge vertex of each slice lies outside its inner vertex
+      if (i % 2 === 1) expect(pos.getX(i)).toBeGreaterThanOrEqual(pos.getX(i - 1) - 1e-6);
+    }
+    g.dispose();
   });
 });
