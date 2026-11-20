@@ -76,7 +76,7 @@ STINGER-7, hold the tower -> gate -> the Gunslinger Crab Mech drops onto the qua
 ```
 
 - **Countdown** 8 minutes; zero is a failure. **Tower**: hold `E` for 5 s within range. Death respawns at the last checkpoint; the countdown keeps running.
-- **Robots** (roster of 22 on foot plus 4 flying drones, streamed in as you walk, 10 alive at most; drones also come in through the windows if you camp on the mezzanine): 5 Medium Mech Strikers (3-round bursts, an AOE rocket every 6 to 9 s), 4 Biped robots (leap and claw; double jump dodges the leap), 6 Spot dogs, 4 Bomber Ducks (3-2-1 explosion), 3 cyber samurai (300 HP elites: cleave, spinning naginata, lightning dashes).
+- **Robots** (roster of 22 on foot plus 4 flying drones, streamed in as you walk, 10 alive at most; drones also come in through the windows if you camp on the mezzanine): 5 Medium Mech Strikers (3-round bursts, an AOE rocket every 6 to 9 s), 4 Biped robots (leap and claw; double jump dodges the leap), 6 Spot dogs, 4 Bomber Ducks (3-2-1 explosion), 3 cyber samurai (300 HP elites: cleave, a spinning naginata that deflects frontal fire, lightning dashes, and a red-charged crescent of sword energy that glides at you for 32 damage: step aside).
 - **STINGER-7** (1300 HP): charge, venom shot, tail slam; raises a hexagon shield under sustained fire.
 - **Gunslinger Crab Mech** (5800 HP): carpet bombs (AOE), dragonfly drones, a 360 degree spin up close, a slow four-way laser that rotates 180 degrees.
 - **Supplies**: 12 ammo crates, 3 medkits; five safe containers heal 12 HP/s and robots cannot enter.

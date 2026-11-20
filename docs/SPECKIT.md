@@ -44,7 +44,7 @@ npx tsc --noEmit && npm test && npm run build
 
 **Verified by running** (scratch dir, then deleted): with `SPECIFY_FEATURE_DIRECTORY` and `SPECIFY_FEATURE_NO_PERSIST=1`, `check-prerequisites.sh --paths-only`, `setup-plan.sh --json` (copies the plan template with its Constitution Check), `resolve-template.sh spec-template`, `setup-tasks.sh --json` and `check-prerequisites.sh --json --require-tasks --include-tasks` all work and fail with a clear message when the previous artifact is missing. Only `create-new-feature.sh` mis-numbers (above); the scripts and templates stay untouched.
 
-**Next spec number:** `ls specs | grep -E '^[0-9]'`, take the highest and add 1 (spec 30 is the fences and gates, so the next is 31; 23 was never used). Name: `NN-short-kebab-name`.
+**Next spec number:** `ls specs | grep -E '^[0-9]'`, take the highest and add 1 (spec 31 is the samurai crescent wave, so the next is 32; 23 was never used). Name: `NN-short-kebab-name`.
 
 **Order of skills:** `speckit-specify` -> (`speckit-clarify`, optional) -> `speckit-plan` -> `speckit-tasks` -> (`speckit-analyze`, optional) -> `speckit-implement` -> verify -> (`speckit-converge` to append unbuilt work as tasks, `speckit-checklist` for extra checklists, optional).
 
