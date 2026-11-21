@@ -25,8 +25,6 @@ import { buildSamuraiModel, type SamuraiModel } from './model';
 import { samuraiSkin } from './skin';
 import { SAMURAI } from './tunables';
 
-/** The spinning fan sits this far in front of the grip (m), so the disc clears the torso. */
-const SPIN_FORWARD = 0.55;
 const waveOrigin = new Vector3();
 
 interface CrescentWave {
@@ -419,7 +417,7 @@ export class Samurai extends BaseEnemy {
     this.fan.position.copy(m.grip);
     this.fan.visible = false;
     // the fan spins in the frontal plane, in front of the body: it faces the player it deflects
-    if (this.skinned) this.fan.position.z -= SPIN_FORWARD;
+    if (this.skinned) this.fan.position.z -= SAMURAI.spin.fanForward;
     this.fan.userData.noReflect = true;
     this.upper.add(this.fan);
     this.root.add(this.model);
@@ -741,7 +739,7 @@ export class Samurai extends BaseEnemy {
     dx /= d;
     dz /= d;
     // aim at the player but never more than ~35 degrees off the facing (it is a forward cut)
-    if (dx * fx + dz * fz < 0.82) {
+    if (dx * fx + dz * fz < SAMURAI.wave.aimMinCos) {
       dx = fx;
       dz = fz;
     }
@@ -1104,7 +1102,7 @@ export class Samurai extends BaseEnemy {
         // a propeller disc in the frontal plane, held a little out in front of the body
         this.weapon.rotation.order = 'ZYX';
         this.weapon.rotation.set(Math.PI / 2, 0, this.spinAngle);
-        this.weapon.position.z = this.gripZ - SPIN_FORWARD;
+        this.weapon.position.z = this.gripZ - SAMURAI.spin.fanForward;
       } else {
         // forward-pointing naginata: raise / lower it about X, turn it aside about Y
         this.weapon.rotation.order = 'XYZ';

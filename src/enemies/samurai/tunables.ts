@@ -44,7 +44,7 @@ export const SAMURAI = {
     clearance: 1.8,
   },
   /** Skill 2: spins the polearm like a fan and deflects shots from the front. */
-  spin: { seconds: 3, cooldown: 7, reduction: 0.85, frontHalfAngle: 1.35, triggerDamage: 50, window: 1.2, advanceSpeed: 1.6, spinRate: 22 },
+  spin: { seconds: 3, cooldown: 7, reduction: 0.85, frontHalfAngle: 1.35, triggerDamage: 50, window: 1.2, advanceSpeed: 1.6, spinRate: 22, fanForward: 0.55 },
   /** Skill 3: charges, then flashes between random points of an area, leaving faint lightning. */
   dash: {
     uses: 2,
@@ -90,6 +90,8 @@ export const SAMURAI = {
     /** Hit volume: half width across the flight (a blade), half depth along it (m). */
     hitHalfWidth: 0.55,
     hitHalfDepth: 0.45,
+    /** Aim limit: minimum cosine between the facing and the aim (0.82 is about 35 degrees); beyond it the cut goes straight ahead. */
+    aimMinCos: 0.82,
     /** Glow of the armour while charging (skin emissive intensity at the peak). */
     chargeGlow: 1.6,
   },
