@@ -13,7 +13,7 @@ TypeScript strict, Three.js (shader ribbon, additive layers), Vitest. Tests: `sr
 |---|---|
 | I Performance | One crescent group (3 small meshes) per samurai, created once, hidden when idle; one ray per fixed step while it flies; embers use the pooled `vfx:spawn`. PASS |
 | II Typed contracts | One new event `enemy:waveReleased`, additive, in the shared `core/events.ts`; otherwise reuses `enemy:attacked`, `vfx:spawn` and the player damage API. PASS |
-| III Tunables | `SAMURAI.wave` holds the skill numbers. `SPIN_FORWARD` (0.55) and the 35 degree aim limit are literals in `Samurai.ts`: JUSTIFIED as visual offset / aim clamp for now; move them into `tunables.ts` when next touched. |
+| III Tunables | `SAMURAI.wave` holds the skill numbers. `SAMURAI.spin.fanForward` (0.55) and `SAMURAI.wave.aimMinCos` (0.82, about 35 degrees) were moved into tunables on 2026-11-21. PASS. |
 | IV Tests | `crescentHit`, `crescentShape`, `crescentRibbon`, numbers unit-tested. Spin orientation, skill selection, wall/gate rules and the event have no test. Browser check by the coordinator. Smoke/e2e skipped. |
 | V Blast radius | Samurai module, plus the additive event in `core/events.ts` and its route in `audio/eventMap.ts` (the earlier plan said "samurai module only", which was wrong). DECLARED |
 | VI Offline / procedural | Procedural geometry and shader, no assets. PASS |

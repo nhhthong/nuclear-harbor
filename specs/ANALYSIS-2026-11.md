@@ -132,4 +132,4 @@ Four cross-cutting findings (X-01 to X-04: the "fully ticked" claim in `specs/RE
 1. ~~Amend constitution Principle VI for audio files.~~ Done (2.1.0, 2026-11-20). Still open: 2, 3, 4 below.
 2. Spec 29 contract conflicts: back door 4.5 m vs mezzanine deck 3.4 m, and `win-n1` over the door. Change the contract or accept.
 3. Samurai (1.8 m) and scorpion (1.9 m) dodge clearances sit at or above the double jump (1.8 m): lower them, or raise the jump.
-4. Optional: move `SPIN_FORWARD` and the 35 degree limit into `SAMURAI` tunables (a small tuning commit, no spec needed).
+4. ~~Move `SPIN_FORWARD` and the 35 degree limit into `SAMURAI` tunables.~~ Done 2026-11-21 (`SAMURAI.spin.fanForward`, `SAMURAI.wave.aimMinCos`).

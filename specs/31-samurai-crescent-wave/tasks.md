@@ -15,4 +15,4 @@
 - [x] T005 [SC-002] Browser check (coordinator, sandbox, low preset, stepped sim): a samurai 20 m away charged red for about 1 s, cut, the crescent flew at 12 m/s and hit the player (100 -> 68 HP, 32 damage); with the spin forced the blur disc and naginata turn in the frontal plane (front and side views); no console errors
 - [x] T009 [SC-001] `npx tsc --noEmit`, `npm test` (615 tests then; 655 on 2026-11-20), `npm run build` pass; smoke/e2e skipped (owner policy)
 - [ ] T010 skipped: tests for skill selection (6 to 26 m, leap condition, 35 degree clamp), spin orientation and the event; browser check that walls stop the crescent and gates do not; bloom on medium/high; balance; real GPU (open follow-up in `docs/SPECKIT.md`)
-- [ ] T011 skipped: move `SPIN_FORWARD` and the 35 degree limit into `SAMURAI` tunables (Principle III), a small tuning change that needs no spec
+- [x] T011 [FR-008] `SPIN_FORWARD` is now `SAMURAI.spin.fanForward` (0.55) and the 35 degree aim limit is `SAMURAI.wave.aimMinCos` (0.82); `tsc` and the samurai tests pass (2026-11-21)

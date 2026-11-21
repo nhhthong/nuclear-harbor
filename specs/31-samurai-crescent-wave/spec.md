@@ -29,7 +29,7 @@ Used from 6 to 26 m with line of sight, when the player is beyond leap range or 
 - **FR-005** Walls stop it, chain-link gates and fences do not. [N]
 - **FR-006** Look: shader ribbon (`crescentRibbon`, `CRESCENT_FRAGMENT`: tapered horns, white-hot edge, orange-to-deep-red body, energy fibres, noise edge, dissolve, soft halo layer, three after-images, embers via `vfx:spawn`), orientation as above. All procedural. [U geometry; B low preset; bloom on medium/high N]
 - **FR-007** Armour glows red while charging. [B]
-- **FR-008** Numbers in `SAMURAI.wave` (`src/enemies/samurai/tunables.ts`). The 0.55 m `SPIN_FORWARD` and the 35 degree aim limit are literals in `Samurai.ts`, not tunables. [review; two literals are a known gap against Principle III]
+- **FR-008** Numbers in `SAMURAI.wave` (`src/enemies/samurai/tunables.ts`). The 0.55 m fan offset is `SAMURAI.spin.fanForward` and the 35 degree aim limit is `SAMURAI.wave.aimMinCos` (0.82). [review]
 - **FR-009** `enemy:waveReleased { id, position }` is emitted when the crescent is released; added to `core/events.ts` in PR #21 and routed to the recorded energy-wave sound by spec 32. [B: the spec 32 browser run produced a sample play on it; no unit test]
 
 ## Success Criteria
