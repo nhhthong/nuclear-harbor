@@ -32,13 +32,13 @@ export const GATES = {
     { id: 'apron-yard', z: 12.4, x0: -35.6, x1: 5.75 },
     { id: 'court-quay', z: -40.75, x0: -35.6, x1: 35.6 },
   ],
-  /** Gates: centre x on a line, total width, 1 or 2 leaves. */
+  /** Gates: centre x on a line, total width, 1 or 2 leaves. `lockedUntilTower`: stays shut (touching does nothing) until all relay towers are active, then swings open and stays open (spec 33). */
   gates: [
-    { id: 'apron-lane-west', line: 'apron-yard', x: -15, width: 6.6, leaves: 2 },
-    { id: 'apron-lane-east', line: 'apron-yard', x: 2, width: 6.6, leaves: 2 },
-    { id: 'apron-walk', line: 'apron-yard', x: -29, width: 1.2, leaves: 1 },
-    { id: 'court-quay-west', line: 'court-quay', x: -10, width: 6.6, leaves: 2 },
-    { id: 'court-quay-east', line: 'court-quay', x: 14, width: 6.6, leaves: 2 },
+    { id: 'apron-lane-west', line: 'apron-yard', x: -15, width: 6.6, leaves: 2, lockedUntilTower: false },
+    { id: 'apron-lane-east', line: 'apron-yard', x: 2, width: 6.6, leaves: 2, lockedUntilTower: false },
+    { id: 'apron-walk', line: 'apron-yard', x: -29, width: 1.2, leaves: 1, lockedUntilTower: false },
+    { id: 'court-quay-west', line: 'court-quay', x: -10, width: 6.6, leaves: 2, lockedUntilTower: true },
+    { id: 'court-quay-east', line: 'court-quay', x: 14, width: 6.6, leaves: 2, lockedUntilTower: true },
   ],
   /** The player opens a gate within this distance of a leaf (capsule radius 0.4 + reach). */
   touchDistance: 0.9,
@@ -48,6 +48,8 @@ export const GATES = {
   /** rad/s */
   swingSpeed: 3.2,
   closeDelay: 5,
+  /** A locked gate shows its hint at most this often (s). */
+  lockedToastEvery: 4,
   /** Nobody within this distance of the gate centre before it may close. */
   clearRadius: 2.2,
   leafThickness: 0.08,

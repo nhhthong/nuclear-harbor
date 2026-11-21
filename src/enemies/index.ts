@@ -53,6 +53,7 @@ export function createEnemiesModule(): GameModule {
       offs.push(ctx.events.on('world:ready', startWhenReady));
       offs.push(ctx.events.on('objectives:defendStarted', (e) => m.onDefendStarted(e.position, e.radius)));
       offs.push(ctx.events.on('game:respawn', () => m.onRespawn()));
+      offs.push(ctx.events.on('objectives:allActivated', () => m.clearForBoss()));
       offs.push(ctx.events.on('enemy:destroyed', (e) => m.onDestroyed(e.id)));
 
       ctx.testHooks.enemies = {
@@ -62,6 +63,7 @@ export function createEnemiesModule(): GameModule {
           return e ? e.id : null;
         },
         killAll: () => m.killAll(),
+        bossSolo: () => m.isBossSolo,
         samuraiSkin: () => samuraiSkin() !== null,
         authored: () => ({ biped: authoredModel('biped') !== null, striker: authoredModel('striker') !== null, spot: authoredModel('spot') !== null }),
         rosterRemaining: () => m.rosterRemaining,

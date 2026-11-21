@@ -55,6 +55,7 @@ export function createScorpionModule(): GameModule {
   let shakeTotal = 1;
   let serialSpawns = 0;
   let passiveAll = false;
+  let bossSolo = false;
 
   const hooks: ScorpionHooks = {
     shake(amplitude, seconds, x, z) {
@@ -228,6 +229,11 @@ export function createScorpionModule(): GameModule {
       buildBar(c);
 
       offs.push(
+        // spec 33: the boss fights alone. The guardian is removed (and never spawns afterwards) when the tower is done.
+        c.events.on('objectives:allActivated', () => {
+          bossSolo = true;
+          for (const d of scorpions) d.retire();
+        }),
         c.events.on('tower:registered', onTowerRegistered),
         c.events.on('game:respawn', () => {
           for (const d of scorpions) d.resetToGuard();
@@ -278,7 +284,7 @@ export function createScorpionModule(): GameModule {
       const p = ctx.player;
       if (p.alive && assets && guardIds.length > 0) {
         for (const t of towers) {
-          if (spawned.has(t.id) || !guardIds.includes(t.id)) continue;
+          if (bossSolo || spawned.has(t.id) || !guardIds.includes(t.id)) continue;
           if (Math.hypot(p.position.x - t.position.x, p.position.z - t.position.z) <= SCORPION.triggerRadius) {
             const spot = findSpot(t);
             spawn(t.id, spot.x, spot.z);

@@ -29,7 +29,7 @@ describe('resolveDamage', () => {
 });
 
 describe('ammo budget (GDD 5.4)', () => {
-  it('needs 356 hits (whole roster, roster drones and the crab boss) and the supply of 570 covers the assumed accuracy', () => {
+  it('needs 356 hits (whole roster, roster drones and the crab boss) and the supply of 690 covers the assumed accuracy', () => {
     const hits =
       ENEMY_COUNTS.army * shotsToKill(ARMY_ROBOT.hp) +
       ENEMY_COUNTS.spot * shotsToKill(SPOT.hp) +
@@ -47,9 +47,9 @@ describe('ammo budget (GDD 5.4)', () => {
       WEAPON.magazineSize +
       WEAPON.reserveAmmo +
       (ECONOMY.ammoCratesInZones + ECONOMY.ammoCratesInBossArena) * ECONOMY.ammoCrateAmount;
-    // 570 = start 210 + (8 zone crates, one of them at WAREHOUSE.supplySpot, + 4 boss crates) x 30;
-    // 570 x 0.65 = 370 hits, so the margin is 14 hits
-    expect(supply).toBe(570);
+    // 690 = start 210 + (12 zone crates, one of them at WAREHOUSE.supplySpot, + 4 boss crates) x 30 (spec 33 added four);
+    // 690 x 0.65 = 448 hits, so the margin is 92 hits
+    expect(supply).toBe(690);
     expect(supply).toBeGreaterThanOrEqual(hits / ECONOMY.assumedAccuracy);
   });
 });

@@ -43,7 +43,8 @@ Folders numbered 24 and above are current and describe the game as built (rewrit
 | `30-fences-and-gates` | two fences, five swing gates, `GATE` layer | #20 |
 | `31-samurai-crescent-wave` | frontal spin, red-charge crescent wave (32 damage, 12 m/s) | #21 |
 | `32-recorded-audio` | 75 OGG samples (1.27 MB), procedural fallbacks; mix pass open | #21 |
+| `33-boss-solo-jump-gates-ammo` | double jump to about 3.2 m, solo boss (robots cleared), locked quay gates until the tower, +4 crates (supply 690), scorpion unstuck | this PR |
 
-Each has `spec.md`, `checklists/requirements.md`, `plan.md` and `tasks.md`. Every requirement carries a check tag (unit test, browser check, or not verified) and every task is ticked or marked "skipped: reason"; open items are the skipped ones (spec 24 T012, 25 T011, 26 T013, 27 T013, 28 T010, 29 T043/T045, 30 T009, 31 T010/T011, 32 T014/T019/T020). Next free number: **33** (highest folder plus 1; 23 was never used).
+Each has `spec.md`, `checklists/requirements.md`, `plan.md` and `tasks.md`. Every requirement carries a check tag (unit test, browser check, or not verified) and every task is ticked or marked "skipped: reason"; open items are the skipped ones (spec 24 T012, 25 T011, 26 T013, 27 T013, 28 T010, 29 T043/T045, 30 T009, 31 T010, 32 T014/T019, 33 T009). Next free number: **34** (highest folder plus 1; 23 was never used).
 
 New work: follow `docs/SPECKIT.md` (new features use Spec Kit; small fixes and tuning do not).

@@ -210,7 +210,7 @@ describe('PlayerController', () => {
     expect(r.player.position.z).toBeCloseTo(30, 1);
   });
 
-  it('Space jumps about 1 m and a second press at the apex reaches about 1.8 m', async () => {
+  it('Space jumps about 1 m and a second press at the apex clears a one-high container (spec 33)', async () => {
     const press = (r: Rig): void => {
       r.input.handleCode('Space', true);
       r.controller.update(DT, 1);
@@ -240,8 +240,8 @@ describe('PlayerController', () => {
       r.tick(1);
       apex2 = Math.max(apex2, r.player.position.y);
     }
-    expect(apex2).toBeGreaterThan(1.6);
-    expect(apex2).toBeLessThan(2.0);
+    expect(apex2).toBeGreaterThan(2.59 + 0.3); // container top 2.59 m, with margin
+    expect(apex2).toBeLessThan(5.18); // a two-high stack stays out of reach
     // a third press in the air does nothing; landing restores the air jump
     expect(jumps).toEqual([false, false, true]);
     r.tick(80);
@@ -286,4 +286,35 @@ describe('PlayerController', () => {
     expect(r.footsteps.every((s) => !s)).toBe(true);
     expect(r.player.invulnerableFor).toBe(0);
   });
+
+  it('the double jump lands on top of a one-high container (spec 33, owner request)', async () => {
+    const r = await makeRig();
+    // a container: 2.44 wide, 6.06 long, 2.59 high; its south face is at z = -6
+    r.physics.addStaticBox({ center: { x: 0, y: 2.59 / 2, z: -6 - 3.03 }, halfExtents: { x: 1.22, y: 2.59 / 2, z: 3.03 } });
+    r.physics.syncQueries();
+    r.tick(10);
+    const press = (): void => {
+      r.input.handleCode('Space', true);
+      r.controller.update(DT, 1);
+      r.input.endFrame();
+      r.input.handleCode('Space', false);
+    };
+    r.input.handleCode('KeyW', true);
+    // walk to 3.6 m from the face (the jump window is about 2.7 to 4.8 m at walking speed), jump, press again shortly after take-off
+    for (let i = 0; i < 400 && r.player.position.z > -6 + 3.6; i++) r.tick(1);
+    press();
+    r.tick(8);
+    press();
+    let top = 0;
+    for (let i = 0; i < 200; i++) {
+      r.tick(1);
+      top = Math.max(top, r.player.position.y);
+      if (r.player.position.z < -7) r.input.handleCode('KeyW', false); // stop on the roof
+    }
+    expect(top).toBeGreaterThan(2.59);
+    expect(r.player.grounded).toBe(true);
+    expect(r.player.position.y).toBeGreaterThan(2.5);
+    expect(r.player.position.y).toBeLessThan(2.8);
+  });
 });
+

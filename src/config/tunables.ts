@@ -29,12 +29,13 @@ export const PLAYER = {
   sprintSpeed: 10,
   /**
    * Owner request: a natural jump, not a rocket. Player gravity stays -30 (world `SIM.gravity` is -24). Apex = v^2 / (2 g):
-   * a ground jump rises 0.95 m (0.5 s in the air), the air jump adds 0.85 m, so 1.8 m when chained at the apex
-   * (was 3.9 m, +3.3 m, 7.2 m with 15.3 and 14.1 m/s). A one-high container top (2.6 m) is no longer reachable.
+   * a ground jump rises 0.95 m (0.5 s in the air). Spec 33 (owner request 2026-11-21): the air jump now adds 2.25 m, so
+   * about 3.2 m when chained near the apex: a one-high container top (2.59 m) is reachable with margin, a
+   * two-high stack (5.2 m) is not. (Spec 24: 0.85 m and 1.8 m; originally 3.9 m, +3.3 m, 7.2 m.)
    */
   gravity: -30,
   jumpSpeed: 7.55,
-  airJumpSpeed: 7.15,
+  airJumpSpeed: 11.6,
   airJumps: 1,
   /** Jump still allowed this long after walking off an edge (s). */
   coyoteTime: 0.1,
@@ -125,9 +126,9 @@ export const ECONOMY = {
   ammoCrateAmount: 30,
   /**
    * Owner request: fewer supplies (was 10 + 6 crates, 4 + 2 medkits). Spec 29: + 1 crate at `WAREHOUSE.supplySpot`
-   * (under the mezzanine) for the four roster drones.
+   * (under the mezzanine) for the four roster drones. Spec 33 (owner request): + 4 crates around the map.
    */
-  ammoCratesInZones: 8,
+  ammoCratesInZones: 12,
   ammoCratesInBossArena: 4,
   medkitHeal: 40,
   medkitsInZones: 2,

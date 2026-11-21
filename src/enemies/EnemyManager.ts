@@ -38,6 +38,7 @@ export class EnemyManager {
   private readonly thinking: BaseEnemy[] = [];
   private time = 0;
   private areas: AreaSpawner<BaseEnemy> | null = null;
+  private bossSolo = false;
   private readonly fx = new Vector3();
   // ---- spec 29: anti-camping drone call-in (not part of the roster) ----
   private readonly callIn = new CallInDirector(DRONE.callIn);
@@ -99,7 +100,7 @@ export class EnemyManager {
 
   /** Player on the mezzanine for `DRONE.callIn.campSeconds`: drones come in from the north windows or the roller door. */
   private updateCallIn(dt: number): void {
-    if (this.ctx.flags.sandbox) return;
+    if (this.ctx.flags.sandbox || this.bossSolo) return;
     const p = this.ctx.player;
     const camping = p.alive && onMezzanine(p.position, DRONE.callIn.yMargin);
     const n = this.callIn.update(dt, camping, this.liveCallIns(), this.liveCount(), ENEMY_LOCAL.area.liveCap);
@@ -232,6 +233,21 @@ export class EnemyManager {
         y: e.position.y,
         z: e.position.z,
       }));
+  }
+
+  /**
+   * Spec 33: the boss fights alone. Every live robot is destroyed, nothing more streams in and the
+   * anti-camping call-in stops. Called on `objectives:allActivated`.
+   */
+  clearForBoss(): void {
+    this.bossSolo = true;
+    this.killAll();
+    this.areas = null;
+    this.projectiles.releaseAll();
+  }
+
+  get isBossSolo(): boolean {
+    return this.bossSolo;
   }
 
   killAll(): void {

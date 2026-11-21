@@ -25,6 +25,7 @@ import { createPose, type ScorpionAssets, type ScorpionRig } from './ScorpionMod
 import type { ScorpionAudio } from './scorpionAudio';
 import type { ScorpionSkill } from './events';
 import { SCORPION } from './tunables';
+import { isBoxedIn, pickEscapeHeading, StuckTracker } from './unstuck';
 
 export type ScorpionState = 'spawning' | 'guard' | 'chase' | 'telegraph' | 'execute' | 'recover' | 'shield' | 'stunned' | 'dead';
 
@@ -286,6 +287,14 @@ export class Scorpion implements Damageable {
   /** Test hook: never leave guard duty (no chase, no skills). */
   passive = false;
   readonly spot = new Vector3();
+  // ---- spec 33: getting out of a wedge ----
+  private readonly stuck = new StuckTracker(SCORPION.stuck.window, SCORPION.stuck.minMove);
+  private walkWanted = false;
+  private escapeLeft = 0;
+  private escapeYaw = 0;
+  private sinceEscape = Infinity;
+  /** Times it got out (crawl or relocation), for tests and the debug overlay. */
+  unstuckCount = 0;
 
   constructor(
     private readonly ctx: GameContext,
@@ -492,6 +501,7 @@ export class Scorpion implements Damageable {
 
   /** Walk towards a point with turning, wall probing, sea guard. Returns true when moving. */
   private walk(tx: number, tz: number, speed: number, dt: number): boolean {
+    this.walkWanted = true;
     const target = Math.atan2(-(tx - this.position.x), -(tz - this.position.z));
     const off = this.turnTowards(target, dt, SCORPION.turnRate);
     if (off > 0.9) return false;
@@ -521,6 +531,107 @@ export class Scorpion implements Damageable {
     return true;
   }
 
+  // ---- spec 33: wedge escape ---------------------------------------------------------------
+
+  /** Free distance (m, capped at `probeLength`) along each of the ring of headings, from the current facing. */
+  private clearances(): number[] {
+    const n = SCORPION.stuck.headings;
+    const out: number[] = [];
+    for (let i = 0; i < n; i++) {
+      const a = this.yaw + (i / n) * Math.PI * 2;
+      const dx = -Math.sin(a);
+      const dz = -Math.cos(a);
+      let free: number = SCORPION.stuck.probeLength;
+      for (const h of SCORPION.probeHeights) {
+        const hit = this.ctx.physics.raycast({ x: this.position.x, y: this.position.y + h, z: this.position.z }, { x: dx, y: 0, z: dz }, free, {
+          groups: QueryGroups.worldOnly,
+        });
+        if (hit) free = Math.min(free, hit.distance);
+      }
+      if (!isOnLand(this.position.x + dx * (SCORPION.edgeMargin + 1), this.position.z + dz * (SCORPION.edgeMargin + 1))) free = Math.min(free, 0);
+      out.push(free);
+    }
+    return out;
+  }
+
+  /** Called when it wanted to walk and did not get anywhere. */
+  private beginEscape(): void {
+    const c = this.clearances();
+    const repeat = this.sinceEscape < SCORPION.stuck.repeatWithin;
+    this.sinceEscape = 0;
+    if (repeat || isBoxedIn(c, SCORPION.stuck.boxedClearance)) {
+      this.relocate();
+      return;
+    }
+    // prefer backing out (the heading opposite the facing); the ring is measured from the facing
+    const i = pickEscapeHeading(c, c.length / 2);
+    this.escapeYaw = this.yaw + (i / c.length) * Math.PI * 2;
+    this.escapeLeft = SCORPION.stuck.crawlSeconds;
+    this.unstuckCount++;
+  }
+
+  /** Crawl along `escapeYaw` (backwards or sideways, whichever was open), turning only slowly. */
+  private escapeStep(dt: number): boolean {
+    this.escapeLeft -= dt;
+    const dx = -Math.sin(this.escapeYaw);
+    const dz = -Math.cos(this.escapeYaw);
+    const step = SCORPION.walkSpeed * SCORPION.stuck.crawlSpeedFactor * dt;
+    if (this.blocked(dx, dz, SCORPION.bodyRadius * 0.6 + step)) {
+      this.escapeLeft = 0;
+      return false;
+    }
+    const nx = this.position.x + dx * step;
+    const nz = this.position.z + dz * step;
+    if (!isOnLand(nx + dx * SCORPION.edgeMargin, nz + dz * SCORPION.edgeMargin)) {
+      this.escapeLeft = 0;
+      return false;
+    }
+    this.position.x = nx;
+    this.position.z = nz;
+    return true;
+  }
+
+  /** Free ground at (x, z): land, and no wall within `freeRadius` in 8 directions at probe heights. */
+  private isFreeSpot(x: number, z: number): boolean {
+    const r = SCORPION.stuck.freeRadius;
+    if (!isOnLand(x, z) || !isOnLand(x + r + SCORPION.edgeMargin, z) || !isOnLand(x - r - SCORPION.edgeMargin, z)) return false;
+    if (!isOnLand(x, z + r + SCORPION.edgeMargin) || !isOnLand(x, z - r - SCORPION.edgeMargin)) return false;
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      for (const h of SCORPION.probeHeights) {
+        if (this.ctx.physics.raycast({ x, y: h, z }, { x: Math.cos(a), y: 0, z: Math.sin(a) }, r, { groups: QueryGroups.worldOnly })) return false;
+      }
+    }
+    // the centre itself must not be inside a collider: a short down ray from above has to reach the ground
+    const down = this.ctx.physics.raycast({ x, y: 8, z }, { x: 0, y: -1, z: 0 }, 8, { groups: QueryGroups.worldOnly });
+    return !down || down.point.y < 0.5;
+  }
+
+  /** Moves the body to the nearest free spot (rings around it, then around its guard spot). */
+  private relocate(): void {
+    const S = SCORPION.stuck;
+    const centres = [this.position, this.spot];
+    for (const c of centres) {
+      for (let r = S.relocateStep; r <= S.relocateMax; r += S.relocateStep) {
+        const count = Math.max(8, Math.round((r * Math.PI * 2) / 2));
+        for (let i = 0; i < count; i++) {
+          const a = (i / count) * Math.PI * 2;
+          const x = c.x + Math.cos(a) * r;
+          const z = c.z + Math.sin(a) * r;
+          if (!this.isFreeSpot(x, z)) continue;
+          this.fx('dust', this.position.x, 0.3, this.position.z, 3);
+          this.position.x = x;
+          this.position.z = z;
+          this.fx('dust', x, 0.3, z, 3);
+          this.escapeLeft = 0;
+          this.stuck.reset();
+          this.unstuckCount++;
+          return;
+        }
+      }
+    }
+  }
+
   // ---- simulation --------------------------------------------------------------------------
 
   fixedUpdate(dt: number): void {
@@ -539,6 +650,8 @@ export class Scorpion implements Damageable {
     const d = this.hdist();
     const pose = this.pose;
     let walking = false;
+    this.walkWanted = false;
+    this.sinceEscape += dt;
 
     switch (this.state_) {
       case 'spawning': {
@@ -568,6 +681,10 @@ export class Scorpion implements Damageable {
         break;
       }
       case 'guard': {
+        if (this.escapeLeft > 0) {
+          walking = this.escapeStep(dt);
+          break;
+        }
         if (!this.passive && player.alive && d < SCORPION.aggroRange) {
           this.enter('chase');
           break;
@@ -580,6 +697,10 @@ export class Scorpion implements Damageable {
       case 'chase': {
         if (!player.alive || d > SCORPION.aggroRange * 1.4) {
           this.enter('guard');
+          break;
+        }
+        if (this.escapeLeft > 0) {
+          walking = this.escapeStep(dt);
           break;
         }
         // clicking claws while it hunts
@@ -656,6 +777,9 @@ export class Scorpion implements Damageable {
         this.fx('smoke', this.position.x, 1.8, this.position.z, 0.9);
       }
     }
+    // spec 33: it wants to walk (guard/chase) but is not getting anywhere: crawl out, or step to a free spot
+    const walkState = this.state_ === 'guard' || this.state_ === 'chase';
+    if (this.stuck.update(dt, walkState && this.escapeLeft <= 0 && this.walkWanted, this.position.x, this.position.z)) this.beginEscape();
     const skillDrivesGait = this.state_ === 'execute' && this.skill === 'ram';
     if (!skillDrivesGait) {
       this.walkAmount += ((walking ? 1 : 0) - this.walkAmount) * Math.min(1, dt * 6);
@@ -1095,6 +1219,15 @@ export class Scorpion implements Damageable {
 
   // ---- death -------------------------------------------------------------------------------
 
+  /** Removes it from the fight with an explosion and no loot (the boss fight is solo, spec 33). */
+  retire(): void {
+    if (this.state_ === 'dead') return;
+    this.skipLoot = true;
+    this.die();
+  }
+
+  private skipLoot = false;
+
   private die(): void {
     if (this.state_ === 'dead') return;
     this.state_ = 'dead';
@@ -1110,7 +1243,7 @@ export class Scorpion implements Damageable {
     }
     this.fx('explosion', this.position.x, 1.4, this.position.z, 1.6);
     this.ctx.events.emit('scorpion:defeated', { id: this.id, position: evPos.copy(this.position) });
-    this.hooks.defeated(this);
+    if (!this.skipLoot) this.hooks.defeated(this);
   }
 
   private updateDeath(): void {

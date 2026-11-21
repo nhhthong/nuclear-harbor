@@ -379,3 +379,28 @@ describe('EnemyManager (headless physics)', () => {
     expect(glowOf(a).material).toBe(glowOf(b).material);
   });
 });
+
+describe('boss fight is solo (spec 33)', () => {
+  it('clearForBoss destroys every live robot, stops the call-in and flags the manager', async () => {
+    const { w, m } = await setup();
+    spawnMech(m, 0, 0);
+    spawnMech(m, 10, 0);
+    m.spawn({ type: 'spot', position: new Vector3(-10, 0, 0), patrol: [] });
+    expect(w.ctx.enemies.aliveCount()).toBe(3);
+    expect(m.isBossSolo).toBe(false);
+    m.clearForBoss();
+    expect(m.isBossSolo).toBe(true);
+    expect(w.ctx.enemies.aliveCount()).toBe(0);
+    // the anti-camping call-in is off for the rest of the run
+    run(w, m, 1);
+    expect(m.callInState().called).toBe(0);
+  });
+
+  it('is safe to call twice and with nothing alive', async () => {
+    const { w, m } = await setup();
+    m.clearForBoss();
+    m.clearForBoss();
+    expect(w.ctx.enemies.aliveCount()).toBe(0);
+  });
+});
+

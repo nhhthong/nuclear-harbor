@@ -36,7 +36,7 @@ const m = (zone: ZoneId, x: number, z: number, elevated = false, castFromY?: num
 
 
 /**
- * Zone placement for the quay: 8 crates (the last one at `WAREHOUSE.supplySpot`, spec 29) and 2 medkits. All of them are on the ground since the jump was lowered (the double jump no longer reaches 2.6 m container tops). `placements.test.ts` checks every position against the
+ * Zone placement: 12 crates (spec 33 added four) (the last one at `WAREHOUSE.supplySpot`, spec 29) and 2 medkits. All of them are on the ground since the jump was lowered (the double jump no longer reaches 2.6 m container tops). `placements.test.ts` checks every position against the
  * generated container layout and the props.
  */
 export const ZONE_PLACEMENTS: readonly PickupCandidate[] = [
@@ -50,8 +50,13 @@ export const ZONE_PLACEMENTS: readonly PickupCandidate[] = [
   // A Warehouse: on the mezzanine deck (ray cast from below the roof); the floor spot under it is
   // WAREHOUSE.supplySpot, reserved for the drone stream's extra crate
   m('A', 21, -20.5, false, 5.5),
+  // spec 33 (owner request): four more crates around the map, all on the ground
+  c('A', -28, -9),
+  c('A', -20, 5),
   // B Relay Court
   c('B', -4, fromLegacyZ(-16.5)),
+  c('B', -30, -35),
+  c('B', 28, -35),
   // D Quay, east of the boss arena
   c('D', 30, fromLegacyZ(-26)),
   m('D', 28, fromLegacyZ(-35)),

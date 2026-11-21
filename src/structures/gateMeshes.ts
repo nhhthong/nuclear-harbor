@@ -125,6 +125,16 @@ export function mountGates(ctx: GameContext, scope: Scope, galvanised: Material)
   });
 
   const pos = new Vector3();
+  let toastCooldown = 0;
+  // spec 33: the quay gates open for good when the relay tower is active
+  const offUnlock = ctx.events.on('objectives:allActivated', () => {
+    for (const gate of system.unlockAll()) {
+      pos.set(gate.def.x, 1.2, gate.def.z);
+      ctx.events.emit('world:gateMoved', { id: gate.def.id, position: pos.clone(), open: true });
+    }
+    ctx.testHooks.gatesUnlocked = true;
+  });
+  scope.onDispose(offUnlock);
   const walkers: Array<{ x: number; z: number }> = [];
   return {
     update(dt: number) {
@@ -138,6 +148,11 @@ export function mountGates(ctx: GameContext, scope: Scope, galvanised: Material)
         pos.set(gate.def.x, 1.2, gate.def.z);
         ctx.events.emit('world:gateMoved', { id: gate.def.id, position: pos.clone(), open: event === 'opened' });
       }
+      toastCooldown = Math.max(0, toastCooldown - dt);
+      if (system.bumped.length > 0 && toastCooldown === 0) {
+        toastCooldown = GATES.lockedToastEvery;
+        ctx.events.emit('ui:toast', { text: 'Gate locked: activate the relay tower first', seconds: 2.5 });
+      }
       for (const l of leaves) {
         l.pivot.rotation.y = (l.leaf.dir === -1 ? Math.PI : 0) + l.gate.leafYaw(l.leaf);
         const enabled = !l.gate.passable;
@@ -145,7 +160,7 @@ export function mountGates(ctx: GameContext, scope: Scope, galvanised: Material)
       }
     },
     summary: () => ({
-      gates: system.gates.map((g) => ({ id: g.def.id, phase: g.phase, angle: +g.angle.toFixed(2) })),
+      gates: system.gates.map((g) => ({ id: g.def.id, locked: g.locked, phase: g.phase, angle: +g.angle.toFixed(2) })),
       fenceRuns: fenceRuns().length,
     }),
   };
