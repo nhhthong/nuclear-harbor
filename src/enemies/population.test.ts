@@ -88,6 +88,17 @@ describe('authored harbor population', () => {
     }
   });
 
+  it('keeps the quay and the boss arena free of robots, and elites away from the tower ring (spec 33)', () => {
+    for (const p of authored) {
+      for (const pt of [p.at, ...p.patrol]) {
+        expect(zoneAt(pt[0], pt[1]), `${p.type} ${pt.join(', ')}`).not.toBe('D');
+        expect(dist(pt, BOSS_ARENA.center.x, BOSS_ARENA.center.z)).toBeGreaterThan(BOSS_ARENA.radius);
+      }
+    }
+    const tower = TOWERS[0]!.position;
+    for (const p of authored.filter((q) => q.type === 'samurai')) expect(dist(p.at, tower.x, tower.z)).toBeGreaterThan(15);
+  });
+
   it('keeps every robot, and every point of its patrol, away from the player spawn', () => {
     for (const p of authored) {
       for (const pt of [p.at, ...p.patrol]) expect(dist(pt, PLAYER_SPAWN.position.x, PLAYER_SPAWN.position.z), `${p.type} ${pt.join(', ')}`).toBeGreaterThan(ENEMY_LOCAL.minDistanceFromSpawn);

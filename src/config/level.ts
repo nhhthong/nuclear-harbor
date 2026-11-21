@@ -183,14 +183,18 @@ export function isKeepClear(x: number, z: number, margin = 0): boolean {
 /** Decorative cargo ship, static, moored out in the dark. */
 export const SHIP_BACKDROP = { position: { x: -34, y: SEA_LEVEL_Y, z: -148 } as Vec3Like, yaw: 0.1 } as const;
 
-/** Enemy roster per zone; sums to ENEMY_COUNTS. The gate apron (player spawn) stays empty. */
+/**
+ * Enemy roster per zone; sums to ENEMY_COUNTS. The gate apron (player spawn) stays empty, and so does the quay
+ * (the boss's ground, behind gates that stay locked until the relay tower is active; spec 33). Spec 33: the nine
+ * quay robots moved into the yard (west leg and warehouse) and the court, so the whole roster of 22 is fought on
+ * the way to the tower. Samurai are elites: two in the yard, one at the east end of the court (the scorpion's
+ * tower ring stays free of them).
+ */
 export const ENEMY_DISTRIBUTION: Readonly<Record<ZoneId, { army: number; spot: number; duck: number; biped: number; samurai: number }>> = {
-  // The gate apron (spawn) is empty. No samurai in the relay court (the scorpion's ground). Spec 29: the
-  // yard is the west leg only (zone A also holds the warehouse floor), so the court and the quay take more.
-  A: { army: 2, spot: 2, duck: 1, biped: 2, samurai: 1 },
-  B: { army: 2, spot: 2, duck: 1, biped: 0, samurai: 0 },
+  A: { army: 2, spot: 3, duck: 1, biped: 3, samurai: 2 },
+  B: { army: 3, spot: 3, duck: 3, biped: 1, samurai: 1 },
   C: { army: 0, spot: 0, duck: 0, biped: 0, samurai: 0 },
-  D: { army: 1, spot: 2, duck: 2, biped: 2, samurai: 2 },
+  D: { army: 0, spot: 0, duck: 0, biped: 0, samurai: 0 },
 };
 
 /** Zone of a point of the play area; null outside it (sea, closed loading dock). */

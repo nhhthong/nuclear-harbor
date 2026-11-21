@@ -2,7 +2,7 @@
 
 **Created**: 2026-11-21 | **Feature**: [spec.md](../spec.md)
 
-- [x] Owner request (5 items) and clarified assumptions recorded (mantis = scorpion, boss gate = court/quay gates, pillar = relay tower)
+- [x] Owner request (5 items) and clarified assumptions recorded (mantis = scorpion, boss gate = court/quay gates, pillar = relay tower, boss area = the quay; robots stay around the rest of the map)
 - [x] No [NEEDS CLARIFICATION] markers; requirements FR-001..006 carry check tags
 - [x] Numbers live in config (`PLAYER`, `ECONOMY`, `GATES`, `SCORPION.stuck`) and match the spec (11.6 m/s, 12 crates, 690 supply, 3 s / 1 m / 1.8 s)
 - [x] No new third-party assets

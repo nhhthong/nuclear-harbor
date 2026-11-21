@@ -55,7 +55,8 @@ describe('level contract', () => {
     expect(PLAYER_SPAWN.position).toEqual(SPAWN_L);
     expect(Object.values(ENEMY_DISTRIBUTION.C).every((n) => n === 0)).toBe(true);
     expect(SPAWN_SAFE_RADIUS).toBeGreaterThanOrEqual(30);
-    expect(ENEMY_DISTRIBUTION.B.samurai).toBe(0);
+    // spec 33: the quay (the boss's ground) is empty too
+    expect(Object.values(ENEMY_DISTRIBUTION.D).every((n) => n === 0)).toBe(true);
   });
 
   it('distributes exactly the configured robots', () => {

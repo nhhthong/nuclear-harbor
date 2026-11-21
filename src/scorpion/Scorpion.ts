@@ -1219,15 +1219,6 @@ export class Scorpion implements Damageable {
 
   // ---- death -------------------------------------------------------------------------------
 
-  /** Removes it from the fight with an explosion and no loot (the boss fight is solo, spec 33). */
-  retire(): void {
-    if (this.state_ === 'dead') return;
-    this.skipLoot = true;
-    this.die();
-  }
-
-  private skipLoot = false;
-
   private die(): void {
     if (this.state_ === 'dead') return;
     this.state_ = 'dead';
@@ -1243,7 +1234,7 @@ export class Scorpion implements Damageable {
     }
     this.fx('explosion', this.position.x, 1.4, this.position.z, 1.6);
     this.ctx.events.emit('scorpion:defeated', { id: this.id, position: evPos.copy(this.position) });
-    if (!this.skipLoot) this.hooks.defeated(this);
+    this.hooks.defeated(this);
   }
 
   private updateDeath(): void {

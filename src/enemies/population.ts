@@ -1,5 +1,5 @@
 import { Vector3 } from 'three';
-import { BOSS_ARENA, PLAYER_SPAWN, SPAWN_SAFE_RADIUS } from '@/config/level';
+import { PLAYER_SPAWN, SPAWN_SAFE_RADIUS } from '@/config/level';
 import type { GameContext } from '@/core/GameContext';
 import type { EnemyType } from '@/core/types';
 import type { EnemySpawn } from './BaseEnemy';
@@ -141,6 +141,10 @@ const ARMY_SPOT_POSTS: readonly Authored[] = [
   biped(line([4, -19], [4, -8])),
   biped(line([14, -22], [14, -14])),
   samurai(line([-8, -4], [-1, -4])),
+  // spec 33: robots moved here from the quay (now 2 army, 3 spot, 1 duck, 3 biped, 2 samurai)
+  spot(line([-28, -11], [-16, -11])),
+  biped(line([-30, -9], [-30, -3])),
+  samurai(line([-26, -7], [-16, -7])),
   // B Relay Court (2 army, 2 spot, 1 duck): the tower guard, the strip in front of the warehouse back door,
   // the strip along the yard's container wall
   army(ring(0, -34, 4.5)),
@@ -148,17 +152,14 @@ const ARMY_SPOT_POSTS: readonly Authored[] = [
   spot(line([15, -31], [26, -31])),
   spot(line([-14, -26.5], [-4, -26.5])),
   duck(line([18, -38], [30, -38])),
-  // D Quay (1 army, 2 spot, 2 duck, 2 biped, 2 samurai): beats on the ring just outside the boss arena, which
-  // stays free of containers, plus the strips kept free of containers (WORLD_LOCAL.clusters.reserved)
-  army(line([BOSS_ARENA.center.x - 18.5, BOSS_ARENA.center.z + 6], [BOSS_ARENA.center.x - 18.5, BOSS_ARENA.center.z - 6])),
-  spot(line([16, -44], [32, -44])),
-  spot(line([BOSS_ARENA.center.x + 18.5, BOSS_ARENA.center.z + 6], [BOSS_ARENA.center.x + 18.5, BOSS_ARENA.center.z - 6])),
-  duck(line([BOSS_ARENA.center.x - 5, BOSS_ARENA.center.z + 19], [BOSS_ARENA.center.x + 5, BOSS_ARENA.center.z + 19])),
-  duck(line([28, -50.5], [33.5, -50.5])),
-  samurai(line([BOSS_ARENA.center.x - 6, BOSS_ARENA.center.z - 18.5], [BOSS_ARENA.center.x + 6, BOSS_ARENA.center.z - 18.5])),
-  samurai(line([4, -45], [10, -45])),
-  biped(line([-25.5, -84.5], [-19, -84.5])),
-  biped(line([18, -65], [30, -65])),
+  // spec 33: robots moved here from the quay (now 3 army, 3 spot, 3 duck, 1 biped, 1 samurai)
+  army(line([-30, -35], [-22, -35])),
+  spot(line([22, -35], [34, -35])),
+  duck(line([4, -29], [24, -29])),
+  duck(line([-33, -33], [-26, -33])),
+  biped(line([-16, -37], [-8, -37])),
+  samurai(line([24, -37], [34, -37])),
+  // D Quay: no robots (spec 33): the boss's ground, locked until the relay tower is active
 ];
 
 function laneAlong(lane: LaneData, d: number): XZ {
@@ -247,12 +248,12 @@ export function getPopulation(
 // Kept apart from the ground roster: drones fly (no nav grid, so no walkable check) and are streamed with the
 // same area spawner. Altitude comes from the drone's cruise band, the patrols here are only x/z.
 
-/** Roster drones: two over the yard's west leg and the warehouse roof line, two over the relay court and the quay. */
+/** Roster drones: two over the yard's west leg and the warehouse roof line, two over the relay court (none over the quay since spec 33). */
 export const DRONE_POSTS: readonly Authored[] = [
   { type: 'drone', at: [-30, -18], patrol: [[-30, -18], [0, -18], [0, -6], [-30, -6]] },
   { type: 'drone', at: [4, -20], patrol: [[4, -20], [4, -4]] },
   { type: 'drone', at: [12, -31], patrol: [[12, -31], [30, -31]] },
-  { type: 'drone', at: [14, -50], patrol: [[14, -50], [30, -50]] },
+  { type: 'drone', at: [-24, -31], patrol: [[-24, -31], [-8, -31]] },
 ];
 
 /** The roster drones as spawns (y = 0: the drone starts at its cruise height). */

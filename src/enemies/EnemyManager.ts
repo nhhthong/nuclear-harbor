@@ -38,7 +38,7 @@ export class EnemyManager {
   private readonly thinking: BaseEnemy[] = [];
   private time = 0;
   private areas: AreaSpawner<BaseEnemy> | null = null;
-  private bossSolo = false;
+  private quaySealed = false;
   private readonly fx = new Vector3();
   // ---- spec 29: anti-camping drone call-in (not part of the roster) ----
   private readonly callIn = new CallInDirector(DRONE.callIn);
@@ -100,7 +100,7 @@ export class EnemyManager {
 
   /** Player on the mezzanine for `DRONE.callIn.campSeconds`: drones come in from the north windows or the roller door. */
   private updateCallIn(dt: number): void {
-    if (this.ctx.flags.sandbox || this.bossSolo) return;
+    if (this.ctx.flags.sandbox) return;
     const p = this.ctx.player;
     const camping = p.alive && onMezzanine(p.position, DRONE.callIn.yMargin);
     const n = this.callIn.update(dt, camping, this.liveCallIns(), this.liveCount(), ENEMY_LOCAL.area.liveCap);
@@ -236,18 +236,21 @@ export class EnemyManager {
   }
 
   /**
-   * Spec 33: the boss fights alone. Every live robot is destroyed, nothing more streams in and the
-   * anti-camping call-in stops. Called on `objectives:allActivated`.
+   * Spec 33: the boss quay is the boss's own ground. The roster has no robots there (`ENEMY_DISTRIBUTION.D` is
+   * empty) and, once the tower is done and the gates open, the whole quay is closed to robots on the nav grid,
+   * so robots from the yard and the court cannot follow the player into the fight. Called on
+   * `objectives:allActivated`. Robots already in the quay (none by design) are left to finish.
    */
-  clearForBoss(): void {
-    this.bossSolo = true;
-    this.killAll();
-    this.areas = null;
-    this.projectiles.releaseAll();
+  sealBossQuay(): void {
+    const nav = this.nav;
+    if (!nav || this.quaySealed) return;
+    this.quaySealed = true;
+    const q = ZONES.D;
+    nav.blockRect(q.minX, q.minZ, q.maxX, q.maxZ);
   }
 
-  get isBossSolo(): boolean {
-    return this.bossSolo;
+  get isQuaySealed(): boolean {
+    return this.quaySealed;
   }
 
   killAll(): void {
