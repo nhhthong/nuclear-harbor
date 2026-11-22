@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ADS, CAMERA, PLAYER } from '@/config/tunables';
+import { ADS, CAMERA, PLAYER, WORLD } from '@/config/tunables';
 import { BIPED } from '@/enemies/biped/tunables';
 import { CRAB } from '@/boss/tunables';
 import { aimFovDeg, aimScale, aimSensitivityScale, stepAim } from './ads';
@@ -35,15 +35,16 @@ describe('ads helpers', () => {
 });
 
 describe('player gravity', () => {
-  it('keeps the natural jump heights (apex = v^2 / 2g)', () => {
+  it('reaches a one-high container top with the double jump (apex = v^2 / 2g)', () => {
     const g = -PLAYER.gravity;
     const single = PLAYER.jumpSpeed ** 2 / (2 * g);
     const air = PLAYER.airJumpSpeed ** 2 / (2 * g);
     expect(single).toBeGreaterThanOrEqual(0.9);
     expect(single).toBeLessThanOrEqual(1.0);
     // chained at the apex of the ground jump
-    expect(single + air).toBeGreaterThanOrEqual(1.6);
-    expect(single + air).toBeLessThanOrEqual(1.85);
+    expect(single + air).toBeGreaterThanOrEqual(WORLD.container.height + 0.4);
+    // a two-high stack stays out of reach
+    expect(single + air).toBeLessThan(WORLD.container.height * 2);
   });
 
   it('keeps the enemy dodge thresholds reachable with the double jump', () => {

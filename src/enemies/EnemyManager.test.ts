@@ -379,3 +379,20 @@ describe('EnemyManager (headless physics)', () => {
     expect(glowOf(a).material).toBe(glowOf(b).material);
   });
 });
+
+describe('boss quay is the boss\'s own ground (spec 33)', () => {
+  it('sealBossQuay closes the whole quay to robots on the nav grid and leaves the rest', async () => {
+    const { m } = await setup();
+    const nav = (m as unknown as { nav: { isWalkable(x: number, z: number): boolean } }).nav;
+    expect(nav.isWalkable(0, -20)).toBe(true);
+    const before = nav.isWalkable(0, -60);
+    expect(m.isQuaySealed).toBe(false);
+    m.sealBossQuay();
+    expect(m.isQuaySealed).toBe(true);
+    expect(nav.isWalkable(0, -60)).toBe(false);
+    expect(before).toBeDefined();
+    expect(nav.isWalkable(0, -20)).toBe(true);
+    // twice is harmless
+    m.sealBossQuay();
+  });
+});

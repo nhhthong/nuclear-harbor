@@ -33,6 +33,8 @@ export interface GateDef {
   readonly z: number;
   readonly width: number;
   readonly leaves: readonly Leaf[];
+  /** Stays shut until `unlock()` (the boss quay gates, spec 33). */
+  readonly lockedUntilTower: boolean;
 }
 
 type LineCfg = (typeof GATES.lines)[number];
@@ -57,7 +59,7 @@ export function gateDefs(): GateDef[] {
             { hx: x1, z: l.z, dir: -1, length: g.width / 2 },
           ]
         : [{ hx: x0, z: l.z, dir: 1, length: g.width }];
-    return { id: g.id, x: g.x, z: l.z, width: g.width, leaves };
+    return { id: g.id, x: g.x, z: l.z, width: g.width, leaves, lockedUntilTower: g.lockedUntilTower };
   });
 }
 
@@ -97,8 +99,29 @@ export class GateState {
   angle = 0;
   side: 1 | -1 = 1;
   private idle = 0;
+  /** Locked gates ignore touches. */
+  locked: boolean;
+  /** Held open: never closes again (after the tower unlocked it). */
+  held = false;
 
-  constructor(readonly def: GateDef) {}
+  constructor(readonly def: GateDef) {
+    this.locked = def.lockedUntilTower;
+  }
+
+  /**
+   * The tower is active: unlock, swing open away from the south (the player's side) and stay open.
+   * Returns 'opened' when a swing started, null when it was already open.
+   */
+  unlock(): 'opened' | null {
+    this.locked = false;
+    this.held = true;
+    this.idle = 0;
+    if (this.phase === 'open' || this.phase === 'opening') return null;
+    // locked gates are always closed: the leaves swing north, away from the court
+    this.side = -1;
+    this.phase = 'opening';
+    return 'opened';
+  }
 
   /** True while the leaves must not block anyone (anything but fully closed). */
   get passable(): boolean {
@@ -111,6 +134,7 @@ export class GateState {
    */
   step(dt: number, touchZ: number | null, anyoneNear: boolean): 'opened' | 'closed' | null {
     let ev: 'opened' | 'closed' | null = null;
+    if (this.locked) touchZ = null;
     if (touchZ !== null && (this.phase === 'closed' || this.phase === 'closing')) {
       // swing away from whoever pushes: someone south (+z) of the line pushes the leaves north
       if (this.phase === 'closed') this.side = touchZ > this.def.z ? -1 : 1;
@@ -124,7 +148,7 @@ export class GateState {
       this.angle = Math.min(target, this.angle + GATES.swingSpeed * dt);
       if (this.angle >= target) this.phase = 'open';
     } else if (this.phase === 'open') {
-      if (this.idle >= GATES.closeDelay && !anyoneNear) this.phase = 'closing';
+      if (this.idle >= GATES.closeDelay && !anyoneNear && !this.held) this.phase = 'closing';
     } else if (this.phase === 'closing') {
       this.angle = Math.max(0, this.angle - GATES.swingSpeed * 0.6 * dt);
       if (this.angle <= 0) {
@@ -156,10 +180,25 @@ export class GateSystem {
     this.gates = defs.map((d) => new GateState(d));
   }
 
+  /** Locked gates the player touched during the last `update` (for the "locked" hint). */
+  readonly bumped: GateState[] = [];
+
+  /** Unlocks (and opens, and holds open) every locked gate. Returns the gates that started to swing. */
+  unlockAll(): GateState[] {
+    const opened: GateState[] = [];
+    for (const g of this.gates) {
+      if (!g.locked) continue;
+      if (g.unlock() === 'opened') opened.push(g);
+    }
+    return opened;
+  }
+
   update(dt: number, player: Walker | null, enemies: readonly Walker[]): Array<{ gate: GateState; event: 'opened' | 'closed' }> {
     const out: Array<{ gate: GateState; event: 'opened' | 'closed' }> = [];
+    this.bumped.length = 0;
     for (const g of this.gates) {
       const d = g.def;
+      if (g.locked && player && g.def.leaves.some((l) => distanceToLeaf(l, player.x, player.z) <= GATES.touchDistance + 0.6)) this.bumped.push(g);
       let touchZ: number | null = null;
       if (player && g.def.leaves.some((l) => distanceToLeaf(l, player.x, player.z) <= GATES.touchDistance)) touchZ = player.z;
       if (touchZ === null) {

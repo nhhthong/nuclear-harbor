@@ -38,6 +38,7 @@ export class EnemyManager {
   private readonly thinking: BaseEnemy[] = [];
   private time = 0;
   private areas: AreaSpawner<BaseEnemy> | null = null;
+  private quaySealed = false;
   private readonly fx = new Vector3();
   // ---- spec 29: anti-camping drone call-in (not part of the roster) ----
   private readonly callIn = new CallInDirector(DRONE.callIn);
@@ -232,6 +233,24 @@ export class EnemyManager {
         y: e.position.y,
         z: e.position.z,
       }));
+  }
+
+  /**
+   * Spec 33: the boss quay is the boss's own ground. The roster has no robots there (`ENEMY_DISTRIBUTION.D` is
+   * empty) and, once the tower is done and the gates open, the whole quay is closed to robots on the nav grid,
+   * so robots from the yard and the court cannot follow the player into the fight. Called on
+   * `objectives:allActivated`. Robots already in the quay (none by design) are left to finish.
+   */
+  sealBossQuay(): void {
+    const nav = this.nav;
+    if (!nav || this.quaySealed) return;
+    this.quaySealed = true;
+    const q = ZONES.D;
+    nav.blockRect(q.minX, q.minZ, q.maxX, q.maxZ);
+  }
+
+  get isQuaySealed(): boolean {
+    return this.quaySealed;
   }
 
   killAll(): void {

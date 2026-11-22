@@ -124,6 +124,26 @@ export const SCORPION = {
   probeHeights: [1, 2.4] as readonly number[],
   /** The body may not walk or charge closer than this to the land edge (m). */
   edgeMargin: 4,
+  /**
+   * Getting out of a wedge (spec 33): it wanted to walk but moved less than `minMove` m in `window` s.
+   * It then crawls along the most open of `headings` probe rays for `crawlSeconds`; stuck again within
+   * `repeatWithin` s, or boxed in on every side (nothing clear beyond `boxedClearance` m), it is moved to
+   * the nearest free spot instead (rings of `relocateStep` m up to `relocateMax` m).
+   */
+  stuck: {
+    window: 3,
+    minMove: 1,
+    headings: 16,
+    probeLength: 6,
+    crawlSeconds: 1.8,
+    crawlSpeedFactor: 0.8,
+    repeatWithin: 8,
+    boxedClearance: 1.8,
+    relocateStep: 2,
+    relocateMax: 16,
+    /** Free radius needed at a relocation spot (m). */
+    freeRadius: 3,
+  },
   /** Spawn sandbox fixture position. */
   sandboxSpot: { x: 0, z: -14 },
   /** Debug HP bar visible within this distance (m). */

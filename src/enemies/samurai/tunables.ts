@@ -68,7 +68,7 @@ export const SAMURAI = {
    * Skill 4 (owner request 2026-11-20): the body glows red, then a vertical overhead cut releases a
    * crescent of sword energy that glides at the player: upright in the vertical plane of its flight and
    * bulging forward, so it reads "(" from the side and a vertical blade "|" to the player. Slower than a
-   * bullet, hard hitting. Too tall to jump over (the double jump reaches 1.8 m): step aside.
+   * bullet, hard hitting. Too tall to jump over (the double jump reaches about 3.2 m since spec 33, but the crescent is a moving wall of 2.9 m, so dodge sideways): step aside.
    */
   wave: {
     min: 6,

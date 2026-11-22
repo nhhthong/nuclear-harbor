@@ -29,7 +29,7 @@ describe('placement budget', () => {
     expect(count(BOSS_PLACEMENTS, 'medkit')).toBe(ECONOMY.medkitsInBossArena);
   });
 
-  it('supply (start 210 + crates = 570) covers the demand (356 hits) at the assumed accuracy without drops', () => {
+  it('supply (start 210 + crates = 690) covers the demand (356 hits) at the assumed accuracy without drops', () => {
     const hits =
       ENEMY_COUNTS.army * shotsToKill(ARMY_ROBOT.hp) +
       ENEMY_COUNTS.spot * shotsToKill(SPOT.hp) +
@@ -42,7 +42,7 @@ describe('placement budget', () => {
     const crates = count(ZONE_PLACEMENTS, 'ammo') + count(BOSS_PLACEMENTS, 'ammo');
     const supply = supplyBudget(WEAPON.magazineSize + WEAPON.reserveAmmo, crates);
     expect(supply).toBe(WEAPON.magazineSize + WEAPON.reserveAmmo + (ECONOMY.ammoCratesInZones + ECONOMY.ammoCratesInBossArena) * ECONOMY.ammoCrateAmount);
-    expect(supply).toBe(570);
+    expect(supply).toBe(690);
     expect(supply).toBeGreaterThanOrEqual(hits / ECONOMY.assumedAccuracy);
   });
 

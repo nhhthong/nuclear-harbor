@@ -104,3 +104,54 @@ describe('gate motion', () => {
     }
   });
 });
+
+describe('boss gates stay locked until the relay tower is active (spec 33)', () => {
+  const quay = (): GateState[] => new GateSystem().gates.filter((g) => g.def.lockedUntilTower);
+
+  it('locks exactly the court/quay gates', () => {
+    const sys = new GateSystem();
+    expect(sys.gates.filter((g) => g.locked).map((g) => g.def.id).sort()).toEqual(['court-quay-east', 'court-quay-west']);
+    for (const g of sys.gates.filter((q) => q.def.z !== GATES.lines.find((l) => l.id === 'court-quay')!.z)) expect(g.locked).toBe(false);
+  });
+
+  it('ignores touches from the player and from robots while locked, and hints that it is locked', () => {
+    const sys = new GateSystem();
+    const g = sys.gates.find((q) => q.def.id === 'court-quay-west')!;
+    const leaf = g.def.leaves[0]!;
+    const at = { x: leaf.hx + 0.3, z: g.def.z + 0.5 };
+    for (let i = 0; i < 120; i++) {
+      const out = sys.update(1 / 60, at, [at]);
+      expect(out).toHaveLength(0);
+    }
+    expect(g.phase).toBe('closed');
+    expect(sys.bumped).toContain(g);
+  });
+
+  it('unlockAll swings the quay gates open away from the court and holds them open', () => {
+    const sys = new GateSystem();
+    const opened = sys.unlockAll();
+    expect(opened.map((g) => g.def.id).sort()).toEqual(['court-quay-east', 'court-quay-west']);
+    for (const g of quay()) expect(g.def.lockedUntilTower).toBe(true);
+    for (let i = 0; i < 60 * 30; i++) sys.update(1 / 60, null, []);
+    for (const g of sys.gates.filter((q) => q.def.lockedUntilTower)) {
+      expect(g.locked).toBe(false);
+      expect(g.phase).toBe('open');
+      expect(g.side).toBe(-1);
+      expect(g.passable).toBe(true);
+    }
+    // a second unlock changes nothing and does not report a new swing
+    expect(sys.unlockAll()).toHaveLength(0);
+  });
+
+  it('leaves the other gates alone (they still close after the delay)', () => {
+    const sys = new GateSystem();
+    sys.unlockAll();
+    const lane = sys.gates.find((g) => g.def.id === 'apron-lane-west')!;
+    const leaf = lane.def.leaves[0]!;
+    sys.update(1 / 60, { x: leaf.hx + 0.2, z: lane.def.z + 0.4 }, []);
+    expect(lane.phase).toBe('opening');
+    for (let i = 0; i < 60 * 20; i++) sys.update(1 / 60, null, []);
+    expect(lane.phase).toBe('closed');
+  });
+});
+
