@@ -2,7 +2,7 @@
 
 **Feature**: `33-boss-solo-jump-gates-ammo` | **Created**: 2026-11-21 | **Status**: Implemented on branch `ccr-1b1f2332-o3lx35`; not played on a real GPU
 **Input**: owner request 2026-11-21, five items, after real play-testing: (1) raise the double jump so a one-high container top is reachable; (2) no robots in the boss area, the boss fights the player alone ("too hard now"); revised the same day: robots stay spread around the rest of the map, only the spawn apron and the boss quay are empty, and the roster is rebalanced (hard but fair); (3) the gate into the boss quay opens only once the relay tower is active; (4) more ammo crates around the map; (5) the "mantis" robot can get stuck in the map: when stuck it must find its own way out to free space.
-**Process**: written with the code by the coordinator (Spec Kit skills not run in order, as for specs 24 to 32). Checks: `[U file]` unit test, `[B]` scripted browser check (low preset, software GL), `[N]` not verified.
+**Process**: written with the code by the coordinator (Spec Kit skills not run in order, as for specs 24 to 32). Checks: `[U file]` unit test, `[B]` scripted browser check (software GL, the default medium preset: the checks did not force the low preset), `[N]` not verified.
 
 ## Clarified assumptions (owner said "clear what is left ambiguous")
 - "Mantis robot" = the large crawling STINGER-7 scorpion (`src/scorpion`): it is the only ground robot that walks by wall probes, not by the nav grid, so it is the one that wedges between containers. The nav-grid robots (including the clawing Biped) route around obstacles and are unchanged.

@@ -2,7 +2,7 @@
 
 **Feature**: `34-boss-phase-two-and-drops` | **Created**: 2026-11-24 | **Status**: Implemented on branch `ccr-1b1f2332-o3lx35`; not played on a real GPU
 **Input**: owner request 2026-11-24: (1) shot-down dragonflies drop ammo or health; (2) remove the healing container in the boss area, so nobody hides and shoots the boss; (3) remove the boss's spin skill (it looks bad); (4) two new skills, only below 50% boss HP: the claws grab the player, lift them into the air and slam them down for huge damage; and the claws pound the ground in time, each pound sending a shockwave outward from the centre, one second apart so the player can jump over each.
-**Process**: written with the code by the coordinator (Spec Kit skills not run in order). Checks: `[U file]` unit test, `[B]` scripted browser check (low preset, software GL), `[N]` not verified.
+**Process**: written with the code by the coordinator (Spec Kit skills not run in order). Checks: `[U file]` unit test, `[B]` scripted browser check (software GL, the default medium preset; the camera screenshots later used the low preset at 640x360), `[N]` not verified.
 
 ## Clarified assumptions
 - "Healing container in the boss area" = the two safe containers (`SHELTERS` `quay-east`, `quay-west`, zone D; standing inside heals 12 HP/s and robots cannot enter). The medkit crates were NOT changed (a first edit that removed them was reverted).
