@@ -90,12 +90,14 @@ export const CRAB = {
 
   /** Skill selection: weights by distance, cooldowns (s), gap between two skills (idle, s). */
   idleGap: [1.2, 2.4] as readonly [number, number],
-  cooldown: { bombs: 9, drones: 16, spin: 10, laser: 14 },
+  cooldown: { bombs: 9, drones: 16, laser: 14, grab: 18, quake: 15 },
   weights: {
     bombs: { near: 1.5, far: 3 },
     drones: { near: 1.5, far: 2.5 },
-    spin: { close: 6 },
     laser: { near: 1.5, far: 3 },
+    /** Phase two only (below `phase2.below` of the HP). */
+    grab: 4,
+    quake: 3.5,
   },
   /** Distance (m) beyond which the "far" weights apply, and the range each skill may be picked in. */
   farDistance: 14,
@@ -137,22 +139,57 @@ export const CRAB = {
     orbitSpeed: 0.55,
     bolt: { damage: 3, speed: 15, tell: 0.55, interval: [2.2, 3.4] as readonly [number, number], radius: 0.7, capacity: 14, life: 4 },
   },
-  spin: {
-    /** Starts only when the player is this close (m, harbor size). */
-    triggerRange: 16,
-    windup: 0.8,
-    duration: 2.5,
-    /** Peak turn rate (rad/s) and the reach of the guns and legs (m). */
-    rate: 4.6,
-    reach: 14,
-    /** Half width of a sweeping arm (rad) and the arm directions relative to the body yaw. */
-    halfWidth: 0.16,
-    armAngles: [0, Math.PI] as readonly number[],
-    /** The player is safe above this height (m, feet) when the legs sweep. */
-    safeHeight: 1.4,
-    damage: 25,
-    knockback: 17,
+  /** The two claw skills only start when the boss has less than this share of its HP left (spec 34). */
+  phase2: { below: 0.5 },
+  /**
+   * Claw grab (spec 34): the boss lunges at where the player stood, its claws close on whoever is within
+   * `radius` of the claw point (feet below `maxPlayerHeight`, so a jump dodges it, as does stepping aside),
+   * lifts them `liftHeight` up, holds, then slams them into the ground for `damage`.
+   */
+  grab: {
+    minRange: 4,
+    maxRange: 24,
+    telegraph: 1.2,
+    /** The lunge target freezes this long into the telegraph (the rest is the player's warning). */
+    lockAt: 0.8,
+    /** Distance from the body centre to the claw point (m). */
+    reach: 7,
+    lungeMax: 20,
+    lungeTime: 0.5,
+    radius: 3.4,
+    maxPlayerHeight: 1.3,
+    liftTime: 0.9,
+    liftHeight: 9,
+    holdTime: 0.4,
+    slamTime: 0.22,
+    damage: 70,
+    knockbackUp: 4,
+    /** Seconds the boss stands after the slam / after a miss (a window to shoot it). */
+    recoverHit: 1.2,
+    recoverMiss: 1.6,
+    /** Player is untouchable this long after the slam (s). */
+    graceAfter: 0.8,
+  },
+  /**
+   * Claw quake (spec 34): the claws pound the ground `count` times, `interval` s apart; every pound sends a ring
+   * out from the body at `speed` m/s up to `maxRadius`. A ring hurts a player on the ground when it passes
+   * (feet below `safeHeight`), so each one is jumped over; one second apart gives time to land and jump again.
+   */
+  quake: {
+    maxRange: 34,
+    telegraph: 1,
+    count: 4,
+    interval: 1,
+    speed: 13,
+    startRadius: 3.5,
+    maxRadius: 32,
+    thickness: 2.2,
+    safeHeight: 0.9,
+    damage: 24,
+    knockback: 6,
     knockbackUp: 5,
+    /** Seconds the boss stays still after the last ring has left. */
+    recover: 0.8,
   },
   laser: {
     telegraph: 1.5,
@@ -175,7 +212,7 @@ export const CRAB = {
     startRadius: 2.2,
   },
   /** Body animation (radians, seconds). */
-  gait: { lift: 0.3, swing: 0.2, bob: 0.12, cycleLength: 9, spinLift: 0.18 },
+  gait: { lift: 0.3, swing: 0.2, bob: 0.12, cycleLength: 9 },
   /** Death collapse: the body sinks (m). */
   sink: 1.2,
   /** Damage point height of the player (m above the feet). */

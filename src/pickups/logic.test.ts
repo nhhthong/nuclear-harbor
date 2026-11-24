@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ECONOMY } from '@/config/tunables';
-import { collect, dropBlinkVisible, findRestingSpot, shouldDrop } from './logic';
+import { collect, dropBlinkVisible, droneDropKind, droneDrops, findRestingSpot, shouldDrop } from './logic';
 
 describe('collect', () => {
   it('always accepts ammo while alive', () => {
@@ -63,5 +63,31 @@ describe('findRestingSpot', () => {
   });
   it('falls back to the first hit when everything nearby is high', () => {
     expect(findRestingSpot(0, 0, false, () => 6)).toEqual({ x: 0, y: 6, z: 0 });
+  });
+});
+
+describe('dragonfly drops (spec 34)', () => {
+  it('drop ammo when the player is healthy (a medkit would be wasted)', () => {
+    for (const r of [0, 0.3, 0.99]) expect(droneDropKind(1, r)).toBe('ammo');
+    expect(droneDropKind(ECONOMY.droneDropFullHp, 0)).toBe('ammo');
+  });
+
+  it('the lower the HP the likelier a medkit, capped below certainty', () => {
+    expect(droneDropKind(0.5, 0.4)).toBe('medkit'); // 50% chance, roll 0.4
+    expect(droneDropKind(0.5, 0.6)).toBe('ammo');
+    expect(droneDropKind(0.1, 0.8)).toBe('medkit'); // chance 0.85 at most
+    expect(droneDropKind(0.1, 0.9)).toBe('ammo'); // never a sure medkit
+    expect(droneDropKind(0, 0.86)).toBe('ammo');
+  });
+
+  it('roster drones always drop, the boss drones with their chance', () => {
+    expect(droneDrops('roster', 0.999)).toBe(true);
+    expect(droneDrops('boss', ECONOMY.bossDroneDropChance - 0.01)).toBe(true);
+    expect(droneDrops('boss', ECONOMY.bossDroneDropChance + 0.01)).toBe(false);
+  });
+
+  it('a drop is small: it gives less than a crate or a medkit', () => {
+    expect(ECONOMY.droneDropAmmo).toBeLessThanOrEqual(ECONOMY.ammoCrateAmount);
+    expect(ECONOMY.droneDropHeal).toBeLessThan(ECONOMY.medkitHeal);
   });
 });

@@ -25,17 +25,20 @@ import { resetArmorTextures } from './BossTextures';
 import {
   SKILL_ATTACK,
   SKILLS,
+  QuakeWaves,
   SkillScheduler,
-  SweepTracker,
   TickTimer,
   beamAngles,
   beamHitsPlayer,
   bombDamage,
   bombPattern,
+  clawPoint,
   droneReleaseCount,
+  grabCarry,
+  grabConnects,
   laserBase,
-  spinRate,
-  sweepContact,
+  lungeEnd,
+  quakeDuration,
 } from './skills';
 import type { SkillId } from './skills';
 import { BOSS_LOCAL, CRAB } from './tunables';
@@ -66,7 +69,9 @@ const beamRay = { x: 0, y: 0, z: 0 };
 const beamOrigin = { x: 0, y: 0, z: 0 };
 const bossXZ: XZ = { x: 0, z: 0 };
 const playerXZ: XZ = { x: 0, z: 0 };
-const touching = [false, false];
+const dronePos = new Vector3();
+const clawXZ: XZ = { x: 0, z: 0 };
+const lungeXZ: XZ = { x: 0, z: 0 };
 
 interface SkillRun {
   skill: SkillId | null;
@@ -80,6 +85,18 @@ interface SkillRun {
   clipTimer: number;
   // bombs
   bombsLeft: number;
+  // claw grab (spec 34): `sub` is the stage of the active phase
+  sub: 'lunge' | 'carry' | 'recover';
+  lungeFromX: number;
+  lungeFromZ: number;
+  lungeToX: number;
+  lungeToZ: number;
+  locked: boolean;
+  carry: number;
+  carried: boolean;
+  slammed: boolean;
+  // claw quake: pounds fired so far
+  pounds: number;
 }
 
 /**
@@ -97,7 +114,7 @@ export function createBossModule(): GameModule {
   let origin: XZ = { x: BOSS_ARENA.center.x, z: BOSS_ARENA.center.z };
   let arenaRadius: number = BOSS_ARENA.radius;
   const scheduler = new SkillScheduler();
-  const sweep = new SweepTracker();
+  const quake = new QuakeWaves();
   const ticks = new TickTimer();
   const angles: number[] = [];
   const lengths: number[] = [0, 0, 0, 0];
@@ -129,8 +146,8 @@ export function createBossModule(): GameModule {
   let walk = 0;
   let strafeDir: 1 | -1 = 1;
   let strafeTimer = 0;
-  const anim: BodyAnim = { walk: 0, travelled: 0, dirX: 0, dirZ: -1, slamRaise: 0, cannonCharge: 0, collapse: 0, spin: 0, windup: 0, charge: 0 };
-  const run: SkillRun = { skill: null, phase: 'telegraph', t: 0, duration: 0, laserStart: 0, laserDir: 1, clipTimer: 0, bombsLeft: 0 };
+  const anim: BodyAnim = { walk: 0, travelled: 0, dirX: 0, dirZ: -1, slamRaise: 0, cannonCharge: 0, collapse: 0, claw: 0, charge: 0 };
+  const run: SkillRun = { skill: null, phase: 'telegraph', t: 0, duration: 0, laserStart: 0, laserDir: 1, clipTimer: 0, bombsLeft: 0, sub: 'lunge', lungeFromX: 0, lungeFromZ: 0, lungeToX: 0, lungeToZ: 0, locked: false, carry: 0, carried: false, slammed: false, pounds: 0 };
 
   // ---- helpers -------------------------------------------------------------------------
 
@@ -226,6 +243,10 @@ export function createBossModule(): GameModule {
       onKilled: (p) => {
         vfx('explosion', p, 1.6);
         vfx('smoke', p, 1.4);
+      },
+      // spec 34: a drone shot down drops ammo or health
+      onShotDown: (p) => {
+        c.events.emit('boss:droneDestroyed', { position: dronePos.copy(p) });
       },
       onFire: (from, to) => {
         effects?.fireBolt(from, to);
@@ -358,13 +379,24 @@ export function createBossModule(): GameModule {
   }
 
   function resetSkill(): void {
+    releasePlayer();
     run.skill = null;
-    anim.spin = 0;
-    anim.windup = 0;
+    run.carried = false;
+    anim.claw = 0;
     anim.charge = 0;
     effects?.setBeams('off', 0, 0, 0, null, null, 0);
-    sweep.reset();
+    effects?.clearRings();
+    quake.reset();
     ticks.reset();
+  }
+
+  /** Lets go of a player held by the claws (skill over, boss dead, respawn). */
+  function releasePlayer(): void {
+    const c = ctx;
+    if (!c || !run.carried) return;
+    run.carried = false;
+    c.player.controlsLocked = false;
+    c.player.velocity.set(0, 0, 0);
   }
 
   function beginCollapse(): void {
@@ -414,12 +446,23 @@ export function createBossModule(): GameModule {
         evPos.copy(worldPoint(bayLocal().x, bayLocal().y, bayLocal().z, bayPos));
         vfx('telegraph-ring', evPos, 3 * k);
         break;
-      case 'spin':
-        run.duration = C.spin.windup;
-        radius = C.spin.reach * k;
+      case 'grab':
+        run.duration = C.grab.telegraph;
+        run.locked = false;
+        run.carried = false;
+        run.slammed = false;
+        radius = C.grab.reach * k;
         evPos.set(pos.x, pos.y, pos.z);
-        effects.addMarker(pos.x, pos.y, pos.z, radius, C.spin.windup + C.spin.duration, false, true);
         vfx('telegraph-ring', evPos, radius * 0.6);
+        break;
+      case 'quake':
+        run.duration = C.quake.telegraph;
+        run.pounds = 0;
+        quake.reset();
+        radius = C.quake.maxRadius * k;
+        evPos.set(pos.x, pos.y, pos.z);
+        effects.addMarker(pos.x, pos.y, pos.z, C.quake.startRadius * 2.4 * k, C.quake.telegraph, false, true);
+        vfx('telegraph-ring', evPos, C.quake.startRadius * 2 * k);
         break;
       case 'laser': {
         run.duration = C.laser.telegraph;
@@ -481,12 +524,25 @@ export function createBossModule(): GameModule {
         c.events.emit('boss:attack', { attack, position: bayPos, radius: 2.5 * k });
         break;
       }
-      case 'spin':
-        run.duration = C.spin.duration;
-        sweep.reset();
+      case 'grab': {
+        run.sub = 'lunge';
+        run.duration = C.grab.lungeTime;
+        run.lungeFromX = pos.x;
+        run.lungeFromZ = pos.z;
+        const end = lungeEnd({ x: pos.x, z: pos.z }, { x: run.lungeToX, z: run.lungeToZ }, k, lungeXZ);
+        const clamped = clampToArena({ x: end.x, z: end.z }, origin, arenaRadius, BOSS_LOCAL.arenaMargin * scale);
+        run.lungeToX = clamped.x;
+        run.lungeToZ = clamped.z;
         evPos.set(pos.x, pos.y, pos.z);
-        vfx('dust', evPos, C.spin.reach * k * 0.8);
-        c.events.emit('boss:attack', { attack, position: evPos, radius: C.spin.reach * k });
+        c.events.emit('boss:attack', { attack, position: evPos, radius: C.grab.radius * k });
+        break;
+      }
+      case 'quake':
+        run.duration = quakeDuration(k);
+        run.pounds = 0;
+        quake.reset();
+        evPos.set(pos.x, pos.y, pos.z);
+        c.events.emit('boss:attack', { attack, position: evPos, radius: C.quake.maxRadius * k });
         break;
       case 'laser':
         run.duration = C.laser.duration;
@@ -527,7 +583,17 @@ export function createBossModule(): GameModule {
     if (run.phase === 'telegraph') {
       const f = Math.min(1, run.t / Math.max(0.001, run.duration));
       anim.charge = f;
-      if (run.skill === 'spin') anim.windup = f;
+      if (run.skill === 'grab' || run.skill === 'quake') anim.claw = f;
+      if (run.skill === 'grab') {
+        // the lunge target follows the player until `lockAt`, then it is fixed (the warning the player can dodge)
+        if (run.t < C.grab.lockAt) {
+          run.lungeToX = c.player.position.x;
+          run.lungeToZ = c.player.position.z;
+        } else if (!run.locked) {
+          run.locked = true;
+          clawAtTarget(c);
+        }
+      }
       if (run.skill === 'laser') {
         clipBeams(run.laserStart, c);
         effects.setBeams('warn', pos.x, C.laser.height * k, pos.z, angles, lengths, C.laser.startRadius * k);
@@ -546,30 +612,12 @@ export function createBossModule(): GameModule {
       case 'drones':
         anim.charge = 0.6 * (1 - run.t / run.duration);
         break;
-      case 'spin': {
-        anim.windup = 0;
-        anim.charge = 0.5;
-        const rate = spinRate(run.t);
-        yaw += rate * dt;
-        anim.spin = rate;
-        const reach = C.spin.reach;
-        bossXZ.x = pos.x;
-        bossXZ.z = pos.z;
-        for (let i = 0; i < C.spin.armAngles.length; i++) {
-          touching[i] = rate > 0.5 && sweepContact(yaw + (C.spin.armAngles[i] ?? 0), bossXZ, c.player.position, k);
-        }
-        if (sweep.step(touching)) {
-          blastDir.set(c.player.position.x - pos.x, 0, c.player.position.z - pos.z);
-          if (blastDir.lengthSq() < 1e-6) blastDir.set(0, 0, 1);
-          blastDir.normalize();
-          c.player.applyDamage({ amount: C.spin.damage, zone: 'body', source: 'boss', direction: blastDir });
-          impulse.copy(blastDir).multiplyScalar(C.spin.knockback);
-          impulse.y = C.spin.knockbackUp;
-          c.player.addImpulse(impulse);
-        }
-        void reach;
+      case 'grab':
+        grabStep(dt, c);
+        return;
+      case 'quake':
+        quakeStep(dt, c);
         break;
-      }
       case 'laser': {
         anim.charge = 0.8;
         const base = laserBase(run.laserStart, run.laserDir, run.t);
@@ -600,6 +648,130 @@ export function createBossModule(): GameModule {
     if (run.t >= run.duration) endSkill();
   }
 
+  /** Marks where the claws will land once the lunge target is locked. */
+  function clawAtTarget(c: GameContext): void {
+    if (!effects) return;
+    const G = CRAB.grab;
+    const end = lungeEnd({ x: pos.x, z: pos.z }, { x: run.lungeToX, z: run.lungeToZ }, k, lungeXZ);
+    const dx = run.lungeToX - end.x;
+    const dz = run.lungeToZ - end.z;
+    const d = Math.hypot(dx, dz) || 1;
+    // the claw point lands on the target unless the lunge was capped: mark where it really lands
+    const reach = Math.min(G.reach * k, Math.hypot(run.lungeToX - pos.x, run.lungeToZ - pos.z));
+    void d;
+    const lx = end.x + (dx / d) * Math.min(reach, G.reach * k);
+    const lz = end.z + (dz / d) * Math.min(reach, G.reach * k);
+    effects.addMarker(lx, pos.y, lz, G.radius * k, G.telegraph - G.lockAt + G.lungeTime, false, true);
+    void c;
+  }
+
+  /** Claw grab, active phase: lunge, then carry (lift, hold, slam) or a miss, then a short recovery. */
+  function grabStep(dt: number, c: GameContext): void {
+    const G = CRAB.grab;
+    if (run.sub === 'lunge') {
+      const u = Math.min(1, run.t / G.lungeTime);
+      const e = 1 - (1 - u) * (1 - u);
+      pos.x = run.lungeFromX + (run.lungeToX - run.lungeFromX) * e;
+      pos.z = run.lungeFromZ + (run.lungeToZ - run.lungeFromZ) * e;
+      anim.claw = 1 - 0.4 * u;
+      anim.charge = 0.8;
+      anim.walk = 0;
+      if (u >= 1) {
+        bossXZ.x = pos.x;
+        bossXZ.z = pos.z;
+        clawPoint(bossXZ, yaw, k, clawXZ);
+        if (grabConnects(clawXZ, c.player.position, k)) {
+          run.sub = 'carry';
+          run.carry = 0;
+          run.carried = true;
+          c.player.controlsLocked = true;
+          c.player.velocity.set(0, 0, 0);
+          evPos.set(clawXZ.x, 1, clawXZ.z);
+          vfx('dust', evPos, 2 * k);
+          c.events.emit('ui:toast', { text: 'GRABBED', seconds: 1 });
+        } else {
+          run.sub = 'recover';
+          run.t = 0;
+          run.duration = G.recoverMiss;
+          evPos.set(clawXZ.x, 0.3, clawXZ.z);
+          vfx('dust', evPos, 3 * k);
+          vfx('explosion', evPos, 1.5 * k);
+        }
+        if (run.sub === 'carry') {
+          run.t = 0;
+          run.duration = Number.POSITIVE_INFINITY;
+        }
+      }
+      return;
+    }
+    if (run.sub === 'carry') {
+      run.carry += dt;
+      const h = grabCarry(run.carry, k);
+      bossXZ.x = pos.x;
+      bossXZ.z = pos.z;
+      clawPoint(bossXZ, yaw, k, clawXZ);
+      anim.claw = h.stage === 'slam' ? 1 - Math.min(1, (run.carry - G.liftTime - G.holdTime) / G.slamTime) * 1.4 : 1;
+      anim.charge = 0.9;
+      c.player.teleport({ x: clawXZ.x, y: h.y, z: clawXZ.z });
+      if (h.stage === 'done') {
+        slamImpact(c);
+        run.sub = 'recover';
+        run.t = 0;
+        run.duration = G.recoverHit;
+      }
+      return;
+    }
+    // recover: the boss stands, claws down
+    anim.claw = (anim.claw ?? 0) * (1 - Math.min(1, dt * 6));
+    anim.charge = 0.2;
+    if (run.t >= run.duration) endSkill();
+  }
+
+  function slamImpact(c: GameContext): void {
+    const G = CRAB.grab;
+    releasePlayer();
+    c.player.invulnerableFor = 0;
+    blastDir.set(0, -1, 0);
+    c.player.applyDamage({ amount: G.damage, zone: 'body', source: 'boss', direction: blastDir });
+    c.player.invulnerableFor = Math.max(c.player.invulnerableFor, G.graceAfter);
+    impulse.set(0, G.knockbackUp, 0);
+    c.player.addImpulse(impulse);
+    evPos.set(clawXZ.x, 0.3, clawXZ.z);
+    vfx('big-explosion', evPos, 2.2 * k);
+    vfx('dust', evPos, 5 * k);
+    c.events.emit('boss:attack', { attack: 'claw-grab', position: evPos, radius: G.radius * k });
+  }
+
+  /** Claw quake, active phase: `count` pounds `interval` s apart, each sending a ring out from the body. */
+  function quakeStep(dt: number, c: GameContext): void {
+    const Q = CRAB.quake;
+    // pound i at t = i * interval
+    while (run.pounds < Q.count && run.t >= run.pounds * Q.interval) {
+      run.pounds++;
+      quake.launch(k);
+      effects?.launchRing(pos.x, pos.z, Q.maxRadius * k, Q.speed * k);
+      evPos.set(pos.x, 0.3, pos.z);
+      vfx('explosion', evPos, 2.5 * k);
+      vfx('dust', evPos, 8 * k);
+      c.events.emit('boss:attack', { attack: 'claw-quake', position: evPos, radius: Q.maxRadius * k });
+    }
+    // arms: raised, slammed down on every pound (1 s beat)
+    const beat = (run.t % Q.interval) / Q.interval;
+    anim.claw = run.pounds >= Q.count && run.t >= (Q.count - 1) * Q.interval + 0.5 ? 0 : 1 - Math.min(1, beat * 6) * 1.2 + beat * 0.2;
+    anim.charge = 0.7;
+    const dist = Math.hypot(c.player.position.x - pos.x, c.player.position.z - pos.z);
+    const hits = quake.step(dt, dist, c.player.position.y, k);
+    if (hits > 0) {
+      blastDir.set(c.player.position.x - pos.x, 0, c.player.position.z - pos.z);
+      if (blastDir.lengthSq() < 1e-6) blastDir.set(0, 0, 1);
+      blastDir.normalize();
+      c.player.applyDamage({ amount: Q.damage * hits, zone: 'body', source: 'boss', direction: blastDir });
+      impulse.copy(blastDir).multiplyScalar(Q.knockback);
+      impulse.y = Q.knockbackUp;
+      c.player.addImpulse(impulse);
+    }
+  }
+
   function onBomb(point: Vector3): void {
     const c = ctx;
     if (!c) return;
@@ -626,10 +798,10 @@ export function createBossModule(): GameModule {
     return true;
   }
 
-  function skillInput(): { distance: number; aliveDrones: number; k: number } {
+  function skillInput(): { distance: number; aliveDrones: number; k: number; hpFraction: number } {
     const c = ctx;
     const d = c ? Math.hypot(c.player.position.x - pos.x, c.player.position.z - pos.z) : 0;
-    return { distance: d, aliveDrones: dronesAlive(), k };
+    return { distance: d, aliveDrones: dronesAlive(), k, hpFraction: model.hpFraction };
   }
 
   function forceSkill(id: string): boolean {
@@ -684,6 +856,10 @@ export function createBossModule(): GameModule {
           liveBombs: effects?.liveBombs ?? 0,
           liveBolts: effects?.liveBolts ?? 0,
           liveMarkers: effects?.liveMarkers ?? 0,
+          liveRings: effects?.liveRings ?? 0,
+          grabSub: run.skill === 'grab' && run.phase === 'active' ? run.sub : null,
+          playerCarried: run.carried,
+          pounds: run.pounds,
           beamsActive: effects?.beamsActive ?? false,
           meshCount: countMeshes(),
           fxDrawCalls: fx?.drawCalls ?? 0,
@@ -704,7 +880,7 @@ export function createBossModule(): GameModule {
         pauseAi: (paused: boolean): void => {
           aiPaused = paused;
         },
-        /** `bombs` | `drones` | `spin` | `laser` (or the event ids `carpet-bombs`, ...). */
+        /** `bombs` | `drones` | `laser` | `grab` | `quake` (or the event ids `carpet-bombs`, `claw-grab`, ...). */
         force: (id: string): boolean => forceSkill(id),
         forceAttack: (id: string): boolean => forceSkill(id),
         teleportBoss: (x: number, z: number): void => {
@@ -813,9 +989,9 @@ export function createBossModule(): GameModule {
     const dz = c.player.position.z - pos.z;
     const dist = Math.hypot(dx, dz);
     const busy = run.skill !== null;
-    const spinning = run.skill === 'spin' && run.phase === 'active';
-    // turn slowly towards the player (not while spinning; the laser keeps its heading)
-    if (!spinning && run.skill !== 'laser') {
+    const grabbing = run.skill === 'grab' && run.phase === 'active';
+    // turn slowly towards the player (not during the grab lunge; the laser keeps its heading)
+    if (!grabbing && run.skill !== 'laser') {
       const target = Math.atan2(-dx, -dz);
       const maxTurn = BOSS_LOCAL.turnRate * dt;
       const delta = angleDelta(yaw, target);
@@ -867,9 +1043,8 @@ export function createBossModule(): GameModule {
     const p = Math.min(1, collapseElapsed / BOSS_LOCAL.collapseDuration);
     anim.collapse = p;
     anim.walk = 0;
-    anim.spin = 0;
+    anim.claw = 0;
     anim.charge = 0;
-    anim.windup = 0;
     pos.y = -p * (usingCrab ? CRAB.sink * k : BOSS_LOCAL.collapseSink * scale);
     applyPose();
     if (collapseElapsed >= nextBurst) {

@@ -39,8 +39,9 @@ const BOSS_ATTACK_ORDER: readonly BossAttackId[] = [
   'emp-pulse',
   'carpet-bombs',
   'drone-release',
-  'body-spin',
   'quad-laser',
+  'claw-grab',
+  'claw-quake',
 ];
 
 function attackVariant(attack: BossAttackId): number {
@@ -144,7 +145,9 @@ export const EVENT_ROUTES = {
       case 'drone-release':
       case 'quad-laser':
         return { id: 'bossEmp', position: e.position, variant };
-      case 'body-spin':
+      case 'claw-grab':
+        return { id: 'bossSlam', position: e.position, intensity: 1.5, variant };
+      case 'claw-quake':
         return { id: 'bossSlam', position: e.position, intensity: 1.2, variant };
       case 'target-lock':
         return null; // the telegraph already carries the lock beeps

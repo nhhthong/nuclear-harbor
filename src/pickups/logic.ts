@@ -31,6 +31,21 @@ export function shouldDrop(rng: () => number, zoneDropsSoFar: number): boolean {
   return rng() < ECONOMY.enemyAmmoDropChance;
 }
 
+/**
+ * What a shot-down dragonfly drops (spec 34): a medkit with a chance that grows as the player's HP falls
+ * (never above `droneDropFullHp` of the HP, where a medkit would be wasted), otherwise ammo.
+ */
+export function droneDropKind(hpFraction: number, rand: number): PickupKind {
+  if (hpFraction >= ECONOMY.droneDropFullHp) return 'ammo';
+  const chance = Math.min(ECONOMY.droneDropMaxMedkitChance, Math.max(0, 1 - hpFraction));
+  return rand < chance ? 'medkit' : 'ammo';
+}
+
+/** Does a shot-down drone drop anything? Roster drones always do, the boss's with `bossDroneDropChance`. */
+export function droneDrops(source: 'roster' | 'boss', rand: number): boolean {
+  return source === 'roster' || rand < ECONOMY.bossDroneDropChance;
+}
+
 /** Blink visibility for a dropped pickup with `remaining` seconds left. */
 export function dropBlinkVisible(remaining: number): boolean {
   if (remaining > PICKUP.blinkWindow) return true;

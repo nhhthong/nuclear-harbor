@@ -197,3 +197,11 @@ Owner: the doubled map felt empty and the yard too symmetric. The quay is now 72
 - Also from PR #24: `SAMURAI.spin.fanForward` and `SAMURAI.wave.aimMinCos` are tunables.
 - Verified: `tsc`, 672 tests (94 files), build, a low-preset browser check (gates locked, then unlocked and opening after `objectives.forceActivate(1)`, `quaySealed` set, no console errors). Not verified: a real GPU, the jump window by hand (about 2.7 to 4.8 m at walking speed), a full run with the solo boss, court density during the tower hold (11 robots + the scorpion), the scorpion in the real yard (only synthetic pockets), robots at locked gates, balance.
 
+## Boss phase two, no spin, no boss-quay shelters, dragonfly drops (2026-11-24, owner request; Spec Kit: specs/34-boss-phase-two-and-drops)
+- Spin removed (it looked bad): the boss's skills are carpet bombs, dragonfly drones and the four-way laser, plus two claw skills that only start below 50% of its HP.
+- **Claw grab** (`claw-grab`): arms rise and glow for 1.2 s, the boss lunges at where the player stood (the target freezes 0.4 s before the lunge and is marked on the ground), the claws close on anyone within 3.4 m of the claw point and below 1.3 m (sidestep or jump to dodge), lift them 9 m, hold, and slam them down for 70 damage (a full-health player survives). 18 s cooldown. The claws are the existing gun arms (no claw model): they rotate.
+- **Claw quake** (`claw-quake`): after a 1 s telegraph the arms pound the ground four times, one second apart; each pound sends a visible ring out from the body at 13 m/s up to 32 m that hurts a player standing on the ground (24 damage); jump over each ring. 15 s cooldown.
+- The two safe containers on the boss quay (`quay-east`, `quay-west`, which heal 12 HP/s) are gone, so nobody hides inside and shoots the boss. The three left are in the yard and the court. Medkit crates are unchanged.
+- A shot-down dragonfly (the boss's drones, 70% of the time; the four roster drones, always) drops 15 ammo or 20 HP where it fell, a medkit with a chance that grows as the player's HP falls (never above 90% HP, at most 85%), else ammo.
+- Verified: `tsc`, 689 tests, build, and a low-preset browser check (see the result in the PR). Not verified: real GPU, dodge windows and balance, the camera while carried, drop pickup in a run.
+

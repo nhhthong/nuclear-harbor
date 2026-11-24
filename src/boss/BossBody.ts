@@ -54,9 +54,8 @@ export interface BodyAnim {
   cannonCharge: number;
   /** 0..1 collapse progress (legs fold like the reference sphere mode). */
   collapse: number;
-  /** Crab look only: current spin rate (rad/s), 0..1 spin wind-up, 0..1 skill charge glow. */
-  spin?: number;
-  windup?: number;
+  /** Crab look only: claw arms (1 raised, below 0 slammed down), and 0..1 skill charge glow. */
+  claw?: number;
   charge?: number;
 }
 

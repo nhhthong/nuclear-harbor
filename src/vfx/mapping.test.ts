@@ -24,7 +24,7 @@ describe('mapping', () => {
   });
 
   it('boss attacks all map to something', () => {
-    for (const a of ['heavy-cannon', 'ground-slam', 'missile-barrage', 'shockwave', 'target-lock', 'emp-pulse', 'carpet-bombs', 'drone-release', 'body-spin', 'quad-laser'] as const) {
+    for (const a of ['heavy-cannon', 'ground-slam', 'missile-barrage', 'shockwave', 'target-lock', 'emp-pulse', 'carpet-bombs', 'drone-release', 'claw-grab', 'claw-quake', 'quad-laser'] as const) {
       expect(bossAttackRecipes(a).length).toBeGreaterThan(0);
     }
   });

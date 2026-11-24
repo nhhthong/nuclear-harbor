@@ -67,29 +67,29 @@ export class CrabBody implements BossVisual {
   update(time: number, _dt: number, a: BodyAnim): void {
     const G = CRAB.gait;
     this.walkSmooth += (a.walk - this.walkSmooth) * 0.2;
-    const spin = a.spin ?? 0;
-    this.gait += (a.travelled / G.cycleLength) * Math.PI * 2 + Math.abs(spin) * 0.06;
-    const walk = Math.max(this.walkSmooth, Math.min(1, Math.abs(spin) * 0.35));
+    this.gait += (a.travelled / G.cycleLength) * Math.PI * 2;
+    const walk = this.walkSmooth;
     const collapse = a.collapse;
     const idle = 1 - Math.min(1, collapse * 2);
     this.rig.position.y = Math.sin(time * 2.1) * 0.05 * idle + Math.abs(Math.sin(this.gait)) * G.bob * walk;
-    const wind = a.windup ?? 0;
-    // crouch before a spin, tiny sway otherwise
-    this.rig.position.y -= wind * 0.5;
+    const claw = a.claw ?? 0;
+    // crouch a little while the claws are up, tiny sway otherwise
+    this.rig.position.y -= Math.max(0, claw) * 0.25;
     this.rig.rotation.z = Math.sin(time * 1.3) * 0.012 * idle + Math.sin(this.gait) * 0.015 * walk;
     this.rig.rotation.x = Math.cos(time * 0.9) * 0.01 * idle + (a.charge ?? 0) * -0.05;
     for (const leg of this.legs) {
       const p = this.gait + leg.group * Math.PI;
-      const lift = Math.max(0, Math.sin(p)) * G.lift * walk + (spin !== 0 ? G.spinLift : 0) + wind * 0.25 + collapse * 0.5;
+      const lift = Math.max(0, Math.sin(p)) * G.lift * walk + Math.max(0, claw) * 0.15 + collapse * 0.5;
       leg.node.rotation.z = leg.side * lift;
       leg.node.rotation.y = Math.cos(p) * G.swing * walk;
     }
     for (const arm of this.arms) {
-      arm.node.rotation.x = Math.sin(time * 1.7 + arm.side) * 0.02 * idle + (a.charge ?? 0) * 0.18;
-      arm.node.rotation.y = arm.side * (a.charge ?? 0) * 0.08;
+      // claw skills (spec 34): the arms swing up (claw 1) and down onto the ground (claw below 0)
+      arm.node.rotation.x = Math.sin(time * 1.7 + arm.side) * 0.02 * idle + (a.charge ?? 0) * 0.18 + claw * 0.75;
+      arm.node.rotation.y = arm.side * ((a.charge ?? 0) * 0.08 - Math.max(0, claw) * 0.35);
     }
     const pulse = 0.75 + 0.25 * Math.sin(time * 14);
-    const glow = Math.min(0.8, ((a.charge ?? 0) * 0.6 + wind * 0.5 + Math.abs(spin) * 0.04) * pulse);
+    const glow = Math.min(0.8, ((a.charge ?? 0) * 0.6 + Math.max(0, claw) * 0.3) * pulse);
     for (const m of this.glow) m.emissiveIntensity = glow;
   }
 }

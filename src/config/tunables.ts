@@ -133,6 +133,18 @@ export const ECONOMY = {
   medkitHeal: 40,
   medkitsInZones: 2,
   medkitsInBossArena: 1,
+  /**
+   * Spec 34 (owner request): a shot-down dragonfly drops a pickup where it falls, ammo or health by need (the
+   * lower the HP the likelier a medkit; none above `droneDropFullHp` of the HP). Roster drones always drop, the
+   * boss's drones with `bossDroneDropChance`. Drops do not count towards `maxEnemyDropsPerZone`.
+   */
+  droneDropAmmo: 15,
+  droneDropHeal: 20,
+  droneDropFullHp: 0.9,
+  droneDropMaxMedkitChance: 0.85,
+  bossDroneDropChance: 0.7,
+  /** Extra pool slots for drone drops (the boss releases 3 to 4 at a time). */
+  droneDropPool: 8,
   /** GDD 5.4: chance for a destroyed robot to drop ammo. */
   enemyAmmoDropChance: 0.1,
   /** proposed: size of an enemy drop. */

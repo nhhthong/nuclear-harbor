@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  GRAB_CARRY_SECONDS,
+  QuakeWaves,
   SKILLS,
   SkillScheduler,
-  SweepTracker,
   TickTimer,
   beamAngles,
   beamHitsPlayer,
@@ -10,34 +11,65 @@ import {
   bombPattern,
   canReleaseDrones,
   clampOrbitRadius,
+  clawPoint,
   droneReleaseCount,
+  grabCarry,
+  grabConnects,
+  inPhaseTwo,
   laserBase,
+  lungeEnd,
   orbitPoint,
   pickSkill,
+  quakeDuration,
   skillWeights,
-  spinRate,
-  sweepContact,
 } from './skills';
 import type { SkillId, SkillInput, SkillWeights } from './skills';
 import { CRAB } from './tunables';
 
-const none: Record<SkillId, number> = { bombs: 0, drones: 0, spin: 0, laser: 0 };
-const at = (distance: number, aliveDrones = 0): SkillInput => ({ distance, aliveDrones, k: 1 });
+const none: Record<SkillId, number> = { bombs: 0, drones: 0, laser: 0, grab: 0, quake: 0 };
+/** Phase one by default (full HP); pass 0.4 for phase two. */
+const at = (distance: number, aliveDrones = 0, hpFraction = 1): SkillInput => ({ distance, aliveDrones, k: 1, hpFraction });
 const zero = (): number => 0;
 
 describe('skill selection', () => {
-  it('spin is only eligible when the player is close, the others need some distance', () => {
+  it('phase one: bombs, drones and the laser need some distance; the claw skills never run', () => {
     const near = skillWeights(at(10), none, null);
-    expect(near.spin).toBeGreaterThan(0);
     expect(near.bombs).toBeGreaterThan(0);
     const far = skillWeights(at(30), none, null);
-    expect(far.spin).toBe(0);
     expect(far.bombs).toBeGreaterThan(near.bombs);
     expect(far.laser).toBeGreaterThan(near.laser);
     const hugging = skillWeights(at(3), none, null);
-    expect(hugging.spin).toBeGreaterThan(0);
     expect(hugging.bombs).toBe(0);
     expect(hugging.laser).toBe(0);
+    for (const d of [3, 10, 20, 30]) {
+      const w = skillWeights(at(d), none, null);
+      expect(w.grab).toBe(0);
+      expect(w.quake).toBe(0);
+    }
+  });
+
+  it('there is no spin skill any more (spec 34)', () => {
+    expect(SKILLS).not.toContain('spin' as SkillId);
+    expect(SKILLS).toEqual(['bombs', 'drones', 'laser', 'grab', 'quake']);
+  });
+
+  it('the claw skills unlock below half of the boss HP', () => {
+    expect(inPhaseTwo(1)).toBe(false);
+    expect(inPhaseTwo(0.5)).toBe(false);
+    expect(inPhaseTwo(0.499)).toBe(true);
+    expect(inPhaseTwo(0.05)).toBe(true);
+    const w = skillWeights(at(12, 0, 0.4), none, null);
+    expect(w.grab).toBeGreaterThan(0);
+    expect(w.quake).toBeGreaterThan(0);
+  });
+
+  it('the grab needs the player within its range, the quake within its radius, both respect the cooldown', () => {
+    expect(skillWeights(at(2, 0, 0.4), none, null).grab).toBe(0); // too close
+    expect(skillWeights(at(CRAB.grab.maxRange + 1, 0, 0.4), none, null).grab).toBe(0); // too far
+    expect(skillWeights(at(CRAB.quake.maxRange + 1, 0, 0.4), none, null).quake).toBe(0);
+    const w = skillWeights(at(12, 0, 0.4), { ...none, grab: 4, quake: 2 }, null);
+    expect(w.grab).toBe(0);
+    expect(w.quake).toBe(0);
   });
 
   it('cooldowns and the drone cap remove skills', () => {
@@ -50,25 +82,25 @@ describe('skill selection', () => {
   });
 
   it('never repeats the last skill while another one can run, but may when it is the only one', () => {
-    const w = skillWeights(at(10), none, 'spin');
-    expect(w.spin).toBe(0);
-    const only = skillWeights(at(10), { bombs: 5, drones: 5, spin: 0, laser: 5 }, 'spin');
-    expect(only.spin).toBeGreaterThan(0);
+    const w = skillWeights(at(10), none, 'bombs');
+    expect(w.bombs).toBe(0);
+    const only = skillWeights(at(10), { bombs: 0, drones: 5, laser: 5, grab: 0, quake: 0 }, 'bombs');
+    expect(only.bombs).toBeGreaterThan(0);
   });
 
   it('weights scale with the boss size factor', () => {
-    expect(skillWeights({ distance: 7, aliveDrones: 0, k: 0.8 }, none, null).spin).toBeGreaterThan(0);
-    // 14 m is "close" for k = 1 (16 m trigger), but 14 / 0.8 = 17.5 m is not for k = 0.8
-    expect(skillWeights({ distance: 14, aliveDrones: 0, k: 1 }, none, null).spin).toBeGreaterThan(0);
-    expect(skillWeights({ distance: 14, aliveDrones: 0, k: 0.8 }, none, null).spin).toBe(0);
+    expect(skillWeights({ distance: 7, aliveDrones: 0, k: 0.8, hpFraction: 1 }, none, null).bombs).toBeGreaterThan(0);
+    // grab reaches 24 m at k = 1, so 18 m is in range for k = 0.8 (22.5 m) and 20 m is not (25 m)
+    expect(skillWeights({ distance: 18, aliveDrones: 0, k: 0.8, hpFraction: 0.3 }, none, null).grab).toBeGreaterThan(0);
+    expect(skillWeights({ distance: 20, aliveDrones: 0, k: 0.8, hpFraction: 0.3 }, none, null).grab).toBe(0);
   });
 
   it('pickSkill is a weighted choice and null when nothing is eligible', () => {
-    const w: SkillWeights = { bombs: 1, drones: 1, spin: 2, laser: 0 };
+    const w: SkillWeights = { bombs: 1, drones: 1, laser: 2, grab: 0, quake: 0 };
     expect(pickSkill(w, 0)).toBe('bombs');
     expect(pickSkill(w, 0.3)).toBe('drones');
-    expect(pickSkill(w, 0.6)).toBe('spin');
-    expect(pickSkill(w, 0.999)).toBe('spin');
+    expect(pickSkill(w, 0.6)).toBe('laser');
+    expect(pickSkill(w, 0.999)).toBe('laser');
     expect(pickSkill(none, 0.5)).toBeNull();
   });
 });
@@ -93,30 +125,35 @@ describe('SkillScheduler', () => {
 
   it('force starts a skill regardless of range and reset clears everything', () => {
     const s = new SkillScheduler();
-    expect(s.force('spin')).toBe(true);
-    expect(s.cooldowns.spin).toBe(CRAB.cooldown.spin);
+    expect(s.force('grab')).toBe(true);
+    expect(s.cooldowns.grab).toBe(CRAB.cooldown.grab);
     s.reset();
     expect(s.active).toBeNull();
-    expect(s.cooldowns.spin).toBe(0);
+    expect(s.cooldowns.grab).toBe(0);
   });
 
-  it('all four skills get picked over a long fight', () => {
-    const s = new SkillScheduler();
-    const seen = new Set<SkillId>();
-    let seed = 7;
-    const rand = (): number => {
-      seed = (seed * 16807) % 2147483647;
-      return seed / 2147483647;
-    };
-    for (let t = 0; t < 600; t += 0.1) {
-      const pick = s.update(0.1, at(8 + 20 * rand()), rand);
-      if (pick) {
-        seen.add(pick);
-        s.finish(rand);
+  it('phase one picks the three old skills, phase two adds the claw skills', () => {
+    for (const hp of [1, 0.3]) {
+      const s = new SkillScheduler();
+      const seen = new Set<SkillId>();
+      let seed = 7;
+      const rand = (): number => {
+        seed = (seed * 16807) % 2147483647;
+        return seed / 2147483647;
+      };
+      for (let t = 0; t < 900; t += 0.1) {
+        const pick = s.update(0.1, at(8 + 20 * rand(), 0, hp), rand);
+        if (pick) {
+          seen.add(pick);
+          s.finish(rand);
+        }
       }
+      for (const k of ['bombs', 'drones', 'laser'] as const) expect(seen.has(k)).toBe(true);
+      expect(seen.has('grab')).toBe(hp < 0.5);
+      expect(seen.has('quake')).toBe(hp < 0.5);
     }
-    for (const k of SKILLS) expect(seen.has(k)).toBe(true);
   });
+
 });
 
 describe('bomb pattern', () => {
@@ -235,36 +272,138 @@ describe('laser', () => {
   });
 });
 
-describe('spin', () => {
-  it('ramps up and down and runs about 2.5 s', () => {
-    expect(spinRate(0)).toBe(0);
-    expect(spinRate(CRAB.spin.duration)).toBe(0);
-    expect(spinRate(CRAB.spin.duration / 2)).toBeCloseTo(CRAB.spin.rate, 9);
-    expect(spinRate(0.1)).toBeLessThan(spinRate(0.3));
-    let turned = 0;
-    for (let t = 0; t < CRAB.spin.duration; t += 0.01) turned += spinRate(t) * 0.01;
-    expect(turned).toBeGreaterThan(Math.PI * 2);
+describe('claw grab (spec 34)', () => {
+  const boss = { x: 0, z: 0 };
+
+  it('the claw point is `reach` in front of the body along the facing (yaw 0 faces -Z)', () => {
+    const out = { x: 0, z: 0 };
+    clawPoint(boss, 0, 1, out);
+    expect(out.x).toBeCloseTo(0, 9);
+    expect(out.z).toBeCloseTo(-CRAB.grab.reach, 9);
+    clawPoint(boss, Math.PI / 2, 0.5, out); // turned left: faces -X
+    expect(out.x).toBeCloseTo(-CRAB.grab.reach * 0.5, 9);
+    expect(out.z).toBeCloseTo(0, 9);
   });
 
-  it('contact needs reach, the right direction and a low player', () => {
-    const boss = { x: 0, z: 0 };
-    // arm yaw 0 points to -Z
-    expect(sweepContact(0, boss, { x: 0, y: 0, z: -10 }, 1)).toBe(true);
-    expect(sweepContact(0, boss, { x: 0, y: 0, z: -20 }, 1)).toBe(false); // out of reach
-    expect(sweepContact(0, boss, { x: 10, y: 0, z: 0 }, 1)).toBe(false); // 90 degrees away
-    expect(sweepContact(0, boss, { x: 0, y: 3, z: -10 }, 1)).toBe(false); // jumped over
-    expect(sweepContact(Math.PI, boss, { x: 0, y: 0, z: 10 }, 1)).toBe(true); // second arm
+  it('the lunge brings the claws onto the target, is capped, and never goes backwards', () => {
+    const out = { x: 0, z: 0 };
+    lungeEnd(boss, { x: 0, z: -15 }, 1, out);
+    expect(out.z).toBeCloseTo(-(15 - CRAB.grab.reach), 9); // claw point lands on the target
+    lungeEnd(boss, { x: 0, z: -80 }, 1, out);
+    expect(out.z).toBeCloseTo(-CRAB.grab.lungeMax, 9);
+    lungeEnd(boss, { x: 0, z: -3 }, 1, out); // already in reach: stays
+    expect(out.x).toBeCloseTo(0, 9);
+    expect(out.z).toBeCloseTo(0, 9);
+    lungeEnd(boss, boss, 1, out);
+    expect(Number.isFinite(out.x + out.z)).toBe(true);
   });
 
-  it('a sweep contact hurts once: only the rising edge counts', () => {
-    const t = new SweepTracker();
-    expect(t.step([true, false])).toBe(true);
-    expect(t.step([true, false])).toBe(false);
-    expect(t.step([false, false])).toBe(false);
-    expect(t.step([false, true])).toBe(true);
-    expect(t.step([true, true])).toBe(true);
-    expect(t.step([true, true])).toBe(false);
-    t.reset();
-    expect(t.step([true, false])).toBe(true);
+  it('the claws close on a player within the radius and below the jump height', () => {
+    const claw = { x: 0, z: -10 };
+    expect(grabConnects(claw, { x: 0, y: 0, z: -10 }, 1)).toBe(true);
+    expect(grabConnects(claw, { x: CRAB.grab.radius - 0.1, y: 0, z: -10 }, 1)).toBe(true);
+    expect(grabConnects(claw, { x: CRAB.grab.radius + 0.5, y: 0, z: -10 }, 1)).toBe(false); // stepped aside
+    expect(grabConnects(claw, { x: 0, y: CRAB.grab.maxPlayerHeight + 0.2, z: -10 }, 1)).toBe(false); // jumped
+    expect(grabConnects(claw, { x: 0, y: 0, z: -10 - CRAB.grab.radius * 0.7 }, 0.8)).toBe(true);
+    expect(grabConnects(claw, { x: 0, y: 0, z: -10 - CRAB.grab.radius * 1.2 }, 0.8)).toBe(false);
+  });
+
+  it('carries up, holds, then slams down to the ground', () => {
+    const G = CRAB.grab;
+    expect(grabCarry(0, 1)).toEqual({ y: 0, stage: 'lift' });
+    expect(grabCarry(G.liftTime / 2, 1).y).toBeCloseTo(G.liftHeight / 2, 6);
+    expect(grabCarry(G.liftTime / 2, 1).stage).toBe('lift');
+    expect(grabCarry(G.liftTime + G.holdTime / 2, 1)).toEqual({ y: G.liftHeight, stage: 'hold' });
+    const mid = grabCarry(G.liftTime + G.holdTime + G.slamTime / 2, 1);
+    expect(mid.stage).toBe('slam');
+    expect(mid.y).toBeGreaterThan(0);
+    expect(mid.y).toBeLessThan(G.liftHeight);
+    expect(grabCarry(GRAB_CARRY_SECONDS, 1)).toEqual({ y: 0, stage: 'done' });
+    // heights scale with the boss size, and never go up while slamming
+    expect(grabCarry(G.liftTime + 0.1, 0.5).y).toBeCloseTo(grabCarry(G.liftTime + 0.1, 1).y * 0.5, 9);
+    let prev = Infinity;
+    for (let t = G.liftTime + G.holdTime; t < GRAB_CARRY_SECONDS; t += 0.01) {
+      const y = grabCarry(t, 1).y;
+      expect(y).toBeLessThanOrEqual(prev + 1e-9);
+      prev = y;
+    }
+  });
+
+  it('the slam is a big hit but not a one-shot from full health', () => {
+    expect(CRAB.grab.damage).toBeGreaterThanOrEqual(50);
+    expect(CRAB.grab.damage).toBeLessThan(100);
+  });
+});
+
+describe('claw quake (spec 34)', () => {
+  const Q = CRAB.quake;
+  const run = (waves: QuakeWaves, seconds: number, dist: number, y: number): number => {
+    let hits = 0;
+    for (let t = 0; t < seconds; t += 1 / 60) hits += waves.step(1 / 60, dist, y, 1);
+    return hits;
+  };
+
+  it('a ring hurts a player on the ground exactly once, when it reaches them', () => {
+    const w = new QuakeWaves();
+    w.launch(1);
+    expect(run(w, 0.3, 20, 0)).toBe(0); // still on its way
+    expect(run(w, 3, 20, 0)).toBe(1);
+    expect(w.live).toBe(0); // gone past the arena edge
+  });
+
+  it('a player in the air when it passes is not hurt, and lands safely behind it', () => {
+    const w = new QuakeWaves();
+    w.launch(1);
+    // ring front reaches 20 m at about (20 - 3.5) / 13 = 1.27 s; airborne through that window
+    let hits = run(w, 1.0, 20, 0);
+    hits += run(w, 0.6, 20, 2);
+    hits += run(w, 2, 20, 0);
+    expect(hits).toBe(0);
+  });
+
+  it('rings one second apart can each be jumped; a missed jump costs one hit per ring', () => {
+    const w = new QuakeWaves();
+    let hits = 0;
+    let t = 0;
+    let launched = 0;
+    for (; t < quakeDuration(); t += 1 / 60) {
+      if (launched < Q.count && t >= launched * Q.interval) {
+        w.launch(1);
+        launched++;
+      }
+      hits += w.step(1 / 60, 24, 0, 1);
+    }
+    expect(launched).toBe(Q.count);
+    expect(hits).toBe(Q.count);
+  });
+
+  it('the pounds are `interval` seconds apart and a ring crosses the arena well before the next three have passed', () => {
+    expect(Q.interval).toBe(1);
+    expect(Q.count).toBe(4);
+    expect(quakeDuration()).toBeGreaterThan((Q.count - 1) * Q.interval);
+    expect((Q.maxRadius - Q.startRadius) / Q.speed).toBeLessThan(3);
+  });
+
+  it('a jump timed to the ring clears it (the safe height is below a single jump)', () => {
+    expect(Q.safeHeight).toBeLessThan(0.95);
+  });
+
+  it('scales with the boss size', () => {
+    const w = new QuakeWaves();
+    w.launch(0.5);
+    let hits = 0;
+    for (let t = 0; t < 3; t += 1 / 60) hits += w.step(1 / 60, 10, 0, 0.5);
+    expect(hits).toBe(1);
+    expect(w.live).toBe(0);
+  });
+
+  it('reset drops every live ring', () => {
+    const w = new QuakeWaves();
+    w.launch(1);
+    w.launch(1);
+    expect(w.live).toBe(2);
+    expect(w.radii()).toHaveLength(2);
+    w.reset();
+    expect(w.live).toBe(0);
   });
 });

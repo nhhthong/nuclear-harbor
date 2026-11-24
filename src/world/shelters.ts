@@ -29,7 +29,6 @@ export interface Shelter {
 }
 
 const FACING_EAST = 0;
-const FACING_WEST = Math.PI;
 
 export const SHELTERS: readonly Shelter[] = [
   // yard (west leg since spec 29), west blocks: the doors face the N-S lane at x = -15 (east)
@@ -38,9 +37,8 @@ export const SHELTERS: readonly Shelter[] = [
   { id: 'yard-south', zone: 'A', x: -24, z: 6, yaw: FACING_EAST },
   // relay court, west of the tower
   { id: 'court-west', zone: 'B', x: -28, z: -34, yaw: FACING_EAST },
-  // quay: east side, and west of the boss arena
-  { id: 'quay-east', zone: 'D', x: 31, z: -58, yaw: FACING_WEST },
-  { id: 'quay-west', zone: 'D', x: -31, z: -56, yaw: FACING_EAST },
+  // Spec 34 (owner request): no safe container on the boss quay (zone D): players hid in them and shot the boss
+  // from inside while healing. The two that stood there (`quay-east`, `quay-west`) are gone.
 ];
 
 const L = WORLD.container.length;
