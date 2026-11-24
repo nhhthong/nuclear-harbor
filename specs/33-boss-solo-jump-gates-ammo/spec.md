@@ -45,7 +45,7 @@ It tracks whether it wants to walk (guard to its spot, or chase) yet moves less 
 
 ## Success Criteria
 - **SC-001** `npx tsc --noEmit`, `npm test` (see tasks), `npm run build` pass.
-- **SC-002** Low-preset browser check: gates locked at start, unlocked and opening after the tower, boss-solo flag set, no console errors. [B]
+- **SC-002** Browser check (default medium preset): gates locked at start, unlocked and opening after the tower, boss-solo flag set, no console errors. [B]
 
 ## Not verified
 Real-GPU frame rate; feel of the new jump (the 2.7 to 4.8 m window, sprint jumps, the tower being climbable with other props); a full run with the solo boss; court density during the tower hold; the scorpion in the real yard between containers (only tested in synthetic pockets); gates locked while a robot stands at them; whether removing the quay roster makes the run too easy; sound of retiring the scorpion.

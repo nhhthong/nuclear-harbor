@@ -37,7 +37,7 @@ Eligible below 50% HP with the player within 34 m (cooldown 15 s, weight 3.5). T
 
 ## Success Criteria
 - **SC-001** `npx tsc --noEmit`, unit tests and build pass.
-- **SC-002** Low-preset browser check: below 50% HP `force('grab')` runs telegraph, lunge, then carry or recover, with the player lifted and then damaged on a hit; `force('quake')` fires four pounds one second apart with live rings. [B]
+- **SC-002** Browser check (default medium preset): below 50% HP `force('grab')` runs telegraph, lunge, then carry or recover, with the player lifted and then damaged on a hit; `force('quake')` fires four pounds one second apart with live rings. [B]
 
 ## Not verified
 Real-GPU look and frame rate of the rings and the lift; the feel of the dodge windows (sidestep and jump for the grab, jump timing for the rings); balance of 70 and 24 damage against the drone heals; the camera while carried (controls are locked, the camera does not follow the lift); whether the shelters' absence leaves another hiding place (containers on the quay can still be used as cover); no claw model (arms rotate).
