@@ -21,6 +21,9 @@ In the claw quake the arms are held high and thrown down on every pound, and eac
 ### Story 5 - The orange wash on the crab is fixed (P2)
 The pale orange wash while skills telegraph (open since spec 27) came from a flat emissive colour added to every pixel of a GLB that has no emissive data. The glow now multiplies the paint (emissive map = base colour map), so red armour flares orange and the dark parts stay dark. [U `crabGlow.test.ts`; B before and after screenshots]
 
+### Story 6 - Raised claws are solid (P2)
+With the arms raised the player looks up at them; the GLB's single-sided open shells made them hollow outlines. The crab materials are drawn on both sides. [U `crabGlow.test.ts`; B before and after screenshots]
+
 ## Requirements
 - **FR-001** Arm poses (`BodyAnim.claw/strike/clamp`, `CRAB.armPose`) and the pure pose functions in `src/boss/grabCam.ts`. [U]
 - **FR-002** Cutscene camera: `grabShot`, `stepGrabBlend`, `CRAB.grabCam`, applied in the boss module's `update` (blended with the player's view; weapon hidden). [U, B]
