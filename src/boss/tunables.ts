@@ -236,6 +236,11 @@ export const CRAB = {
     /** Beam starts this far from the body centre (m). */
     startRadius: 2.2,
   },
+  /**
+   * Skill glow: emissive colour (multiplied by the paint, see `prepareGlowMaterial`), the peak intensity and a gain
+   * on the charge. The glow is texture-modulated, so it can be stronger than the old flat wash without hiding detail.
+   */
+  glow: { colour: [1, 0.45, 0.12] as const, max: 1.3, gain: 1.6 },
   /** Body animation (radians, seconds). */
   gait: { lift: 0.3, swing: 0.2, bob: 0.12, cycleLength: 9 },
   /** Death collapse: the body sinks (m). */

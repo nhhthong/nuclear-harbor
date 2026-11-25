@@ -6,6 +6,24 @@ import { ARM_NAMES, LEG_NAMES } from './crabAssets';
 import type { CrabAssets } from './crabAssets';
 import { CRAB } from './tunables';
 
+/**
+ * Sets a boss material up for the skill glow. The GLB materials have no emissive data, so a flat emissive colour
+ * would be added on top of every pixel and wash the whole body out to pale orange (the old "orange wash on the
+ * crab while skills telegraph"). Using the base colour texture as the emissive map multiplies the glow by the
+ * paint instead: red armour flares orange, black joints and the dark parts stay dark, and the detail survives.
+ * Returns false for a material that cannot glow.
+ */
+export function prepareGlowMaterial(sm: MeshStandardMaterial): boolean {
+  if (!sm.emissive) return false;
+  sm.emissive.setRGB(...CRAB.glow.colour);
+  sm.emissiveIntensity = 0;
+  if (sm.map && !sm.emissiveMap) {
+    sm.emissiveMap = sm.map;
+    sm.needsUpdate = true;
+  }
+  return true;
+}
+
 /** What the module needs from the boss look: the crab, or the procedural fallback (`BossBody`). */
 export interface BossVisual {
   readonly root: Group;
@@ -52,11 +70,7 @@ export class CrabBody implements BossVisual {
     });
     for (const m of mats) {
       const sm = m as MeshStandardMaterial;
-      if (sm.emissive) {
-        sm.emissive.setRGB(1, 0.32, 0.08);
-        sm.emissiveIntensity = 0;
-        this.glow.push(sm);
-      }
+      if (prepareGlowMaterial(sm)) this.glow.push(sm);
     }
     res.track(this.root);
     res.onDispose(() => {
@@ -95,7 +109,7 @@ export class CrabBody implements BossVisual {
       arm.node.rotation.y = arm.side * ((a.charge ?? 0) * 0.08 - raise * 0.25 * (1 - clamp) + clamp * P.clamp);
     }
     const pulse = 0.75 + 0.25 * Math.sin(time * 14);
-    const glow = Math.min(0.8, ((a.charge ?? 0) * 0.6 + Math.max(0, claw) * 0.3) * pulse);
+    const glow = Math.min(CRAB.glow.max, ((a.charge ?? 0) * 0.6 + Math.max(0, claw) * 0.3) * pulse * CRAB.glow.gain);
     for (const m of this.glow) m.emissiveIntensity = glow;
   }
 }
