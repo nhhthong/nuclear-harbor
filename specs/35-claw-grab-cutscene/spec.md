@@ -18,10 +18,14 @@ On the slam the arms are thrown down hard (`strike`), the impact shakes the came
 ### Story 4 - Quake arms and shake (P2)
 In the claw quake the arms are held high and thrown down on every pound, and each pound shakes the camera (0.45). [N: arm timing not captured]
 
+### Story 5 - The orange wash on the crab is fixed (P2)
+The pale orange wash while skills telegraph (open since spec 27) came from a flat emissive colour added to every pixel of a GLB that has no emissive data. The glow now multiplies the paint (emissive map = base colour map), so red armour flares orange and the dark parts stay dark. [U `crabGlow.test.ts`; B before and after screenshots]
+
 ## Requirements
 - **FR-001** Arm poses (`BodyAnim.claw/strike/clamp`, `CRAB.armPose`) and the pure pose functions in `src/boss/grabCam.ts`. [U]
 - **FR-002** Cutscene camera: `grabShot`, `stepGrabBlend`, `CRAB.grabCam`, applied in the boss module's `update` (blended with the player's view; weapon hidden). [U, B]
 - **FR-003** New event `camera:shake { trauma }` handled by the vfx module's existing trauma shake. [tsc; N]
+- **FR-005** `prepareGlowMaterial` and `CRAB.glow`. [U, B]
 - **FR-004** Overlays: letterbox bars and a flash layer in `ctx.uiRoot`, removed on dispose. [B]
 
 ## Success Criteria
