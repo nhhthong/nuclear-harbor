@@ -171,6 +171,31 @@ export const CRAB = {
     graceAfter: 0.8,
   },
   /**
+   * Cutscene of the claw grab (spec 35): the camera leaves the player's eyes and shows the boss holding them, a
+   * white flash and letterbox bars mark the catch, shakes mark the catch, the lift, every quake pound and the slam.
+   * `distance`, `side`, `height` place the camera relative to the claw point (metres, boss scale), `dolly` is how
+   * far it pushes in over the carry.
+   */
+  grabCam: {
+    blendIn: 0.3,
+    blendOut: 0.4,
+    distance: 11,
+    side: 5,
+    height: 2.5,
+    dolly: 2.5,
+    barsFraction: 0.1,
+    /** Camera shake ("trauma", see `VFX.shake`). */
+    shakeCatch: 0.7,
+    shakeRumble: 0.012,
+    shakeSlam: 1,
+    shakePound: 0.45,
+    /** Screen flashes (peak opacity, seconds). */
+    flashCatch: { opacity: 0.85, seconds: 0.35 },
+    flashSlam: { opacity: 0.8, seconds: 0.6 },
+  },
+  /** Strike pose of the arms (radians): raised high before the strike, swung forward and down by the whip, clamped inward when they hold. */
+  armPose: { raise: 1.1, strikeDown: -0.5, clamp: 0.55, whipPortion: 0.45 },
+  /**
    * Claw quake (spec 34): the claws pound the ground `count` times, `interval` s apart; every pound sends a ring
    * out from the body at `speed` m/s up to `maxRadius`. A ring hurts a player on the ground when it passes
    * (feet below `safeHeight`), so each one is jumped over; one second apart gives time to land and jump again.

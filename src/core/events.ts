@@ -119,6 +119,8 @@ export interface GameEvents {
   'boss:attackTelegraph': { attack: BossAttackId; position: Vector3; radius: number; duration: number };
   'boss:attack': { attack: BossAttackId; position: Vector3; radius: number };
   'boss:defeated': { position: Vector3 };
+  /** Adds camera shake ("trauma" 0..1, decays by itself); handled by the vfx module (spec 35). */
+  'camera:shake': { trauma: number };
   /** A boss drone shot down by the player (spec 34): the pickups module drops ammo or health there. */
   'boss:droneDestroyed': { position: Vector3 };
 

@@ -124,6 +124,7 @@ export function createVfxModule(): GameModule {
         spawn('muzzle-smoke', o.x + d.x * 0.9, o.y + d.y * 0.9 - 0.08, o.z + d.z * 0.9, d.x, d.y, d.z, 1);
       });
 
+      on('camera:shake', (e) => addTrauma(e.trauma));
       on('player:damaged', (e) => addTrauma(Math.min(VFX.shake.hitMax, VFX.shake.hit * e.amount)));
 
       // applied after the player controller has written the camera, right before rendering

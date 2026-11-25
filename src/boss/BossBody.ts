@@ -56,6 +56,10 @@ export interface BodyAnim {
   collapse: number;
   /** Crab look only: claw arms (1 raised, below 0 slammed down), and 0..1 skill charge glow. */
   claw?: number;
+  /** 0..1 the arms whip forward and down (claw grab strike and slam). */
+  strike?: number;
+  /** 0..1 the arms close inward on the prey. */
+  clamp?: number;
   charge?: number;
 }
 

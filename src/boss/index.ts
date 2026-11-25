@@ -17,6 +17,8 @@ import type { BossVisual } from './CrabBody';
 import { fallbackBones, loadBossAssets } from './crabAssets';
 import type { BossAssets, LegBone } from './crabAssets';
 import { Drones } from './Drones';
+import { carryPose, grabShot, lungePose, raisePose, recoverPose, stepGrabBlend } from './grabCam';
+import type { ClawPose } from './grabCam';
 import { pickLandingSpot } from './landing';
 import type { LandingObstacle } from './landing';
 import { BossModel, DEFAULT_BOSS_MODEL_CONFIG } from './BossModel';
@@ -70,6 +72,10 @@ const beamOrigin = { x: 0, y: 0, z: 0 };
 const bossXZ: XZ = { x: 0, z: 0 };
 const playerXZ: XZ = { x: 0, z: 0 };
 const dronePos = new Vector3();
+const focusV = new Vector3();
+const centreV = new Vector3();
+const shotPos = new Vector3();
+const shotTarget = new Vector3();
 const clawXZ: XZ = { x: 0, z: 0 };
 const lungeXZ: XZ = { x: 0, z: 0 };
 
@@ -123,6 +129,15 @@ export function createBossModule(): GameModule {
   const cin = { active: false, t: 0, impacted: false, ended: false, frame: newCinematicFrame() };
   const landing = { x: 0, z: 0, clear: true };
   const hiddenCamChildren: Array<{ o: { visible: boolean }; was: boolean }> = [];
+  // claw grab cutscene (spec 35): camera blend, the viewmodel hidden while it shows, overlays
+  let grabBlend = 0;
+  let grabViewHidden = false;
+  const grabViewKids: Array<{ o: { visible: boolean }; was: boolean }> = [];
+  let overlay: { root: HTMLDivElement; top: HTMLDivElement; bottom: HTMLDivElement; flash: HTMLDivElement } | null = null;
+  let flashLeft = 0;
+  let flashTotal = 1;
+  let flashPeak = 0;
+  let lastPose: ClawPose = { claw: 0, strike: 0, clamp: 0 };
 
   let body: BossVisual | null = null;
   let usingCrab = false;
@@ -146,7 +161,7 @@ export function createBossModule(): GameModule {
   let walk = 0;
   let strafeDir: 1 | -1 = 1;
   let strafeTimer = 0;
-  const anim: BodyAnim = { walk: 0, travelled: 0, dirX: 0, dirZ: -1, slamRaise: 0, cannonCharge: 0, collapse: 0, claw: 0, charge: 0 };
+  const anim: BodyAnim = { walk: 0, travelled: 0, dirX: 0, dirZ: -1, slamRaise: 0, cannonCharge: 0, collapse: 0, claw: 0, strike: 0, clamp: 0, charge: 0 };
   const run: SkillRun = { skill: null, phase: 'telegraph', t: 0, duration: 0, laserStart: 0, laserDir: 1, clipTimer: 0, bombsLeft: 0, sub: 'lunge', lungeFromX: 0, lungeFromZ: 0, lungeToX: 0, lungeToZ: 0, locked: false, carry: 0, carried: false, slammed: false, pounds: 0 };
 
   // ---- helpers -------------------------------------------------------------------------
@@ -378,11 +393,87 @@ export function createBossModule(): GameModule {
     c.camera.quaternion.multiply(CAM_ROLL);
   }
 
+  /** Applies a claw pose to the arm animation. */
+  function setPose(p: ClawPose): void {
+    anim.claw = p.claw;
+    anim.strike = p.strike;
+    anim.clamp = p.clamp;
+    lastPose = p;
+  }
+
+  function shake(trauma: number): void {
+    ctx?.events.emit('camera:shake', { trauma });
+  }
+
+  function flash(color: string, peak: number, seconds: number): void {
+    if (!overlay) return;
+    flashPeak = peak;
+    flashTotal = seconds;
+    flashLeft = seconds;
+    overlay.flash.style.background = color;
+  }
+
+  function buildOverlay(c: GameContext): void {
+    if (typeof document === 'undefined') return;
+    const root = document.createElement('div');
+    root.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:6;';
+    const bar = (top: boolean): HTMLDivElement => {
+      const b = document.createElement('div');
+      b.style.cssText = `position:absolute;left:0;right:0;${top ? 'top' : 'bottom'}:0;height:0;background:#000;`;
+      return b;
+    };
+    const top = bar(true);
+    const bottom = bar(false);
+    const fl = document.createElement('div');
+    fl.style.cssText = 'position:absolute;inset:0;opacity:0;';
+    root.append(top, bottom, fl);
+    c.uiRoot.appendChild(root);
+    overlay = { root, top, bottom, flash: fl };
+  }
+
+  /** The cutscene camera, blended with the player's own view; hides the weapon model while it shows. */
+  function grabCamera(c: GameContext, dt: number): void {
+    grabBlend = stepGrabBlend(grabBlend, run.carried, dt);
+    if (flashLeft > 0) flashLeft = Math.max(0, flashLeft - dt);
+    if (overlay) {
+      const bars = grabBlend * CRAB.grabCam.barsFraction * 100;
+      overlay.top.style.height = `${bars.toFixed(2)}%`;
+      overlay.bottom.style.height = `${bars.toFixed(2)}%`;
+      overlay.flash.style.opacity = flashLeft > 0 ? String(((flashLeft / flashTotal) ** 2) * flashPeak) : '0';
+    }
+    const hide = grabBlend > 0.05;
+    if (hide && !grabViewHidden) {
+      grabViewHidden = true;
+      grabViewKids.length = 0;
+      for (const o of c.camera.children) {
+        grabViewKids.push({ o, was: o.visible });
+        o.visible = false;
+      }
+    } else if (!hide && grabViewHidden) {
+      grabViewHidden = false;
+      for (const h of grabViewKids) h.o.visible = h.was;
+      grabViewKids.length = 0;
+    }
+    if (grabBlend <= 0.0005) return;
+    const e = grabBlend * grabBlend * (3 - 2 * grabBlend);
+    const p = c.player.position;
+    focusV.set(p.x, p.y + 1, p.z);
+    bossCentre(centreV);
+    grabShot(focusV, centreV, yaw, k, run.carry, shotPos, shotTarget);
+    c.player.getEyePosition(tmpLocal);
+    c.camera.position.set(tmpLocal.x + (shotPos.x - tmpLocal.x) * e, tmpLocal.y + (shotPos.y - tmpLocal.y) * e, tmpLocal.z + (shotPos.z - tmpLocal.z) * e);
+    lookM.lookAt(shotPos, shotTarget, UP);
+    camQ.setFromRotationMatrix(lookM);
+    playerEuler.set(c.player.pitch, c.player.yaw, 0, 'YXZ');
+    playerQ.setFromEuler(playerEuler);
+    c.camera.quaternion.copy(playerQ).slerp(camQ, e);
+  }
+
   function resetSkill(): void {
     releasePlayer();
     run.skill = null;
     run.carried = false;
-    anim.claw = 0;
+    setPose({ claw: 0, strike: 0, clamp: 0 });
     anim.charge = 0;
     effects?.setBeams('off', 0, 0, 0, null, null, 0);
     effects?.clearRings();
@@ -583,7 +674,8 @@ export function createBossModule(): GameModule {
     if (run.phase === 'telegraph') {
       const f = Math.min(1, run.t / Math.max(0.001, run.duration));
       anim.charge = f;
-      if (run.skill === 'grab' || run.skill === 'quake') anim.claw = f;
+      if (run.skill === 'grab') setPose(raisePose(f));
+      if (run.skill === 'quake') anim.claw = f;
       if (run.skill === 'grab') {
         // the lunge target follows the player until `lockAt`, then it is fixed (the warning the player can dodge)
         if (run.t < C.grab.lockAt) {
@@ -673,7 +765,7 @@ export function createBossModule(): GameModule {
       const e = 1 - (1 - u) * (1 - u);
       pos.x = run.lungeFromX + (run.lungeToX - run.lungeFromX) * e;
       pos.z = run.lungeFromZ + (run.lungeToZ - run.lungeFromZ) * e;
-      anim.claw = 1 - 0.4 * u;
+      setPose(lungePose(u));
       anim.charge = 0.8;
       anim.walk = 0;
       if (u >= 1) {
@@ -689,6 +781,10 @@ export function createBossModule(): GameModule {
           evPos.set(clawXZ.x, 1, clawXZ.z);
           vfx('dust', evPos, 2 * k);
           c.events.emit('ui:toast', { text: 'GRABBED', seconds: 1 });
+          // the catch: a white flash and a hard shake, then the cutscene camera takes over
+          flash('#ffffff', CRAB.grabCam.flashCatch.opacity, CRAB.grabCam.flashCatch.seconds);
+          shake(CRAB.grabCam.shakeCatch);
+          setPose(carryPose(0, 0));
         } else {
           run.sub = 'recover';
           run.t = 0;
@@ -696,6 +792,9 @@ export function createBossModule(): GameModule {
           evPos.set(clawXZ.x, 0.3, clawXZ.z);
           vfx('dust', evPos, 3 * k);
           vfx('explosion', evPos, 1.5 * k);
+          // the claws smash into the empty ground
+          shake(CRAB.grabCam.shakeCatch * 0.6);
+          lastPose = lungePose(1);
         }
         if (run.sub === 'carry') {
           run.t = 0;
@@ -710,8 +809,11 @@ export function createBossModule(): GameModule {
       bossXZ.x = pos.x;
       bossXZ.z = pos.z;
       clawPoint(bossXZ, yaw, k, clawXZ);
-      anim.claw = h.stage === 'slam' ? 1 - Math.min(1, (run.carry - G.liftTime - G.holdTime) / G.slamTime) * 1.4 : 1;
+      const slamU = h.stage === 'slam' ? Math.min(1, (run.carry - G.liftTime - G.holdTime) / G.slamTime) : 0;
+      setPose(carryPose(h.y / (G.liftHeight * k), slamU));
       anim.charge = 0.9;
+      // a steady rumble while it lifts and holds
+      if (h.stage !== 'slam') shake(CRAB.grabCam.shakeRumble);
       c.player.teleport({ x: clawXZ.x, y: h.y, z: clawXZ.z });
       if (h.stage === 'done') {
         slamImpact(c);
@@ -722,7 +824,7 @@ export function createBossModule(): GameModule {
       return;
     }
     // recover: the boss stands, claws down
-    anim.claw = (anim.claw ?? 0) * (1 - Math.min(1, dt * 6));
+    setPose(recoverPose(Math.min(1, run.t / Math.max(0.001, run.duration)), lastPose));
     anim.charge = 0.2;
     if (run.t >= run.duration) endSkill();
   }
@@ -739,6 +841,8 @@ export function createBossModule(): GameModule {
     evPos.set(clawXZ.x, 0.3, clawXZ.z);
     vfx('big-explosion', evPos, 2.2 * k);
     vfx('dust', evPos, 5 * k);
+    shake(CRAB.grabCam.shakeSlam);
+    flash('#c01810', CRAB.grabCam.flashSlam.opacity, CRAB.grabCam.flashSlam.seconds);
     c.events.emit('boss:attack', { attack: 'claw-grab', position: evPos, radius: G.radius * k });
   }
 
@@ -753,11 +857,14 @@ export function createBossModule(): GameModule {
       evPos.set(pos.x, 0.3, pos.z);
       vfx('explosion', evPos, 2.5 * k);
       vfx('dust', evPos, 8 * k);
+      shake(CRAB.grabCam.shakePound);
       c.events.emit('boss:attack', { attack: 'claw-quake', position: evPos, radius: Q.maxRadius * k });
     }
     // arms: raised, slammed down on every pound (1 s beat)
     const beat = (run.t % Q.interval) / Q.interval;
-    anim.claw = run.pounds >= Q.count && run.t >= (Q.count - 1) * Q.interval + 0.5 ? 0 : 1 - Math.min(1, beat * 6) * 1.2 + beat * 0.2;
+    const finished = run.pounds >= Q.count && run.t >= (Q.count - 1) * Q.interval + 0.5;
+    // the arms are held high between pounds and thrown down on each one
+    setPose(finished ? { claw: 0, strike: 0, clamp: 0 } : { claw: 1, strike: Math.max(0, 1 - beat * 3.5), clamp: 0 });
     anim.charge = 0.7;
     const dist = Math.hypot(c.player.position.x - pos.x, c.player.position.z - pos.z);
     const hits = quake.step(dt, dist, c.player.position.y, k);
@@ -840,6 +947,7 @@ export function createBossModule(): GameModule {
         assets = { crab: null, drone: null };
       }
 
+      buildOverlay(context);
       context.testHooks.boss = {
         getState: () => ({
           phase: model.phase,
@@ -859,6 +967,8 @@ export function createBossModule(): GameModule {
           liveRings: effects?.liveRings ?? 0,
           grabSub: run.skill === 'grab' && run.phase === 'active' ? run.sub : null,
           playerCarried: run.carried,
+          grabBlend,
+          armPose: { claw: anim.claw ?? 0, strike: anim.strike ?? 0, clamp: anim.clamp ?? 0 },
           pounds: run.pounds,
           beamsActive: effects?.beamsActive ?? false,
           meshCount: countMeshes(),
@@ -950,6 +1060,7 @@ export function createBossModule(): GameModule {
       body.root.rotation.y = yaw;
       body.update(c.clock.simTime, dt, anim);
       anim.travelled = 0;
+      if (!cin.active) grabCamera(c, dt);
       effects?.update();
       drones?.update(c.clock.simTime);
       if (cin.active) {
@@ -964,6 +1075,9 @@ export function createBossModule(): GameModule {
       offs.length = 0;
       if (ctx) {
         delete ctx.testHooks.boss;
+        overlay?.root.remove();
+        overlay = null;
+        for (const h of grabViewKids) h.o.visible = h.was;
         colliders?.dispose();
         fx?.dispose();
         if (cin.active) {
@@ -1043,7 +1157,7 @@ export function createBossModule(): GameModule {
     const p = Math.min(1, collapseElapsed / BOSS_LOCAL.collapseDuration);
     anim.collapse = p;
     anim.walk = 0;
-    anim.claw = 0;
+    setPose({ claw: 0, strike: 0, clamp: 0 });
     anim.charge = 0;
     pos.y = -p * (usingCrab ? CRAB.sink * k : BOSS_LOCAL.collapseSink * scale);
     applyPose();

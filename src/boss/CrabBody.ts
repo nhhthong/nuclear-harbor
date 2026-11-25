@@ -73,6 +73,8 @@ export class CrabBody implements BossVisual {
     const idle = 1 - Math.min(1, collapse * 2);
     this.rig.position.y = Math.sin(time * 2.1) * 0.05 * idle + Math.abs(Math.sin(this.gait)) * G.bob * walk;
     const claw = a.claw ?? 0;
+    const strike = a.strike ?? 0;
+    const clamp = a.clamp ?? 0;
     // crouch a little while the claws are up, tiny sway otherwise
     this.rig.position.y -= Math.max(0, claw) * 0.25;
     this.rig.rotation.z = Math.sin(time * 1.3) * 0.012 * idle + Math.sin(this.gait) * 0.015 * walk;
@@ -84,9 +86,13 @@ export class CrabBody implements BossVisual {
       leg.node.rotation.y = Math.cos(p) * G.swing * walk;
     }
     for (const arm of this.arms) {
-      // claw skills (spec 34): the arms swing up (claw 1) and down onto the ground (claw below 0)
-      arm.node.rotation.x = Math.sin(time * 1.7 + arm.side) * 0.02 * idle + (a.charge ?? 0) * 0.18 + claw * 0.75;
-      arm.node.rotation.y = arm.side * ((a.charge ?? 0) * 0.08 - Math.max(0, claw) * 0.35);
+      // claw skills (spec 34, 35): raised high (claw 1), whipped forward and down (strike 1), clamped inward (clamp 1)
+      const P = CRAB.armPose;
+      const raise = Math.max(0, claw);
+      const lifted = raise * P.raise;
+      const pitch = lifted + (P.strikeDown - lifted) * strike;
+      arm.node.rotation.x = Math.sin(time * 1.7 + arm.side) * 0.02 * idle + (a.charge ?? 0) * 0.18 + pitch + Math.min(0, claw) * 0.75;
+      arm.node.rotation.y = arm.side * ((a.charge ?? 0) * 0.08 - raise * 0.25 * (1 - clamp) + clamp * P.clamp);
     }
     const pulse = 0.75 + 0.25 * Math.sin(time * 14);
     const glow = Math.min(0.8, ((a.charge ?? 0) * 0.6 + Math.max(0, claw) * 0.3) * pulse);
