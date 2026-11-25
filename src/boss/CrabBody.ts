@@ -1,4 +1,4 @@
-import { Group, Mesh } from 'three';
+import { DoubleSide, Group, Mesh } from 'three';
 import type { Material, MeshStandardMaterial, Object3D } from 'three';
 import type { ResourceTracker } from '@/assets/ResourceTracker';
 import type { BodyAnim } from './BossBody';
@@ -15,6 +15,9 @@ import { CRAB } from './tunables';
  */
 export function prepareGlowMaterial(sm: MeshStandardMaterial): boolean {
   if (!sm.emissive) return false;
+  // the GLB shells are open on the underside and inside: with the arms raised (claw skills) the player looks up at
+  // them and single-sided faces vanished, leaving outlines. Draw both sides.
+  sm.side = DoubleSide;
   sm.emissive.setRGB(...CRAB.glow.colour);
   sm.emissiveIntensity = 0;
   if (sm.map && !sm.emissiveMap) {

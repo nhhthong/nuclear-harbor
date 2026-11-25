@@ -1,4 +1,4 @@
-import { MeshStandardMaterial, Texture } from 'three';
+import { DoubleSide, MeshStandardMaterial, Texture } from 'three';
 import { describe, expect, it } from 'vitest';
 import { prepareGlowMaterial } from './CrabBody';
 import { CRAB } from './tunables';
@@ -13,6 +13,12 @@ describe('crab skill glow', () => {
     expect(m.emissiveIntensity).toBe(0);
     expect(m.emissive.r).toBeCloseTo(CRAB.glow.colour[0], 6);
     expect(m.emissive.g).toBeCloseTo(CRAB.glow.colour[1], 6);
+  });
+
+  it('draws both sides, so raised arms seen from below are not hollow', () => {
+    const m = new MeshStandardMaterial();
+    prepareGlowMaterial(m);
+    expect(m.side).toBe(DoubleSide);
   });
 
   it('keeps an existing emissive map and copes with an untextured material', () => {
