@@ -123,6 +123,8 @@ export type BossAttackId =
   /** Gunslinger Crab Mech skills (spec 27). */
   | 'carpet-bombs'
   | 'drone-release'
-  | 'body-spin'
-  | 'quad-laser';
+  | 'quad-laser'
+  /** Phase two (spec 34): the claws grab and slam the player; the claws pound the ground in rings. */
+  | 'claw-grab'
+  | 'claw-quake';
 export type VfxKind = 'spark' | 'armor-spark' | 'explosion' | 'big-explosion' | 'smoke' | 'dust' | 'pickup' | 'telegraph-ring';

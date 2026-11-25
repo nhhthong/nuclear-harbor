@@ -50,7 +50,7 @@ describe('player gravity', () => {
   it('keeps the enemy dodge thresholds reachable with the double jump', () => {
     const g = -PLAYER.gravity;
     const reach = (PLAYER.jumpSpeed ** 2 + PLAYER.airJumpSpeed ** 2) / (2 * g);
-    for (const t of [BIPED.leap.clearance, BIPED.claw.clearance, CRAB.spin.safeHeight, CRAB.laser.top]) {
+    for (const t of [BIPED.leap.clearance, BIPED.claw.clearance, CRAB.quake.safeHeight, CRAB.grab.maxPlayerHeight, CRAB.laser.top]) {
       expect(t).toBeLessThan(reach - 0.2);
     }
   });

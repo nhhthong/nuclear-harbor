@@ -8,6 +8,7 @@ import {
   Matrix4,
   MeshBasicMaterial,
   Object3D,
+  RingGeometry,
   SphereGeometry,
   Vector3,
 } from 'three';
@@ -62,6 +63,8 @@ export type BoltHandler = (point: Vector3) => boolean;
 
 export type BeamMode = 'off' | 'warn' | 'fire';
 
+/** Live quake rings at once (a quake sends four, one per second, each gone in about 2.5 s). */
+const RING_CAP = 6;
 const dummy = new Object3D();
 const ZERO = new Matrix4().makeScale(0, 0, 0);
 const tmp = new Vector3();
@@ -78,6 +81,8 @@ export class BossEffects {
   private readonly beamGlow: InstancedMesh;
   private readonly beamWarn: InstancedMesh;
   private readonly markerMat: MeshBasicMaterial;
+  private readonly ringMesh: InstancedMesh;
+  private readonly rings: Array<{ x: number; z: number; r: number; max: number; speed: number; live: boolean }> = [];
   private beamsOn = false;
   private time = 0;
 
@@ -106,7 +111,13 @@ export class BossEffects {
     this.beamCore = this.make(new BoxGeometry(1, 1, 1), additive(new Color(2.8, 0.55, 0.35), 1), beams);
     this.beamGlow = this.make(new BoxGeometry(1, 1, 1), additive(new Color(1.6, 0.25, 0.15), 0.4), beams);
     this.beamWarn = this.make(new BoxGeometry(1, 1, 1), additive(new Color(1.4, 0.2, 0.15), 0.55), beams);
-    for (const m of [this.markerMesh, this.bombMesh, this.boltMesh, this.beamCore, this.beamGlow, this.beamWarn]) {
+    // spec 34: expanding shockwave rings of the claw quake (HDR so the bloom picks them up)
+    this.ringMesh = this.make(new RingGeometry(0.9, 1, 64), additive(new Color(3, 0.9, 0.35), 0.9), RING_CAP);
+    for (let i = 0; i < RING_CAP; i++) {
+      this.rings.push({ x: 0, z: 0, r: 0, max: 0, speed: 0, live: false });
+      this.ringMesh.setMatrixAt(i, ZERO);
+    }
+    for (const m of [this.markerMesh, this.bombMesh, this.boltMesh, this.beamCore, this.beamGlow, this.beamWarn, this.ringMesh]) {
       res.track(m);
       res.onDispose(() => m.dispose());
       scene.add(m);
@@ -169,6 +180,34 @@ export class BossEffects {
     return this.beamsOn;
   }
 
+  /** Starts an expanding ground ring at (x, z): grows `speed` m/s from the first step up to `max` m. */
+  launchRing(x: number, z: number, max: number, speed: number): void {
+    const ring = this.rings.find((q) => !q.live);
+    if (!ring) return;
+    ring.x = x;
+    ring.z = z;
+    ring.r = CRAB.quake.startRadius * this.k;
+    ring.max = max;
+    ring.speed = speed;
+    ring.live = true;
+  }
+
+  clearRings(): void {
+    for (let i = 0; i < this.rings.length; i++) {
+      const q = this.rings[i];
+      if (q) q.live = false;
+      this.ringMesh.setMatrixAt(i, ZERO);
+    }
+    this.ringMesh.instanceMatrix.needsUpdate = true;
+    this.ringMesh.visible = false;
+  }
+
+  get liveRings(): number {
+    let n = 0;
+    for (const q of this.rings) if (q.live) n++;
+    return n;
+  }
+
   addMarker(x: number, y: number, z: number, radius: number, duration: number, grow: boolean, pulse = false): Marker | null {
     const m = this.markers.acquire();
     if (!m) return null;
@@ -216,6 +255,7 @@ export class BossEffects {
     this.markers.releaseAll();
     this.bombs.releaseAll();
     this.bolts.releaseAll();
+    this.clearRings();
     this.setBeams('off', 0, 0, 0, null, null, 0);
     this.sync();
   }
@@ -223,6 +263,11 @@ export class BossEffects {
   /** Fixed-step motion; bomb landings and bolt contacts are reported through the handlers. */
   fixedStep(dt: number, onBomb: BombHandler, onBolt: BoltHandler): void {
     this.time += dt;
+    for (const q of this.rings) {
+      if (!q.live) continue;
+      q.r += q.speed * dt;
+      if (q.r > q.max) q.live = false;
+    }
     if (this.markers.liveCount > 0) {
       const done: Marker[] = [];
       this.markers.forEachLive((m) => {
@@ -349,6 +394,22 @@ export class BossEffects {
     this.markers.forEachLive((m) => {
       if (m.pulse) pulsing = true;
     });
+    let ringsLive = 0;
+    for (let i = 0; i < this.rings.length; i++) {
+      const q = this.rings[i];
+      if (q?.live) {
+        ringsLive++;
+        dummy.position.set(q.x, 0.18, q.z);
+        dummy.rotation.set(-Math.PI / 2, 0, 0);
+        dummy.scale.setScalar(q.r);
+        dummy.updateMatrix();
+        this.ringMesh.setMatrixAt(i, dummy.matrix);
+      } else {
+        this.ringMesh.setMatrixAt(i, ZERO);
+      }
+    }
+    this.ringMesh.instanceMatrix.needsUpdate = true;
+    this.ringMesh.visible = ringsLive > 0;
     this.markerMat.opacity = pulsing ? 0.3 + 0.18 * Math.sin(this.time * 16) : 0.38;
     this.sync();
   }

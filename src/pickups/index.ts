@@ -6,7 +6,7 @@ import type { GameModule } from '@/core/GameModule';
 import { ObjectPool } from '@/core/ObjectPool';
 import type { PickupKind } from '@/core/types';
 import { QueryGroups } from '@/physics/groups';
-import { collect, dropBlinkVisible, findRestingSpot, shouldDrop } from './logic';
+import { collect, dropBlinkVisible, droneDropKind, droneDrops, findRestingSpot, shouldDrop } from './logic';
 import { BOSS_PLACEMENTS, type PickupCandidate, ZONE_PLACEMENTS } from './placements';
 import { PICKUP } from './tunables';
 import { PickupRenderer } from './visuals';
@@ -129,8 +129,9 @@ export function createPickupsModule(): GameModule {
     if (ctx.flags.params.has('boss')) spawnBossSupplies();
   }
 
-  function onEnemyDestroyed(e: { position: Vector3 }): void {
+  function onEnemyDestroyed(e: { position: Vector3; type: string }): void {
     if (!ctx || !pool) return;
+    if (e.type === 'drone') return; // dragonflies have their own drop (onDroneShotDown)
     const zone = zoneAt(e.position.x, e.position.z);
     if (!zone) return;
     if (!shouldDrop(Math.random, dropsByZone[zone])) return;
@@ -143,6 +144,20 @@ export function createPickupsModule(): GameModule {
       return;
     }
     dropsByZone[zone]++;
+  }
+
+  /** Spec 34: a shot-down dragonfly drops ammo or health where it fell. */
+  function onDroneShotDown(at: { x: number; y: number; z: number }, source: 'roster' | 'boss'): void {
+    if (!ctx || !pool) return;
+    if (!droneDrops(source, Math.random())) return;
+    const player = ctx.player;
+    const kind = droneDropKind(player.maxHp > 0 ? player.hp / player.maxHp : 1, Math.random());
+    const spot = findRestingSpot(at.x, at.z, true, rayDown, at.y + 2);
+    if (!spot) return;
+    const p = pool.acquire();
+    if (!p) return;
+    const amount = kind === 'ammo' ? ECONOMY.droneDropAmmo : ECONOMY.droneDropHeal;
+    if (!add(p, kind, spot.x, spot.y, spot.z, true, amount)) pool.release(p);
   }
 
   function onRespawn(): void {
@@ -158,7 +173,7 @@ export function createPickupsModule(): GameModule {
     if (!result.accepted) return false;
     let amount = result.amount;
     if (p.kind === 'medkit') {
-      amount = player.heal(ECONOMY.medkitHeal);
+      amount = player.heal(p.amount);
       if (amount <= 0) return false;
     } else {
       ctx.events.emit('weapon:grantAmmo', { amount });
@@ -184,12 +199,16 @@ export function createPickupsModule(): GameModule {
       context.scene.add(renderer.meshes.ammo, renderer.meshes.medkit, renderer.halos.ammo, renderer.halos.medkit);
       pool = new ObjectPool<Pickup>({
         create: makePickup,
-        capacity: ECONOMY.maxEnemyDropsPerZone * PICKUP.zoneCount,
+        capacity: ECONOMY.maxEnemyDropsPerZone * PICKUP.zoneCount + ECONOMY.droneDropPool,
       });
 
       offs = [
         context.events.on('world:ready', onWorldReady),
         context.events.on('enemy:destroyed', onEnemyDestroyed),
+        context.events.on('enemy:destroyed', (e) => {
+          if (e.type === 'drone') onDroneShotDown(e.position, 'roster');
+        }),
+        context.events.on('boss:droneDestroyed', (e) => onDroneShotDown(e.position, 'boss')),
         context.events.on('objectives:allActivated', spawnBossSupplies),
         context.events.on('game:respawn', onRespawn),
       ];

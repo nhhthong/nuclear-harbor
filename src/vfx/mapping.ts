@@ -38,7 +38,8 @@ export function bossAttackRecipes(attack: BossAttackId): readonly RecipeId[] {
     case 'quad-laser':
     case 'drone-release':
       return ['armor-spark', 'telegraph-ring'];
-    case 'body-spin':
+    case 'claw-grab':
+    case 'claw-quake':
       return ['dust', 'telegraph-ring'];
     case 'target-lock':
       return ['spark'];

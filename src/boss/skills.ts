@@ -4,22 +4,23 @@ import type { XZ } from './BossAttacks';
 import { CRAB } from './tunables';
 
 /**
- * Pure logic of the Gunslinger Crab Mech's four skills (spec 27-crab-boss): selection by distance and
+ * Pure logic of the Gunslinger Crab Mech's skills (spec 27-crab-boss; spec 34: no spin, two claw skills in phase two): selection by distance and
  * cooldown, bomb pattern, drone cap, laser beam angles and hit test, spin sweep contacts. Everything
  * the scene needs is computed here and unit tested; `index.ts` only glues it to the world.
  * `k` is the size factor of the boss (1 on the harbor, smaller in the sandbox): it scales distances.
  */
 
-export type SkillId = 'bombs' | 'drones' | 'spin' | 'laser';
+export type SkillId = 'bombs' | 'drones' | 'laser' | 'grab' | 'quake';
 
-export const SKILLS: readonly SkillId[] = ['bombs', 'drones', 'spin', 'laser'];
+export const SKILLS: readonly SkillId[] = ['bombs', 'drones', 'laser', 'grab', 'quake'];
 
 /** Event id of each skill (`boss:attackTelegraph` / `boss:attack`). */
 export const SKILL_ATTACK: Record<SkillId, BossAttackId> = {
   bombs: 'carpet-bombs',
   drones: 'drone-release',
-  spin: 'body-spin',
   laser: 'quad-laser',
+  grab: 'claw-grab',
+  quake: 'claw-quake',
 };
 
 export type { XZ };
@@ -31,21 +32,30 @@ export interface SkillInput {
   aliveDrones: number;
   /** Size factor of the boss (distances in `CRAB` are multiplied by it). */
   k: number;
+  /** Share of the boss HP left (0..1); the claw skills need it below `CRAB.phase2.below`. */
+  hpFraction: number;
+}
+
+/** Phase two: the boss has less than half of its HP left. */
+export function inPhaseTwo(hpFraction: number): boolean {
+  return hpFraction < CRAB.phase2.below;
 }
 
 export type SkillWeights = Record<SkillId, number>;
 
 /** Weight of every skill for this situation; 0 means "not eligible" (cooldown, range, drone cap). */
 export function skillWeights(input: SkillInput, cooldowns: Readonly<Record<SkillId, number>>, last: SkillId | null, out?: SkillWeights): SkillWeights {
-  const w = out ?? { bombs: 0, drones: 0, spin: 0, laser: 0 };
+  const w = out ?? { bombs: 0, drones: 0, laser: 0, grab: 0, quake: 0 };
   const d = input.distance / input.k;
   const far = d >= CRAB.farDistance;
   const r = CRAB.ranges;
   const W = CRAB.weights;
   w.bombs = cooldowns.bombs <= 0 && d >= r.bombsMin && d <= r.bombsMax ? (far ? W.bombs.far : W.bombs.near) : 0;
   w.drones = cooldowns.drones <= 0 && canReleaseDrones(input.aliveDrones) && d >= r.dronesMin && d <= r.dronesMax ? (far ? W.drones.far : W.drones.near) : 0;
-  w.spin = cooldowns.spin <= 0 && d <= CRAB.spin.triggerRange ? W.spin.close : 0;
   w.laser = cooldowns.laser <= 0 && d >= r.laserMin && d <= r.laserMax ? (far ? W.laser.far : W.laser.near) : 0;
+  const two = inPhaseTwo(input.hpFraction);
+  w.grab = two && cooldowns.grab <= 0 && d >= CRAB.grab.minRange && d <= CRAB.grab.maxRange ? W.grab : 0;
+  w.quake = two && cooldowns.quake <= 0 && d <= CRAB.quake.maxRange ? W.quake : 0;
   // never the same skill twice in a row when anything else can run
   if (last) {
     let other = 0;
@@ -78,11 +88,11 @@ export function pickSkill(weights: Readonly<SkillWeights>, rand: number): SkillI
  * `update` returns the skill to start (the caller runs it and calls `finish` when it is over).
  */
 export class SkillScheduler {
-  readonly cooldowns: Record<SkillId, number> = { bombs: 0, drones: 0, spin: 0, laser: 0 };
+  readonly cooldowns: Record<SkillId, number> = { bombs: 0, drones: 0, laser: 0, grab: 0, quake: 0 };
   private gap: number = CRAB.idleGap[1];
   private running: SkillId | null = null;
   private last: SkillId | null = null;
-  private readonly weights: SkillWeights = { bombs: 0, drones: 0, spin: 0, laser: 0 };
+  private readonly weights: SkillWeights = { bombs: 0, drones: 0, laser: 0, grab: 0, quake: 0 };
 
   get active(): SkillId | null {
     return this.running;
@@ -208,55 +218,112 @@ export function clampOrbitRadius(r: number): number {
   return Math.min(CRAB.drones.orbitMax, Math.max(CRAB.drones.orbitMin, r));
 }
 
-// ---- spin --------------------------------------------------------------------------------------------
+// ---- claw grab (spec 34) -----------------------------------------------------------------------------
 
-/** Turn rate during the spin: ramps up and down so the start and stop are readable. t in seconds. */
-export function spinRate(t: number): number {
-  const S = CRAB.spin;
-  const ramp = 0.35;
-  const up = Math.min(1, Math.max(0, t / ramp));
-  const down = Math.min(1, Math.max(0, (S.duration - t) / ramp));
-  const e = Math.min(up, down);
-  return S.rate * e * e * (3 - 2 * e);
+/** The claw point: `reach` metres in front of the body centre along the boss's facing (yaw 0 faces -Z). */
+export function clawPoint(boss: XZ, yaw: number, k: number, out: XZ): XZ {
+  out.x = boss.x - Math.sin(yaw) * CRAB.grab.reach * k;
+  out.z = boss.z - Math.cos(yaw) * CRAB.grab.reach * k;
+  return out;
 }
 
-/** True when the player stands in the reach of the sweeping arm at angle `arm` (rad, world yaw frame). */
-export function sweepContact(arm: number, boss: XZ, player: { x: number; y: number; z: number }, k: number): boolean {
-  const S = CRAB.spin;
-  const dx = player.x - boss.x;
-  const dz = player.z - boss.z;
+/**
+ * Where the body centre ends up after the lunge: far enough that the claw point lands on `target`, at most
+ * `lungeMax` away, and never backwards (a target already within reach is not approached).
+ */
+export function lungeEnd(boss: XZ, target: XZ, k: number, out: XZ): XZ {
+  const dx = target.x - boss.x;
+  const dz = target.z - boss.z;
   const d = Math.hypot(dx, dz);
-  if (d > S.reach * k || player.y > S.safeHeight * k) return false;
-  // arm direction for yaw `a`: the body faces -Z at yaw 0 and turns left (counter-clockwise from above)
-  const dirAngle = Math.atan2(-dx, -dz);
-  return Math.abs(wrap(dirAngle - arm)) <= S.halfWidth + Math.atan2(0.9, Math.max(d, 0.9));
+  const travel = Math.min(CRAB.grab.lungeMax * k, Math.max(0, d - CRAB.grab.reach * k));
+  if (d < 1e-6) {
+    out.x = boss.x;
+    out.z = boss.z;
+    return out;
+  }
+  out.x = boss.x + (dx / d) * travel;
+  out.z = boss.z + (dz / d) * travel;
+  return out;
 }
 
-function wrap(a: number): number {
-  let d = a % (Math.PI * 2);
-  if (d > Math.PI) d -= Math.PI * 2;
-  if (d <= -Math.PI) d += Math.PI * 2;
-  return d;
+/** Do the claws close on the player? Within `radius` of the claw point and not above `maxPlayerHeight` (a jump dodges it). */
+export function grabConnects(claw: XZ, player: { x: number; y: number; z: number }, k: number): boolean {
+  const G = CRAB.grab;
+  if (player.y > G.maxPlayerHeight * k) return false;
+  return Math.hypot(player.x - claw.x, player.z - claw.z) <= G.radius * k;
 }
 
-/** Reports a contact only on its rising edge, per arm: one hit per sweep contact. */
-export class SweepTracker {
-  private readonly inContact: boolean[] = [];
+export type GrabStage = 'lift' | 'hold' | 'slam' | 'done';
+
+/** Total length of a carry: lift, hold, slam (s). */
+export const GRAB_CARRY_SECONDS: number = CRAB.grab.liftTime + CRAB.grab.holdTime + CRAB.grab.slamTime;
+
+/** Height of the carried player `t` seconds after the claws closed: eased lift, a held hover, an accelerating slam. */
+export function grabCarry(t: number, k: number): { y: number; stage: GrabStage } {
+  const G = CRAB.grab;
+  const H = G.liftHeight * k;
+  if (t < G.liftTime) {
+    const u = Math.max(0, t) / G.liftTime;
+    return { y: H * u * u * (3 - 2 * u), stage: 'lift' };
+  }
+  if (t < G.liftTime + G.holdTime) return { y: H, stage: 'hold' };
+  const u = (t - G.liftTime - G.holdTime) / G.slamTime;
+  if (u < 1 - 1e-9) return { y: H * (1 - u * u), stage: 'slam' };
+  return { y: 0, stage: 'done' };
+}
+
+// ---- claw quake (spec 34) ----------------------------------------------------------------------------
+
+/**
+ * The expanding rings of a quake. `launch` starts one at `startRadius`; `step` grows them and returns how many
+ * hit the player this step: a ring hurts once, when its band (`thickness`) sweeps over a player whose feet are
+ * below `safeHeight`. A ring that passes while the player is in the air is harmless.
+ */
+export class QuakeWaves {
+  private readonly rings: Array<{ r: number; hit: boolean }> = [];
+
+  get live(): number {
+    return this.rings.length;
+  }
+
+  /** Radii of the live rings (metres, already scaled), for the visuals. */
+  radii(out: number[] = []): number[] {
+    out.length = 0;
+    for (const w of this.rings) out.push(w.r);
+    return out;
+  }
 
   reset(): void {
-    this.inContact.length = 0;
+    this.rings.length = 0;
   }
 
-  /** `touching[i]` is the contact of arm i this step; returns true when any arm touched for the first time. */
-  step(touching: readonly boolean[]): boolean {
-    let hit = false;
-    for (let i = 0; i < touching.length; i++) {
-      const now = touching[i] === true;
-      if (now && !this.inContact[i]) hit = true;
-      this.inContact[i] = now;
-    }
-    return hit;
+  launch(k: number): void {
+    this.rings.push({ r: CRAB.quake.startRadius * k, hit: false });
   }
+
+  step(dt: number, playerDist: number, playerY: number, k: number): number {
+    const Q = CRAB.quake;
+    const half = (Q.thickness * k) / 2;
+    let hits = 0;
+    for (let i = this.rings.length - 1; i >= 0; i--) {
+      const w = this.rings[i];
+      if (!w) continue;
+      const before = w.r;
+      w.r += Q.speed * k * dt;
+      if (!w.hit && playerY <= Q.safeHeight * k && playerDist >= before - half && playerDist <= w.r + half) {
+        w.hit = true;
+        hits++;
+      }
+      if (w.r - half > Q.maxRadius * k) this.rings.splice(i, 1);
+    }
+    return hits;
+  }
+}
+
+/** Seconds from the first pound until the last ring has left the arena (the skill's active length). */
+export function quakeDuration(k = 1): number {
+  const Q = CRAB.quake;
+  return (Q.count - 1) * Q.interval + (Q.maxRadius - Q.startRadius) / Q.speed + Q.thickness / Q.speed + Q.recover * k;
 }
 
 // ---- four-way laser -----------------------------------------------------------------------------------
@@ -274,7 +341,7 @@ export function laserBase(start: number, dir: 1 | -1, t: number): number {
   return start + dir * L.sweep * Math.min(1, Math.max(0, t / L.duration));
 }
 
-/** Unit direction (xz) of a beam angle in the same convention as `sweepContact` (angle 0 = -Z, turning left). */
+/** Unit direction (xz) of a beam angle in the the boss's facing convention (angle 0 = -Z, turning left). */
 export function beamDirection(angle: number, out: XZ): XZ {
   out.x = -Math.sin(angle);
   out.z = -Math.cos(angle);

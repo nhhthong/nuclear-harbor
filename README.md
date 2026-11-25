@@ -27,7 +27,7 @@ Fight through the yard, bring down STINGER-7, the mecha scorpion that guards the
 
 ## Overview
 
-You are the only survivor of a container quay whose defence robots have been hijacked. The nuclear control system counts down from **08:00**. Fight through the container yard and a steel warehouse to the relay tower, where the mecha scorpion **STINGER-7** rises, hold **E** to activate the tower, then bring down the **Gunslinger Crab Mech**, a 10 m armoured boss with one huge health bar and four skills.
+You are the only survivor of a container quay whose defence robots have been hijacked. The nuclear control system counts down from **08:00**. Fight through the container yard and a steel warehouse to the relay tower, where the mecha scorpion **STINGER-7** rises, hold **E** to activate the tower, then bring down the **Gunslinger Crab Mech**, a 10 m armoured boss with one huge health bar and five skills (two of them only when it is below half health).
 
 **Three.js + TypeScript + Vite + Rapier**: fixed 60 Hz simulation, recorded sound effects (75 small OGG files, each with a procedural Web Audio fallback), no backend, no network at runtime. One small L-shaped level (72 x 122 m, closed by a 7 m wall) with modelled containers, a two-storey warehouse, chain-link fences with swing gates, wet asphalt and concrete (CC0 scans) with painted road markings and a planar reflection, a pale sun with one shadow map, an overcast sky, bloom and a cold film grade. Robots, vehicles and clutter are free CC0 or CC-BY models ([credits](CREDITS.md)). It is a **prototype**: nobody has play-tested a full run yet, so balance and real-GPU frame rate are unverified.
 
@@ -78,8 +78,8 @@ STINGER-7, hold the tower -> gate -> the Gunslinger Crab Mech drops onto the qua
 - **Countdown** 8 minutes; zero is a failure. **Tower**: hold `E` for 5 s within range. Death respawns at the last checkpoint; the countdown keeps running.
 - **Robots** (roster of 22 on foot plus 4 flying drones, streamed in as you walk, 10 alive at most; drones also come in through the windows if you camp on the mezzanine): 5 Medium Mech Strikers (3-round bursts, an AOE rocket every 6 to 9 s), 4 Biped robots (leap and claw; double jump dodges the leap), 6 Spot dogs, 4 Bomber Ducks (3-2-1 explosion), 3 cyber samurai (300 HP elites: cleave, a spinning naginata that deflects frontal fire, lightning dashes, and a red-charged crescent of sword energy that glides at you for 32 damage: step aside).
 - **STINGER-7** (1300 HP): charge, venom shot, tail slam; raises a hexagon shield under sustained fire.
-- **Gunslinger Crab Mech** (5800 HP): carpet bombs (AOE), dragonfly drones, a 360 degree spin up close, a slow four-way laser that rotates 180 degrees.
-- **Supplies**: 12 ammo crates, 3 medkits; five safe containers heal 12 HP/s and robots cannot enter.
+- **Gunslinger Crab Mech** (5800 HP): carpet bombs (AOE), dragonfly drones (shot-down ones drop ammo or health), a slow four-way laser that rotates 180 degrees. Below 50% health it adds a **claw grab** (it lunges, lifts you and slams you down: sidestep or jump) and a **claw quake** (four ground rings one second apart: jump over each).
+- **Supplies**: 12 ammo crates, 3 medkits; three safe containers (yard and court, none at the boss) heal 12 HP/s and robots cannot enter; shot-down dragonflies drop ammo or health.
 - Fences: touch a gate to open it; it closes about 5 s after everyone has left. Numbers are starting values and **not** balanced by play-testing.
 
 | Action | Input |

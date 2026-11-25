@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { KEEP_CLEAR, LAND, PLAYER_SPAWN, isOnLand, zoneAt } from '@/config/level';
+import { BOSS_ARENA, KEEP_CLEAR, LAND, PLAYER_SPAWN, isOnLand, zoneAt } from '@/config/level';
 import { structureSolids } from '@/structures/layout';
 import { generateContainerLayout } from './containerLayout';
 import { SHELTER, SHELTERS, insideShelter, shelterBoxes, shelterFootprint, toLocal, toWorld } from './shelters';
@@ -8,13 +8,21 @@ const layout = generateContainerLayout();
 
 describe('safe containers', () => {
   it('has a handful, each inside its declared zone', () => {
-    expect(SHELTERS.length).toBeGreaterThanOrEqual(4);
+    expect(SHELTERS.length).toBeGreaterThanOrEqual(3);
     for (const s of SHELTERS) {
       const f = shelterFootprint(s);
       for (const [x, z] of [[f.minX, f.minZ], [f.maxX, f.maxZ]] as const) {
         expect(isOnLand(x, z), s.id).toBe(true);
       }
       expect(zoneAt(s.x, s.z), s.id).toBe(s.zone);
+    }
+  });
+
+  it('has none on the boss quay, where players could hide and heal during the fight (spec 34)', () => {
+    expect(SHELTERS.filter((s) => s.zone === 'D')).toHaveLength(0);
+    for (const s of SHELTERS) {
+      expect(zoneAt(s.x, s.z), s.id).not.toBe('D');
+      expect(Math.hypot(s.x - BOSS_ARENA.center.x, s.z - BOSS_ARENA.center.z), s.id).toBeGreaterThan(BOSS_ARENA.radius + 10);
     }
   });
 

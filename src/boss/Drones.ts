@@ -56,6 +56,8 @@ interface Drone {
 export interface DroneEvents {
   /** A drone died (shot): position for the burst. */
   onKilled(position: Vector3): void;
+  /** A drone destroyed by the player's fire (not by the boss dying or a respawn): it drops ammo or health (spec 34). */
+  onShotDown?(position: Vector3): void;
   /** The drone fires a bolt from `from` towards `to`. */
   onFire(from: Vector3, to: Vector3): void;
 }
@@ -185,15 +187,16 @@ export class Drones {
     if (!d.alive) return { dealt: 0, zone: 'body', killed: false, absorbed: true };
     const r = resolveDamage(d.hp, { amount: info.amount, zone: 'body' });
     d.hp = r.hpAfter;
-    if (r.killed) this.kill(d, true);
+    if (r.killed) this.kill(d, true, true);
     return { dealt: r.dealt, zone: 'body', killed: r.killed, absorbed: r.absorbed };
   }
 
-  private kill(d: Drone, burst: boolean): void {
+  private kill(d: Drone, burst: boolean, shot = false): void {
     d.alive = false;
     d.body.setEnabled(false);
     d.body.setTranslation(PARK, true);
     if (burst) this.events.onKilled(d.pos);
+    if (shot) this.events.onShotDown?.(d.pos);
     d.pos.set(PARK.x, PARK.y, PARK.z);
   }
 
